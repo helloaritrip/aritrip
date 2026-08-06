@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import {
   destinations,
-  destinationCoordinates,
   generateAllPriceSnapshots,
   getRecommendations,
   ORIGIN_HUBS,
@@ -81,7 +80,6 @@ export async function POST(request: Request) {
         weather: season
           ? { avgTempMinC: season.avgTempC.min, avgTempMaxC: season.avgTempC.max, rainfallLevel: season.rainfallLevel }
           : null,
-        coordinates: destinationCoordinates[r.destination.id] ?? null,
       };
     }),
   });
