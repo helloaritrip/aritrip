@@ -1,0 +1,39 @@
+{
+  "root": { "props": { "title": "Best Trips From Dallas" } },
+  "content": [
+    {
+      "type": "Hero",
+      "props": {
+        "id": "hero-1",
+        "heading": "Best trips from Dallas on a budget",
+        "subheading": "Real flight, hotel, and activity costs for the destinations that actually fit what you have to spend.",
+        "ctaLabel": "Find your trip",
+        "ctaHref": "http://localhost:3000"
+      }
+    },
+    {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-1",
+        "text": "Flying out of DFW opens up short, affordable hops across Mexico and the Caribbean. Here are a few of our best-value picks — pulled straight from our real cost data, not guesses."
+      }
+    },
+    {
+      "type": "DestinationHighlight",
+      "props": { "id": "dest-1", "destinationId": "puerto-vallarta" }
+    },
+    {
+      "type": "DestinationHighlight",
+      "props": { "id": "dest-2", "destinationId": "mazatlan" }
+    },
+    {
+      "type": "CTAButton",
+      "props": {
+        "id": "cta-1",
+        "label": "See prices for your dates",
+        "href": "http://localhost:3000",
+        "variant": "primary"
+      }
+    }
+  ]
+}

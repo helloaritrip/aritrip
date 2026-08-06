@@ -15,6 +15,7 @@
   "dependencies": {
     "@astrojs/cloudflare": "^14.2.0",
     "@astrojs/react": "^6.0.2",
+    "@measured/puck": "^0.20.2",
     "@tailwindcss/vite": "^4.3.3",
     "@travel-package-builder/data": "*",
     "@travel-package-builder/ui": "*",
