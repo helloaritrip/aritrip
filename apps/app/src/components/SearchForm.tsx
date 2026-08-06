@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { TextInput, Combobox, Chip, Button } from "@travel-package-builder/ui";
 import { ORIGIN_HUBS, type OriginHub, type InterestTag } from "@travel-package-builder/data";
+import { ResultCard, type RecommendationResult } from "./ResultCard";
 
 const ORIGIN_LABELS: Record<OriginHub, string> = {
   JFK: "New York (JFK)",
@@ -54,16 +55,6 @@ const initialState: FormState = {
   adults: "2",
   children: "0",
   interests: [],
-};
-
-type RecommendationResult = {
-  destinationId: string;
-  name: string;
-  country: string;
-  totalEstimatedCostUSD: number;
-  finalScore: number;
-  reasons: string[];
-  rank: number;
 };
 
 type SearchStatus = "idle" | "loading" | "done" | "error";
@@ -232,30 +223,6 @@ export function SearchForm() {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function ResultCard({ result }: { result: RecommendationResult }) {
-  return (
-    <div className="flex flex-col gap-2 rounded-lg border border-rule bg-surface p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-wide text-muted">#{result.rank}</p>
-          <h3 className="text-lg font-semibold text-ink">
-            {result.name}, {result.country}
-          </h3>
-        </div>
-        <div className="text-right">
-          <p className="text-lg font-semibold text-accent">${result.totalEstimatedCostUSD.toLocaleString()}</p>
-          <p className="text-xs text-muted">total estimated</p>
-        </div>
-      </div>
-      <ul className="flex flex-col gap-1 text-sm text-muted">
-        {result.reasons.map((reason, i) => (
-          <li key={i}>• {reason}</li>
-        ))}
-      </ul>
     </div>
   );
 }

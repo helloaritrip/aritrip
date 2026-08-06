@@ -16,9 +16,16 @@ export interface RecommendationInput {
   interests: InterestTag[];
 }
 
+export interface CostBreakdown {
+  flightUSD: number;
+  hotelUSD: number;
+  activitiesUSD: number;
+}
+
 export interface ScoredDestination {
   destination: Destination;
   totalEstimatedCostUSD: number;
+  costBreakdown: CostBreakdown;
   finalScore: number;
   subScores: Recommendation["subScores"];
   reasons: string[];
@@ -130,10 +137,12 @@ export function getRecommendations(
     );
     if (!snapshot) continue;
 
-    const totalEstimatedCostUSD =
-      snapshot.avgFlightCostUSD * totalTravelers +
-      snapshot.avgHotelCostPerNightUSD.mid * tripDays * rooms +
-      snapshot.avgActivityCostPerDayUSD * totalTravelers * tripDays;
+    const costBreakdown: CostBreakdown = {
+      flightUSD: snapshot.avgFlightCostUSD * totalTravelers,
+      hotelUSD: snapshot.avgHotelCostPerNightUSD.mid * tripDays * rooms,
+      activitiesUSD: snapshot.avgActivityCostPerDayUSD * totalTravelers * tripDays,
+    };
+    const totalEstimatedCostUSD = costBreakdown.flightUSD + costBreakdown.hotelUSD + costBreakdown.activitiesUSD;
 
     const ratio = totalEstimatedCostUSD / input.budgetUSD;
     if (ratio > 1.05) continue;
@@ -159,6 +168,7 @@ export function getRecommendations(
     results.push({
       destination,
       totalEstimatedCostUSD,
+      costBreakdown,
       finalScore: Math.round(finalScore * 10) / 10,
       subScores,
       reasons: buildReasons(destination, subScores, ratio, input.interests),

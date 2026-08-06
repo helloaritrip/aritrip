@@ -60,6 +60,11 @@ export async function POST(request: Request) {
       name: r.destination.name,
       country: r.destination.country,
       totalEstimatedCostUSD: Math.round(r.totalEstimatedCostUSD),
+      costBreakdown: {
+        flightUSD: Math.round(r.costBreakdown.flightUSD),
+        hotelUSD: Math.round(r.costBreakdown.hotelUSD),
+        activitiesUSD: Math.round(r.costBreakdown.activitiesUSD),
+      },
       finalScore: r.finalScore,
       subScores: r.subScores,
       reasons: r.reasons,
