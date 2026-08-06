@@ -11,6 +11,7 @@
     "lint": "npm run lint --workspace=apps/app",
     "data:typecheck": "npm run typecheck --workspace=packages/data",
     "data:seed:dry-run": "npm run seed:dry-run --workspace=packages/data",
-    "data:seed": "npm run seed --workspace=packages/data"
+    "data:seed": "npm run seed --workspace=packages/data",
+    "data:verify": "npm run verify --workspace=packages/data"
   }
 }
