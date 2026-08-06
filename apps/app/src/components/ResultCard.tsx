@@ -1,5 +1,11 @@
+"use client";
+
+import { buildPartnerLinks } from "@/lib/partnerLinks";
+import { trackEvent } from "@/lib/trackEvent";
+
 export type RecommendationResult = {
   destinationId: string;
+  destinationAirportCode: string;
   name: string;
   country: string;
   totalEstimatedCostUSD: number;
@@ -10,7 +16,31 @@ export type RecommendationResult = {
   imageQuery: string;
 };
 
-export function ResultCard({ result }: { result: RecommendationResult }) {
+export type TripContext = {
+  originAirportCode: string;
+  startDate: string;
+  endDate: string;
+  adults: number;
+};
+
+const CTA_LABELS = {
+  flight: "✈ Flights",
+  hotel: "🏨 Hotel",
+  activity: "🎟 Activities",
+  insurance: "🛡 Insurance",
+  esim: "📶 eSIM",
+} as const;
+
+export function ResultCard({ result, tripContext }: { result: RecommendationResult; tripContext: TripContext }) {
+  const links = buildPartnerLinks({
+    originAirportCode: tripContext.originAirportCode,
+    destinationAirportCode: result.destinationAirportCode,
+    destinationName: result.name,
+    startDate: tripContext.startDate,
+    endDate: tripContext.endDate,
+    adults: tripContext.adults,
+  });
+
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-rule bg-surface">
       {/* eslint-disable-next-line @next/next/no-img-element -- viene de un proxy propio, no de next/image remote patterns */}
@@ -58,6 +88,21 @@ export function ResultCard({ result }: { result: RecommendationResult }) {
 
         <div className="flex items-center gap-2 rounded-md border border-dashed border-rule p-3 text-xs text-muted">
           <span>🌤️ Weather &amp; map — coming soon</span>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {(Object.keys(links) as (keyof typeof links)[]).map((category) => (
+            <a
+              key={category}
+              href={links[category]}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              onClick={() => trackEvent({ name: "recommendation_clicked", destinationId: result.destinationId, category })}
+              className="rounded-full border border-rule px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-accent hover:text-accent"
+            >
+              {CTA_LABELS[category]}
+            </a>
+          ))}
         </div>
 
         <p className="text-xs text-muted">

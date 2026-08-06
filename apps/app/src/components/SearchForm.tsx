@@ -3,8 +3,9 @@
 import { useState, type FormEvent } from "react";
 import { TextInput, Combobox, Chip, Button } from "@travel-package-builder/ui";
 import { type OriginHub, type InterestTag } from "@travel-package-builder/data";
-import { ResultCard, type RecommendationResult } from "./ResultCard";
+import { ResultCard, type RecommendationResult, type TripContext } from "./ResultCard";
 import { ORIGIN_OPTIONS } from "@/lib/originLabels";
+import { trackEvent } from "@/lib/trackEvent";
 
 const INTEREST_OPTIONS: { value: InterestTag; label: string }[] = [
   { value: "beach", label: "Beach" },
@@ -44,6 +45,7 @@ export function SearchForm() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [results, setResults] = useState<RecommendationResult[]>([]);
+  const [tripContext, setTripContext] = useState<TripContext | null>(null);
 
   function toggleInterest(tag: InterestTag) {
     setForm((f) => ({
@@ -82,6 +84,7 @@ export function SearchForm() {
     }
 
     setStatus("loading");
+    trackEvent({ name: "search_performed", originAirportCode: form.originAirportCode, budgetUSD });
     try {
       const res = await fetch("/api/recommendations", {
         method: "POST",
@@ -102,6 +105,10 @@ export function SearchForm() {
       }
       const data: { recommendations: RecommendationResult[] } = await res.json();
       setResults(data.recommendations);
+      setTripContext({ originAirportCode: form.originAirportCode, startDate: form.startDate, endDate: form.endDate, adults });
+      for (const r of data.recommendations) {
+        trackEvent({ name: "recommendation_shown", destinationId: r.destinationId, rank: r.rank, finalScore: r.finalScore });
+      }
       setStatus("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -191,15 +198,15 @@ export function SearchForm() {
 
       {status === "done" && results.length === 0 && (
         <div className="rounded-lg border border-rule bg-surface p-5 text-sm text-muted">
-          No destinations fit that budget for those dates yet — our catalog is still growing (12 of the
+          No destinations fit that budget for those dates yet — our catalog is still growing (21 of the
           30-50 destinations planned). Try a higher budget or different dates.
         </div>
       )}
 
-      {status === "done" && results.length > 0 && (
+      {status === "done" && results.length > 0 && tripContext && (
         <div className="flex flex-col gap-3">
           {results.map((r) => (
-            <ResultCard key={r.destinationId} result={r} />
+            <ResultCard key={r.destinationId} result={r} tripContext={tripContext} />
           ))}
         </div>
       )}

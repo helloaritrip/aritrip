@@ -57,6 +57,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     recommendations: results.map((r) => ({
       destinationId: r.destination.id,
+      destinationAirportCode: r.destination.airportCodes[0],
       name: r.destination.name,
       country: r.destination.country,
       totalEstimatedCostUSD: Math.round(r.totalEstimatedCostUSD),
