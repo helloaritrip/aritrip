@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { TextInput, Select, Chip, Button } from "@travel-package-builder/ui";
+import { TextInput, Combobox, Chip, Button } from "@travel-package-builder/ui";
 import { ORIGIN_HUBS, type OriginHub, type InterestTag } from "@travel-package-builder/data";
 
 const ORIGIN_LABELS: Record<OriginHub, string> = {
@@ -13,7 +13,17 @@ const ORIGIN_LABELS: Record<OriginHub, string> = {
   YYZ: "Toronto (YYZ)",
   YVR: "Vancouver (YVR)",
   MEX: "Mexico City (MEX)",
+  ATL: "Atlanta (ATL)",
+  BOS: "Boston (BOS)",
+  SEA: "Seattle (SEA)",
+  DEN: "Denver (DEN)",
+  IAH: "Houston (IAH)",
+  PHX: "Phoenix (PHX)",
+  SFO: "San Francisco (SFO)",
+  YUL: "Montreal (YUL)",
 };
+
+const ORIGIN_OPTIONS = ORIGIN_HUBS.map((code) => ({ value: code, label: ORIGIN_LABELS[code] }));
 
 const INTEREST_OPTIONS: { value: InterestTag; label: string }[] = [
   { value: "beach", label: "Beach" },
@@ -92,12 +102,13 @@ export function SearchForm() {
   return (
     <div className="flex w-full max-w-xl flex-col gap-6">
       <form onSubmit={handleSubmit} className="flex flex-col gap-5 rounded-lg border border-rule bg-surface p-6">
-        <Select
+        <Combobox
           label="Flying from"
           name="origin"
+          placeholder="Type a city or airport code..."
           value={form.originAirportCode}
-          onChange={(e) => setForm((f) => ({ ...f, originAirportCode: e.target.value as OriginHub }))}
-          options={ORIGIN_HUBS.map((code) => ({ value: code, label: ORIGIN_LABELS[code] }))}
+          onChange={(value) => setForm((f) => ({ ...f, originAirportCode: value as OriginHub }))}
+          options={ORIGIN_OPTIONS}
         />
 
         <TextInput

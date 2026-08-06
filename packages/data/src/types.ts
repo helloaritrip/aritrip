@@ -4,7 +4,13 @@
  * en dos formatos (prosa para discutir, TS para compilar).
  */
 
-/** Los 8 hubs de origen aprobados para el MVP — ver Data Model. */
+/**
+ * Los 16 hubs de origen aprobados para el MVP — ampliado de los 8
+ * originales (2026-08-06) porque 8 resultaba muy limitado para el mercado
+ * de US/CA/MX. Sigue siendo una lista curada y cerrada, no "cualquier
+ * aeropuerto" — cada hub nuevo implica costos base curados a mano por
+ * destino (ver destinations/originBaseCosts.ts).
+ */
 export const ORIGIN_HUBS = [
   "JFK",
   "MIA",
@@ -14,6 +20,14 @@ export const ORIGIN_HUBS = [
   "YYZ",
   "YVR",
   "MEX",
+  "ATL",
+  "BOS",
+  "SEA",
+  "DEN",
+  "IAH",
+  "PHX",
+  "SFO",
+  "YUL",
 ] as const;
 export type OriginHub = (typeof ORIGIN_HUBS)[number];
 
