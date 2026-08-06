@@ -198,7 +198,7 @@ export function SearchForm() {
 
       {status === "done" && results.length === 0 && (
         <div className="rounded-lg border border-rule bg-surface p-5 text-sm text-muted">
-          No destinations fit that budget for those dates yet — our catalog is still growing (21 of the
+          No destinations fit that budget for those dates yet — our catalog is still growing (30 of the
           30-50 destinations planned). Try a higher budget or different dates.
         </div>
       )}
