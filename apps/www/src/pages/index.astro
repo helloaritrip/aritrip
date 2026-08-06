@@ -1,6 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { Button } from "@travel-package-builder/ui";
+import { Button, SkylineIllustration } from "@travel-package-builder/ui";
 import { destinations, ORIGIN_HUBS } from "@travel-package-builder/data";
 
 // Cuenta real del catálogo, no un número fijo que se desactualiza — mismo
@@ -72,13 +72,20 @@ const steps = [
         See where you can go
       </Button>
     </section>
-
-    <footer class="flex flex-col items-center gap-2 text-center text-xs text-muted">
-      <p>Some links on this site are affiliate links. We may earn a commission at no extra cost to you.</p>
-      <div class="flex gap-4">
-        <a href={`${APP_URL}/privacy`} class="hover:text-ink">Privacy</a>
-        <a href={`${APP_URL}/terms`} class="hover:text-ink">Terms</a>
-      </div>
-    </footer>
   </main>
+
+  <footer class="relative overflow-hidden bg-brand-blue-mid text-white">
+    <SkylineIllustration className="absolute inset-0 h-full w-full" />
+    <div class="relative mx-auto flex max-w-5xl flex-col items-center gap-4 px-6 py-14 text-center">
+      <p class="text-lg font-semibold">Travel Package Builder</p>
+      <div class="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
+        <a href={APP_URL} class="hover:text-highlight">Home</a>
+        <a href={`${APP_URL}/privacy`} class="hover:text-highlight">Privacy</a>
+        <a href={`${APP_URL}/terms`} class="hover:text-highlight">Terms</a>
+      </div>
+      <p class="max-w-md text-xs text-white/70">
+        Some links on this site are affiliate links. We may earn a commission at no extra cost to you.
+      </p>
+    </div>
+  </footer>
 </Layout>

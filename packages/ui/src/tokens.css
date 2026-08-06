@@ -20,6 +20,16 @@
   --color-rule: #dce6f2;
   --color-highlight: #f4713d;
   --color-highlight-ink: #ffffff;
+
+  /*
+    Azules de marca fijos — NO reactivos a claro/oscuro, a propósito.
+    Usados en piezas con identidad propia (el footer con silueta de
+    skyline) que se ven igual sin importar el tema del usuario, como el
+    fondo de un logo. No usar para UI normal — para eso está --color-accent.
+  */
+  --color-brand-blue-deep: #0f3d91;
+  --color-brand-blue-mid: #1b5fd8;
+  --color-brand-blue-light: #bee3fa;
 }
 
 @media (prefers-color-scheme: dark) {
