@@ -138,7 +138,7 @@ export function SearchForm() {
           onChange={(e) => setForm((f) => ({ ...f, budgetUSD: e.target.value }))}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TextInput
             label="Departure date"
             name="startDate"
@@ -155,7 +155,7 @@ export function SearchForm() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TextInput
             label="Adults"
             name="adults"
