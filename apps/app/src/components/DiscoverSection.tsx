@@ -77,7 +77,7 @@ function DiscoverCard({ pick, emphasized }: { pick: DiscoverPick; emphasized: bo
       <div className="relative">
         {/* eslint-disable-next-line @next/next/no-img-element -- viene de un proxy propio */}
         <img
-          src={`/api/image-proxy?q=${encodeURIComponent(pick.imageQuery)}`}
+          src={`/api/image-proxy?q=${encodeURIComponent(pick.imageQuery)}&fallback=${encodeURIComponent(pick.name)}`}
           alt={`${pick.name}, ${pick.country}`}
           className="h-40 w-full object-cover"
           loading="lazy"

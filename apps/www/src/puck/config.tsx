@@ -148,7 +148,7 @@ export const config: Config<Props> = {
         return (
           <div className="mx-auto flex max-w-md flex-col overflow-hidden rounded-lg border border-rule bg-surface">
             <img
-              src={`${APP_URL}/api/image-proxy?q=${encodeURIComponent(destination.imageQuery)}`}
+              src={`${APP_URL}/api/image-proxy?q=${encodeURIComponent(destination.imageQuery)}&fallback=${encodeURIComponent(destination.name)}`}
               alt={destination.name}
               className="h-48 w-full object-cover"
             />

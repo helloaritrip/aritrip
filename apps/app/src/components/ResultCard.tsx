@@ -74,7 +74,7 @@ export function ResultCard({ result, tripContext }: { result: RecommendationResu
       <div className="relative">
         {/* eslint-disable-next-line @next/next/no-img-element -- viene de un proxy propio, no de next/image remote patterns */}
         <img
-          src={`/api/image-proxy?q=${encodeURIComponent(result.imageQuery)}`}
+          src={`/api/image-proxy?q=${encodeURIComponent(result.imageQuery)}&fallback=${encodeURIComponent(result.name)}`}
           alt={`${result.name}, ${result.country}`}
           className="h-48 w-full object-cover"
           loading="lazy"
