@@ -30,8 +30,8 @@ const scenarios: Scenario[] = [
     input: { originAirportCode: "YYZ", budgetUSD: 2200, startDate: "2026-02-10", endDate: "2026-02-13", adults: 1, children: 0, interests: ["adventure"] },
   },
   {
-    name: "4. MEX $4500, 10d, 4 adultos, family",
-    input: { originAirportCode: "MEX", budgetUSD: 4500, startDate: "2026-07-10", endDate: "2026-07-20", adults: 4, children: 0, interests: ["family"] },
+    name: "4. MEX $7500, 10d, 4 adultos, family (recalibrado — $4500 no era alcanzable ni con Aruba agregada)",
+    input: { originAirportCode: "MEX", budgetUSD: 7500, startDate: "2026-07-10", endDate: "2026-07-20", adults: 4, children: 0, interests: ["family"] },
   },
   {
     name: "5. LAX $1200, 6d, 2 adultos, beach",
