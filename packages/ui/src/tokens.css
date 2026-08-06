@@ -1,50 +1,62 @@
 /*
-  Design tokens compartidos entre apps/app (Next.js) y, más adelante,
-  apps/www (Astro) — ver "Frontend: Next.js + Astro" en los docs de
-  arquitectura. Los valores de color son un placeholder neutral, no una
-  decisión de marca: Design System / Brand Guidelines quedaron fuera de
-  alcance de Sprint -1 a propósito. Reemplazar acá cuando exista marca real.
+  Design tokens compartidos entre apps/app (Next.js) y apps/www (Astro) —
+  ver "Frontend: Next.js + Astro" en los docs de arquitectura.
+
+  Paleta real de marca (2026-08-06) — ya no placeholder. Viene de la
+  identidad original de miodisea.com (2017): azul cobalto de la ilustración
+  de colinas + Taj Mahal como color principal, naranja del isotipo original
+  (mochilero/astronauta) como acento secundario, usado con moderación, no
+  como color dominante. Neutrales con sesgo hacia el azul en vez de gris
+  puro, a propósito.
 */
 
 @theme {
-  --color-bg: #f7f7f8;
+  --color-bg: #f5f8fc;
   --color-surface: #ffffff;
-  --color-ink: #1a1d23;
-  --color-muted: #6b7280;
-  --color-accent: #2f5fae;
+  --color-ink: #12233f;
+  --color-muted: #5c7085;
+  --color-accent: #1b5fd8;
   --color-accent-ink: #ffffff;
-  --color-rule: #e2e4e8;
+  --color-rule: #dce6f2;
+  --color-highlight: #f4713d;
+  --color-highlight-ink: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #14171c;
-    --color-surface: #1c2027;
-    --color-ink: #eef0f2;
-    --color-muted: #9aa3af;
-    --color-accent: #6f9bef;
-    --color-accent-ink: #0b1220;
-    --color-rule: #2a2f38;
+    --color-bg: #0b1626;
+    --color-surface: #142238;
+    --color-ink: #eaf2fb;
+    --color-muted: #93a7c2;
+    --color-accent: #4c8df0;
+    --color-accent-ink: #071224;
+    --color-rule: #24354e;
+    --color-highlight: #ff8656;
+    --color-highlight-ink: #241006;
   }
 }
 
 /* El toggle manual de tema (cuando exista) escribe data-theme en <html>. */
 :root[data-theme="dark"] {
-  --color-bg: #14171c;
-  --color-surface: #1c2027;
-  --color-ink: #eef0f2;
-  --color-muted: #9aa3af;
-  --color-accent: #6f9bef;
-  --color-accent-ink: #0b1220;
-  --color-rule: #2a2f38;
+  --color-bg: #0b1626;
+  --color-surface: #142238;
+  --color-ink: #eaf2fb;
+  --color-muted: #93a7c2;
+  --color-accent: #4c8df0;
+  --color-accent-ink: #071224;
+  --color-rule: #24354e;
+  --color-highlight: #ff8656;
+  --color-highlight-ink: #241006;
 }
 
 :root[data-theme="light"] {
-  --color-bg: #f7f7f8;
+  --color-bg: #f5f8fc;
   --color-surface: #ffffff;
-  --color-ink: #1a1d23;
-  --color-muted: #6b7280;
-  --color-accent: #2f5fae;
+  --color-ink: #12233f;
+  --color-muted: #5c7085;
+  --color-accent: #1b5fd8;
   --color-accent-ink: #ffffff;
-  --color-rule: #e2e4e8;
+  --color-rule: #dce6f2;
+  --color-highlight: #f4713d;
+  --color-highlight-ink: #ffffff;
 }

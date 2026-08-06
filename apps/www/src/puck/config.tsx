@@ -157,7 +157,7 @@ export const config: Config<Props> = {
                 {destination.name}, {destination.country}
               </h3>
               <p className="text-sm text-muted">{destination.insiderNotes}</p>
-              <p className="text-xs uppercase tracking-wide text-accent">
+              <p className="text-xs uppercase tracking-wide text-highlight">
                 Value score: {destination.valueRating}/100
               </p>
             </div>
