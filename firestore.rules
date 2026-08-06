@@ -1,0 +1,14 @@
+rules_version = '2';
+
+// Todo el acceso a Firestore pasa por Cloudflare Workers usando el Admin SDK
+// (ver System Architecture), que ignora estas reglas. Se niega todo acceso
+// directo desde cliente a propósito — si en el futuro se agrega lectura
+// directa desde el frontend, las reglas de esa colección se abren acá
+// explícitamente, no por defecto.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

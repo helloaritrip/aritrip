@@ -1,0 +1,13 @@
+{
+  "name": "travel-package-builder",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/app",
+    "build": "npm run build --workspace=apps/app",
+    "lint": "npm run lint --workspace=apps/app"
+  }
+}

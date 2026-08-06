@@ -1,0 +1,50 @@
+/*
+  Design tokens compartidos entre apps/app (Next.js) y, más adelante,
+  apps/www (Astro) — ver "Frontend: Next.js + Astro" en los docs de
+  arquitectura. Los valores de color son un placeholder neutral, no una
+  decisión de marca: Design System / Brand Guidelines quedaron fuera de
+  alcance de Sprint -1 a propósito. Reemplazar acá cuando exista marca real.
+*/
+
+@theme {
+  --color-bg: #f7f7f8;
+  --color-surface: #ffffff;
+  --color-ink: #1a1d23;
+  --color-muted: #6b7280;
+  --color-accent: #2f5fae;
+  --color-accent-ink: #ffffff;
+  --color-rule: #e2e4e8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #14171c;
+    --color-surface: #1c2027;
+    --color-ink: #eef0f2;
+    --color-muted: #9aa3af;
+    --color-accent: #6f9bef;
+    --color-accent-ink: #0b1220;
+    --color-rule: #2a2f38;
+  }
+}
+
+/* El toggle manual de tema (cuando exista) escribe data-theme en <html>. */
+:root[data-theme="dark"] {
+  --color-bg: #14171c;
+  --color-surface: #1c2027;
+  --color-ink: #eef0f2;
+  --color-muted: #9aa3af;
+  --color-accent: #6f9bef;
+  --color-accent-ink: #0b1220;
+  --color-rule: #2a2f38;
+}
+
+:root[data-theme="light"] {
+  --color-bg: #f7f7f8;
+  --color-surface: #ffffff;
+  --color-ink: #1a1d23;
+  --color-muted: #6b7280;
+  --color-accent: #2f5fae;
+  --color-accent-ink: #ffffff;
+  --color-rule: #e2e4e8;
+}

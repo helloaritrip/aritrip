@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.vercel/
+.wrangler/
+.open-next/
+cloudflare-env.d.ts
+.env
+.env.local
+*.log
+.DS_Store
+dist/
+.turbo/
