@@ -2,29 +2,9 @@
 
 import { useState, type FormEvent } from "react";
 import { TextInput, Combobox, Chip, Button } from "@travel-package-builder/ui";
-import { ORIGIN_HUBS, type OriginHub, type InterestTag } from "@travel-package-builder/data";
+import { type OriginHub, type InterestTag } from "@travel-package-builder/data";
 import { ResultCard, type RecommendationResult } from "./ResultCard";
-
-const ORIGIN_LABELS: Record<OriginHub, string> = {
-  JFK: "New York (JFK)",
-  MIA: "Miami (MIA)",
-  DFW: "Dallas (DFW)",
-  LAX: "Los Angeles (LAX)",
-  ORD: "Chicago (ORD)",
-  YYZ: "Toronto (YYZ)",
-  YVR: "Vancouver (YVR)",
-  MEX: "Mexico City (MEX)",
-  ATL: "Atlanta (ATL)",
-  BOS: "Boston (BOS)",
-  SEA: "Seattle (SEA)",
-  DEN: "Denver (DEN)",
-  IAH: "Houston (IAH)",
-  PHX: "Phoenix (PHX)",
-  SFO: "San Francisco (SFO)",
-  YUL: "Montreal (YUL)",
-};
-
-const ORIGIN_OPTIONS = ORIGIN_HUBS.map((code) => ({ value: code, label: ORIGIN_LABELS[code] }));
+import { ORIGIN_OPTIONS } from "@/lib/originLabels";
 
 const INTEREST_OPTIONS: { value: InterestTag; label: string }[] = [
   { value: "beach", label: "Beach" },
