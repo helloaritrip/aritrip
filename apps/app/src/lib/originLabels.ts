@@ -17,6 +17,14 @@ export const ORIGIN_LABELS: Record<OriginHub, string> = {
   PHX: "Phoenix (PHX)",
   SFO: "San Francisco (SFO)",
   YUL: "Montreal (YUL)",
+  PTY: "Panama City (PTY)",
+  MCO: "Orlando (MCO)",
+  LAS: "Las Vegas (LAS)",
+  MTY: "Monterrey (MTY)",
+  CUN: "Cancún (CUN)",
+  GDL: "Guadalajara (GDL)",
+  IAD: "Washington, D.C. (IAD)",
+  CLT: "Charlotte (CLT)",
 };
 
 export const ORIGIN_OPTIONS = ORIGIN_HUBS.map((code) => ({ value: code, label: ORIGIN_LABELS[code] }));

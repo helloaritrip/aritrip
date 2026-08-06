@@ -5,11 +5,15 @@
  */
 
 /**
- * Los 16 hubs de origen aprobados para el MVP — ampliado de los 8
- * originales (2026-08-06) porque 8 resultaba muy limitado para el mercado
- * de US/CA/MX. Sigue siendo una lista curada y cerrada, no "cualquier
+ * Los 24 hubs de origen aprobados para el MVP — ampliado 8 -> 16 -> 24
+ * (2026-08-06). Sigue siendo una lista curada y cerrada, no "cualquier
  * aeropuerto" — cada hub nuevo implica costos base curados a mano por
- * destino (ver destinations/originBaseCosts.ts).
+ * destino (ver destinations/originBaseCosts.ts). Esta ronda agregó Panamá
+ * (mercado real del usuario, fuera del US/CA/MX original de la visión) y
+ * 7 hubs más "famosos" para redondear cobertura. CUN y PTY son origen Y
+ * destino a la vez — igual que ya pasaba con MEX/Ciudad de México, esos
+ * destinos excluyen su propio código como origen (no tiene sentido
+ * recomendarle Cancún a alguien que ya sale de Cancún).
  */
 export const ORIGIN_HUBS = [
   "JFK",
@@ -28,6 +32,14 @@ export const ORIGIN_HUBS = [
   "PHX",
   "SFO",
   "YUL",
+  "PTY",
+  "MCO",
+  "LAS",
+  "MTY",
+  "CUN",
+  "GDL",
+  "IAD",
+  "CLT",
 ] as const;
 export type OriginHub = (typeof ORIGIN_HUBS)[number];
 

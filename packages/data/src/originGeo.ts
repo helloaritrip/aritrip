@@ -18,6 +18,14 @@ export const ORIGIN_HUB_COORDS: Record<OriginHub, { lat: number; lon: number }> 
   PHX: { lat: 33.43, lon: -112.01 },
   SFO: { lat: 37.62, lon: -122.38 },
   YUL: { lat: 45.47, lon: -73.74 },
+  PTY: { lat: 9.07, lon: -79.38 },
+  MCO: { lat: 28.43, lon: -81.31 },
+  LAS: { lat: 36.08, lon: -115.15 },
+  MTY: { lat: 25.78, lon: -100.11 },
+  CUN: { lat: 21.04, lon: -86.87 },
+  GDL: { lat: 20.52, lon: -103.31 },
+  IAD: { lat: 38.95, lon: -77.46 },
+  CLT: { lat: 35.21, lon: -80.94 },
 };
 
 /** Fallback cuando no hay señal de geolocalización (dev local sin proxy de Cloudflare, o visitante fuera del footprint). */
