@@ -4,12 +4,19 @@
  * (--color-brand-blue-light / --color-brand-blue-deep), sin depender del
  * tema claro/oscuro. Puramente decorativa, sin interactividad — se puede
  * montar en Astro sin isla (cero JS).
+ *
+ * `xMidYMid slice` (no "none"): recorta como `background-size: cover` en vez
+ * de estirar sin mantener proporción. El contenedor del footer cambia mucho
+ * de proporción entre desktop (ancho, bajo) y mobile (angosto, alto por el
+ * texto apilado) — con "none" las torres/monumentos se veían deformados
+ * verticalmente en pantallas chicas. Requiere que el contenedor tenga
+ * `overflow-hidden` (ya lo tiene en ambos footers).
  */
 export function SkylineIllustration({ className = "" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 1600 300"
-      preserveAspectRatio="none"
+      preserveAspectRatio="xMidYMid slice"
       className={className}
       aria-hidden="true"
       focusable="false"

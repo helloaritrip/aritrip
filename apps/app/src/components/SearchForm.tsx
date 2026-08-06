@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { TextInput, Combobox, Chip, Button } from "@travel-package-builder/ui";
-import { type OriginHub, type InterestTag } from "@travel-package-builder/data";
+import { destinations, type OriginHub, type InterestTag } from "@travel-package-builder/data";
 import { ResultCard, type RecommendationResult, type TripContext } from "./ResultCard";
 import { ORIGIN_OPTIONS } from "@/lib/originLabels";
 import { trackEvent } from "@/lib/trackEvent";
@@ -198,8 +198,8 @@ export function SearchForm() {
 
       {status === "done" && results.length === 0 && (
         <div className="rounded-lg border border-rule bg-surface p-5 text-sm text-muted">
-          No destinations fit that budget for those dates yet — our catalog is still growing (30 of the
-          30-50 destinations planned). Try a higher budget or different dates.
+          No destinations fit that budget for those dates yet — our catalog is still growing (
+          {destinations.length} destinations so far). Try a higher budget or different dates.
         </div>
       )}
 
