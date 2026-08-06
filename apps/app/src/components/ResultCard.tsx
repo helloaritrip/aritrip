@@ -17,6 +17,8 @@ export type RecommendationResult = {
   reasons: string[];
   rank: number;
   imageQuery: string;
+  weather: { avgTempMinC: number; avgTempMaxC: number; rainfallLevel: "low" | "medium" | "high" } | null;
+  coordinates: { lat: number; lng: number } | null;
 };
 
 export type TripContext = {
@@ -33,6 +35,31 @@ const CTA_LABELS = {
   insurance: "🛡 Insurance",
   esim: "📶 eSIM",
 } as const;
+
+const RAINFALL_LABEL: Record<"low" | "medium" | "high", string> = {
+  low: "Low rainfall",
+  medium: "Some rainfall",
+  high: "Rainy season",
+};
+
+const RAINFALL_ICON: Record<"low" | "medium" | "high", string> = {
+  low: "☀️",
+  medium: "⛅",
+  high: "🌧️",
+};
+
+// Bounding box chico centrado en el destino — vista a escala de ciudad, no
+// hace falta precisión, es un mapa de referencia embebido sin API key.
+function osmEmbedUrl(lat: number, lng: number): string {
+  const dLat = 0.08;
+  const dLng = 0.12;
+  const bbox = [lng - dLng, lat - dLat, lng + dLng, lat + dLat].join(",");
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${lat}%2C${lng}`;
+}
+
+function osmLink(lat: number, lng: number): string {
+  return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=12/${lat}/${lng}`;
+}
 
 function formatDateRange(startDate: string, endDate: string): string {
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
@@ -122,9 +149,34 @@ export function ResultCard({ result, tripContext }: { result: RecommendationResu
           </div>
         </div>
 
-        <div className="flex items-center gap-2 rounded-md border border-dashed border-rule p-3 text-xs text-muted">
-          <span>🌤️ Weather &amp; map — coming soon</span>
-        </div>
+        {result.weather && (
+          <div className="flex items-center gap-2 rounded-md border border-rule bg-bg p-3 text-xs text-muted">
+            <span aria-hidden="true">{RAINFALL_ICON[result.weather.rainfallLevel]}</span>
+            <span>
+              {result.weather.avgTempMinC}°–{result.weather.avgTempMaxC}°C · {RAINFALL_LABEL[result.weather.rainfallLevel]} for
+              your dates
+            </span>
+          </div>
+        )}
+
+        {result.coordinates && (
+          <div className="overflow-hidden rounded-md border border-rule">
+            <iframe
+              src={osmEmbedUrl(result.coordinates.lat, result.coordinates.lng)}
+              className="h-40 w-full"
+              loading="lazy"
+              title={`Map of ${result.name}, ${result.country}`}
+            />
+            <a
+              href={osmLink(result.coordinates.lat, result.coordinates.lng)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block bg-surface px-3 py-1.5 text-center text-xs text-accent hover:underline"
+            >
+              Open larger map
+            </a>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           {(Object.keys(links) as (keyof typeof links)[]).map((category) => (

@@ -1,6 +1,7 @@
 export * from "./types";
 export { destinations } from "./destinations";
 export { originBaseCosts, destinationBaseStayCosts } from "./destinations/originBaseCosts";
+export { destinationCoordinates } from "./destinations/coordinates";
 export { generatePriceSnapshotsForDestination, generateAllPriceSnapshots } from "./priceSnapshots";
 export { getRecommendations } from "./recommend";
 export type { RecommendationInput, ScoredDestination, CostBreakdown } from "./recommend";

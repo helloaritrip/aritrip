@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   destinations,
+  destinationCoordinates,
   generateAllPriceSnapshots,
   getRecommendations,
   ORIGIN_HUBS,
@@ -54,23 +55,34 @@ export async function POST(request: Request) {
     priceSnapshots
   );
 
+  // Mismo mes que usa el motor para Season Fit (ver recommend.ts) — acá se
+  // reexpone como texto/temperatura real para el usuario, no un placeholder.
+  const month = new Date(startDate).getMonth() + 1;
+
   return NextResponse.json({
-    recommendations: results.map((r) => ({
-      destinationId: r.destination.id,
-      destinationAirportCode: r.destination.airportCodes[0],
-      name: r.destination.name,
-      country: r.destination.country,
-      totalEstimatedCostUSD: Math.round(r.totalEstimatedCostUSD),
-      costBreakdown: {
-        flightUSD: Math.round(r.costBreakdown.flightUSD),
-        hotelUSD: Math.round(r.costBreakdown.hotelUSD),
-        activitiesUSD: Math.round(r.costBreakdown.activitiesUSD),
-      },
-      finalScore: r.finalScore,
-      subScores: r.subScores,
-      reasons: r.reasons,
-      rank: r.rank,
-      imageQuery: r.destination.imageQuery,
-    })),
+    recommendations: results.map((r) => {
+      const season = r.destination.seasons.find((s) => s.months.includes(month));
+      return {
+        destinationId: r.destination.id,
+        destinationAirportCode: r.destination.airportCodes[0],
+        name: r.destination.name,
+        country: r.destination.country,
+        totalEstimatedCostUSD: Math.round(r.totalEstimatedCostUSD),
+        costBreakdown: {
+          flightUSD: Math.round(r.costBreakdown.flightUSD),
+          hotelUSD: Math.round(r.costBreakdown.hotelUSD),
+          activitiesUSD: Math.round(r.costBreakdown.activitiesUSD),
+        },
+        finalScore: r.finalScore,
+        subScores: r.subScores,
+        reasons: r.reasons,
+        rank: r.rank,
+        imageQuery: r.destination.imageQuery,
+        weather: season
+          ? { avgTempMinC: season.avgTempC.min, avgTempMaxC: season.avgTempC.max, rainfallLevel: season.rainfallLevel }
+          : null,
+        coordinates: destinationCoordinates[r.destination.id] ?? null,
+      };
+    }),
   });
 }
