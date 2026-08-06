@@ -56,10 +56,23 @@ const initialState: FormState = {
   interests: [],
 };
 
+type RecommendationResult = {
+  destinationId: string;
+  name: string;
+  country: string;
+  totalEstimatedCostUSD: number;
+  finalScore: number;
+  reasons: string[];
+  rank: number;
+};
+
+type SearchStatus = "idle" | "loading" | "done" | "error";
+
 export function SearchForm() {
   const [form, setForm] = useState<FormState>(initialState);
-  const [submitted, setSubmitted] = useState<FormState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<SearchStatus>("idle");
+  const [results, setResults] = useState<RecommendationResult[]>([]);
 
   function toggleInterest(tag: InterestTag) {
     setForm((f) => ({
@@ -68,12 +81,13 @@ export function SearchForm() {
     }));
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
 
-    const budget = Number(form.budgetUSD);
+    const budgetUSD = Number(form.budgetUSD);
     const adults = Number(form.adults);
+    const children = Number(form.children || "0");
 
     if (!form.startDate || !form.endDate) {
       setError("Pick your travel dates.");
@@ -83,7 +97,7 @@ export function SearchForm() {
       setError("Return date must be after the departure date.");
       return;
     }
-    if (!budget || budget <= 0) {
+    if (!budgetUSD || budgetUSD <= 0) {
       setError("Enter a budget greater than $0.");
       return;
     }
@@ -96,7 +110,32 @@ export function SearchForm() {
       return;
     }
 
-    setSubmitted(form);
+    setStatus("loading");
+    try {
+      const res = await fetch("/api/recommendations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          originAirportCode: form.originAirportCode,
+          budgetUSD,
+          startDate: form.startDate,
+          endDate: form.endDate,
+          adults,
+          children,
+          interests: form.interests,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Request failed (${res.status})`);
+      }
+      const data: { recommendations: RecommendationResult[] } = await res.json();
+      setResults(data.recommendations);
+      setStatus("done");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setStatus("error");
+    }
   }
 
   return (
@@ -174,30 +213,49 @@ export function SearchForm() {
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-        <Button type="submit">Find my trip</Button>
+        <Button type="submit" disabled={status === "loading"}>
+          {status === "loading" ? "Searching..." : "Find my trip"}
+        </Button>
       </form>
 
-      {submitted && (
-        <div className="rounded-lg border border-accent bg-surface p-5 text-sm">
-          <p className="mb-2 font-medium text-accent">Search captured — here&apos;s what you&apos;re planning:</p>
-          <ul className="flex flex-col gap-1 text-muted">
-            <li>From {ORIGIN_LABELS[submitted.originAirportCode]}</li>
-            <li>Budget: ${Number(submitted.budgetUSD).toLocaleString()} total</li>
-            <li>
-              {submitted.startDate} → {submitted.endDate}
-            </li>
-            <li>
-              {submitted.adults} adult{Number(submitted.adults) !== 1 ? "s" : ""}
-              {Number(submitted.children) > 0 ? `, ${submitted.children} children` : ""}
-            </li>
-            <li>Interests: {submitted.interests.join(", ")}</li>
-          </ul>
-          <p className="mt-3 text-xs text-muted">
-            The recommendation engine isn&apos;t built yet (Sprint 3) — this just confirms the form
-            captures everything it needs to.
-          </p>
+      {status === "done" && results.length === 0 && (
+        <div className="rounded-lg border border-rule bg-surface p-5 text-sm text-muted">
+          No destinations fit that budget for those dates yet — our catalog is still growing (12 of the
+          30-50 destinations planned). Try a higher budget or different dates.
         </div>
       )}
+
+      {status === "done" && results.length > 0 && (
+        <div className="flex flex-col gap-3">
+          {results.map((r) => (
+            <ResultCard key={r.destinationId} result={r} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ResultCard({ result }: { result: RecommendationResult }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-rule bg-surface p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted">#{result.rank}</p>
+          <h3 className="text-lg font-semibold text-ink">
+            {result.name}, {result.country}
+          </h3>
+        </div>
+        <div className="text-right">
+          <p className="text-lg font-semibold text-accent">${result.totalEstimatedCostUSD.toLocaleString()}</p>
+          <p className="text-xs text-muted">total estimated</p>
+        </div>
+      </div>
+      <ul className="flex flex-col gap-1 text-sm text-muted">
+        {result.reasons.map((reason, i) => (
+          <li key={i}>• {reason}</li>
+        ))}
+      </ul>
     </div>
   );
 }

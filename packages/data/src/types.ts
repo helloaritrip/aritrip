@@ -149,6 +149,7 @@ export interface Recommendation {
     activitiesMatch: number;
     seasonFit: number;
     travelTime: number;
+    valueRating: number;
   };
   finalScore: number;
   rank: number; // 1-5
