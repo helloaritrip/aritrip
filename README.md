@@ -44,7 +44,7 @@ npm run build       # build de producción de apps/app
 
 1. **Cloudflare**: `cd apps/app && npx wrangler login`, después `npm run preview` (prueba local en runtime de Workers) o `npm run deploy` (deploy real).
 2. **Firebase/Firestore**: `firebase login`, después `firebase projects:create` (o `firebase use --add` si ya existe un proyecto) para reemplazar el placeholder `REPLACE_WITH_REAL_FIREBASE_PROJECT_ID` en `.firebaserc`. Después `firebase deploy --only firestore:rules,firestore:indexes`.
-3. **GitHub remoto**: no hay `gh` CLI instalado en este entorno — crear el repo manualmente en GitHub y `git remote add origin <url>`, o instalar `gh` (`winget install GitHub.cli`) para hacerlo desde acá.
+3. **GitHub remoto**: `gh` CLI ya está instalado. Correr `gh auth login` (interactivo, requiere navegador), después `gh repo create travel-package-builder --private --source=. --remote=origin` y `git push -u origin master`.
 
 ## Nota técnica
 
