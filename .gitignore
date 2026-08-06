@@ -4,6 +4,8 @@ node_modules/
 .wrangler/
 .open-next/
 cloudflare-env.d.ts
+worker-configuration.d.ts
+.astro/
 .env
 .env.local
 *.log

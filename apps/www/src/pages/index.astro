@@ -1,0 +1,84 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { Button } from "@travel-package-builder/ui";
+import { destinations, ORIGIN_HUBS } from "@travel-package-builder/data";
+
+// Cuenta real del catálogo, no un número fijo que se desactualiza — mismo
+// error que ya corregimos dos veces en apps/app.
+const destinationCount = destinations.length;
+const originCount = ORIGIN_HUBS.length;
+
+const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
+
+const steps = [
+  {
+    title: "Tell us your budget",
+    body: "Origin, total budget, dates, travelers, and what you're into. Takes under a minute.",
+  },
+  {
+    title: "See what actually fits",
+    body: "Real flight, hotel, and activity costs — not just a flight price. Ranked by how well each destination fits you, not by who pays the highest commission.",
+  },
+  {
+    title: "Book directly",
+    body: "Every result links straight to real flight, hotel, and activity searches. No new account, no middleman booking flow.",
+  },
+];
+---
+
+<Layout
+  title="Travel Package Builder — Find the best trip you can take on your budget"
+  description="Tell us your budget and we'll show you which destinations actually fit — real flight, hotel, and activity costs, not just a flight price."
+>
+  <main class="mx-auto flex max-w-5xl flex-col gap-24 px-6 py-20">
+    <section class="flex flex-col items-center gap-6 text-center">
+      <p class="text-sm font-medium uppercase tracking-wide text-accent">Travel Package Builder</p>
+      <h1 class="max-w-2xl text-4xl font-semibold text-balance text-ink sm:text-5xl">
+        Find the best trip you can take on your budget.
+      </h1>
+      <p class="max-w-xl text-lg text-muted">
+        Not the cheapest flight. Not a random destination. The trip that actually fits what you have
+        to spend — flight, hotel, and activities included.
+      </p>
+      <Button href={APP_URL} className="px-6 py-3 text-base">
+        Start planning →
+      </Button>
+    </section>
+
+    <section class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+      {
+        steps.map((step, i) => (
+          <div class="flex flex-col gap-2 rounded-lg border border-rule bg-surface p-6">
+            <p class="text-xs font-medium uppercase tracking-wide text-muted">Step {i + 1}</p>
+            <h2 class="text-lg font-semibold text-ink">{step.title}</h2>
+            <p class="text-sm text-muted">{step.body}</p>
+          </div>
+        ))
+      }
+    </section>
+
+    <section class="flex flex-col items-center gap-6 rounded-lg border border-rule bg-surface px-6 py-10 text-center">
+      <div class="grid grid-cols-2 gap-8 sm:grid-cols-2">
+        <div>
+          <p class="text-3xl font-semibold text-accent">{destinationCount}</p>
+          <p class="text-sm text-muted">destinations, and growing</p>
+        </div>
+        <div>
+          <p class="text-3xl font-semibold text-accent">{originCount}</p>
+          <p class="text-sm text-muted">cities you can fly from</p>
+        </div>
+      </div>
+      <Button href={APP_URL} variant="secondary">
+        See where you can go
+      </Button>
+    </section>
+
+    <footer class="flex flex-col items-center gap-2 text-center text-xs text-muted">
+      <p>Some links on this site are affiliate links. We may earn a commission at no extra cost to you.</p>
+      <div class="flex gap-4">
+        <a href={`${APP_URL}/privacy`} class="hover:text-ink">Privacy</a>
+        <a href={`${APP_URL}/terms`} class="hover:text-ink">Terms</a>
+      </div>
+    </footer>
+  </main>
+</Layout>

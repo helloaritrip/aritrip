@@ -9,6 +9,8 @@
     "dev": "npm run dev --workspace=apps/app",
     "build": "npm run build --workspace=apps/app",
     "lint": "npm run lint --workspace=apps/app",
+    "dev:www": "npm run dev --workspace=apps/www",
+    "build:www": "npm run build --workspace=apps/www",
     "data:typecheck": "npm run typecheck --workspace=packages/data",
     "data:seed:dry-run": "npm run seed:dry-run --workspace=packages/data",
     "data:seed": "npm run seed --workspace=packages/data",

@@ -1,6 +1,6 @@
 # Travel Package Builder
 
-Plataforma de planificación de viajes por presupuesto. En vez de preguntar "¿a dónde querés viajar?", pregunta presupuesto/origen/fechas/intereses y devuelve los mejores destinos con el paquete completo (vuelo + hotel + actividades + seguro + eSIM) listo para reservar vía afiliados.
+Plataforma de planificación de viajes por presupuesto. En vez de preguntar "¿a dónde querés viajar?", pregunta presupuesto/origen/fechas/intereses y devuelve los mejores destinos con el paquete completo (vuelo + hotel + actividades) listo para reservar vía afiliados.
 
 ## Documentos de arquitectura (Sprint -1, cerrada)
 
@@ -16,40 +16,45 @@ Plataforma de planificación de viajes por presupuesto. En vez de preguntar "¿a
 
 ```
 apps/
-  app/      Next.js (App Router) — formulario, motor de recomendación, futuro dashboard. app.travelbuilder.com
-  www/      Astro — se crea en Sprint 1+, cuando exista contenido real para SEO. www.travelbuilder.com
+  app/      Next.js 16 (App Router) — formulario, motor de recomendación, resultados, CTAs de afiliados. app.travelbuilder.com
+  www/      Astro — landing/marketing/SEO. www.travelbuilder.com (ver apps/www/README.md)
 packages/
   ui/       Componentes React + Tailwind y tokens de diseño (claro/oscuro), compartidos por ambos frontends
+  data/     Tipos, catálogo de 30 destinos curados, motor de recomendación (fórmula v0), scripts de seed
 ```
 
-## Estado — Sprint 0 (fundación)
+## Estado
 
-- [x] Monorepo con npm workspaces
-- [x] `apps/app`: Next.js 16 + TypeScript + Tailwind v4, build y dev verificados
-- [x] `packages/ui`: tokens claro/oscuro + componente `Button` de ejemplo, consumido por `apps/app`
-- [x] Deploy a Cloudflare Workers configurado (`@opennextjs/cloudflare`), build local verificado
-- [x] Skeleton de Firestore (`firestore.rules` cerrado por defecto — todo el acceso pasa por Workers, no por cliente)
-- [ ] `apps/www` (Astro) — se crea en Sprint 1+
+- [x] Sprints 0-5 completos (fundación, catálogo, formulario, motor de recomendación, resultados, CTAs de afiliados + tracking placeholder)
+- [x] Sprint 6 parcial: páginas legales (`/privacy`, `/terms`), footer, fix de QA mobile
+- [x] Catálogo: 30 destinos, 24 hubs de origen (incluye Panamá — fuera del scope US/CA/MX original, agregado porque es donde vive el fundador)
+- [x] `apps/www` (Astro) — landing real con stats en vivo del catálogo, deploy a Cloudflare configurado
 - [ ] Deploy real y proyecto Firestore real — requieren login interactivo (ver abajo)
+- [ ] Puck (editor visual de contenido) — todavía no integrado, decisión pendiente
+- [ ] Ampliar catálogo hacia 40-50 destinos (30 es el mínimo del rango, no el objetivo final)
 
 ## Correr localmente
 
 ```bash
 npm install
-npm run dev        # apps/app en http://localhost:3000
-npm run build       # build de producción de apps/app
+npm run dev          # apps/app en http://localhost:3000
+npm run build        # build de producción de apps/app
+
+npm run build:www    # build de apps/www
+cd apps/www && npx astro preview   # sirve el build real (ver nota de astro dev abajo)
 ```
 
 ## Pasos manuales pendientes (requieren tu cuenta, no se pueden automatizar)
 
-1. **Cloudflare**: `cd apps/app && npx wrangler login`, después `npm run preview` (prueba local en runtime de Workers) o `npm run deploy` (deploy real).
+1. **Cloudflare**: `cd apps/app && npx wrangler login` (sirve para ambas apps), después `npm run preview`/`npm run deploy` en `apps/app`, o `npx wrangler deploy` en `apps/www`.
 2. **Firebase/Firestore**: `firebase login`, después `firebase projects:create` (o `firebase use --add` si ya existe un proyecto) para reemplazar el placeholder `REPLACE_WITH_REAL_FIREBASE_PROJECT_ID` en `.firebaserc`. Después `firebase deploy --only firestore:rules,firestore:indexes`.
 3. **GitHub remoto**: `gh` CLI ya está instalado. Correr `gh auth login` (interactivo, requiere navegador), después `gh repo create travel-package-builder --private --source=. --remote=origin` y `git push -u origin master`.
 
-## Nota técnica
+## Notas técnicas (Windows)
 
-`@opennextjs/cloudflare` advierte que no es 100% compatible con Windows (recomienda WSL para uso prolongado). El build local funcionó igual en este entorno; si aparecen fallas impredecibles al iterar, correr desde WSL es la solución recomendada por la propia herramienta.
+- `@opennextjs/cloudflare` (apps/app) advierte que no es 100% compatible con Windows. El build funciona igual; si aparecen fallas al iterar, correr desde WSL es la solución recomendada por la herramienta.
+- `astro dev` (apps/www) falla en este entorno con `require is not defined` — bug del runtime de Workers que el adaptador de Cloudflare emula localmente, no de nuestro código. `astro build` + `astro preview` funcionan sin problema (el sitio es 100% estático). Ver `apps/www/README.md`.
 
 ## Próximo paso
 
-Sprint 1: modelo de datos en Firestore + catálogo de 30-50 destinos curados (ficha completa por destino, ver Travel Intelligence Database) para los 8 hubs de origen del MVP.
+Elegir entre: ampliar el catálogo hacia 40-50 destinos, integrar Puck en `apps/www` para edición visual de contenido, o resolver los logins pendientes para tener un deploy real.
