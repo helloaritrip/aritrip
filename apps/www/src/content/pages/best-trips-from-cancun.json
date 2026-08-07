@@ -12,7 +12,7 @@
         "heading": "Best trips from Cancún on a budget",
         "subheading": "Real flight, hotel, and activity costs for the destinations that actually fit what you have to spend — flying out of CUN.",
         "ctaLabel": "Find your trip",
-        "ctaHref": "https://app.aritrips.com",
+        "ctaHref": "https://app.aritrips.com/?origin=CUN",
         "backgroundImageQuery": "cancun hotel zone aerial beach"
       }
     },
@@ -68,7 +68,7 @@
         "heading": "See prices for your exact dates",
         "subheading": "Tell us your budget and travel dates, and we'll show you what actually fits — from CUN.",
         "ctaLabel": "Start planning",
-        "ctaHref": "https://app.aritrips.com"
+        "ctaHref": "https://app.aritrips.com/?origin=CUN"
       }
     }
   ]

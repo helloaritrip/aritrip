@@ -48,6 +48,12 @@ for (const hub of ORIGIN_HUBS as readonly OriginHub[]) {
 
   const cheapest = [...picks].sort((a, b) => a.estimatedFromUSD - b.estimatedFromUSD)[0];
 
+  // ?origin= preselecciona el hub en el Combobox del formulario real
+  // (apps/app/src/components/SearchForm.tsx) — alguien que entra desde
+  // "Best trips from Atlanta" no debería tener que volver a elegir
+  // Atlanta a mano.
+  const appUrlWithOrigin = `${APP_URL}/?origin=${hub}`;
+
   const intro =
     `Flying out of ${hub}, a trip to ${cheapest.name} can start around $${cheapest.estimatedFromUSD.toLocaleString()} ` +
     `for flight, hotel, and activities together — not just the flight. Here's what actually gives ${city} travelers ` +
@@ -63,7 +69,7 @@ for (const hub of ORIGIN_HUBS as readonly OriginHub[]) {
           heading: `Best trips from ${city} on a budget`,
           subheading: `Real flight, hotel, and activity costs for the destinations that actually fit what you have to spend — flying out of ${hub}.`,
           ctaLabel: "Find your trip",
-          ctaHref: APP_URL,
+          ctaHref: appUrlWithOrigin,
           backgroundImageQuery: ORIGIN_IMAGE_QUERY[hub],
         },
       },
@@ -100,7 +106,7 @@ for (const hub of ORIGIN_HUBS as readonly OriginHub[]) {
           heading: "See prices for your exact dates",
           subheading: `Tell us your budget and travel dates, and we'll show you what actually fits — from ${hub}.`,
           ctaLabel: "Start planning",
-          ctaHref: APP_URL,
+          ctaHref: appUrlWithOrigin,
         },
       },
     ],

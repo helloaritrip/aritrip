@@ -1,11 +1,24 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { TextInput, Combobox, Chip, Button } from "@aritrips/ui";
-import { destinations, type OriginHub, type InterestTag } from "@aritrips/data";
+import { destinations, ORIGIN_HUBS, DEFAULT_ORIGIN_HUB, type OriginHub, type InterestTag } from "@aritrips/data";
 import { ResultCard, type RecommendationResult, type TripContext } from "./ResultCard";
 import { ORIGIN_OPTIONS } from "@/lib/originLabels";
 import { trackEvent } from "@/lib/trackEvent";
+
+// Google Flights limita a 9 pasajeros por búsqueda; KAYAK permite hasta 9
+// adultos + 7 niños — referencia real de la industria, no un número
+// arbitrario (investigado 2026-08-07 a pedido del usuario).
+const MAX_ADULTS = 9;
+const MAX_CHILDREN = 8;
+
+function clampedNumberInput(raw: string, max: number): string {
+  if (raw === "") return raw;
+  const n = Number(raw);
+  if (Number.isNaN(n)) return raw;
+  return n > max ? String(max) : raw;
+}
 
 const INTEREST_OPTIONS: { value: InterestTag; label: string }[] = [
   { value: "beach", label: "Beach" },
@@ -29,11 +42,11 @@ type FormState = {
 };
 
 const initialState: FormState = {
-  originAirportCode: "DFW",
+  originAirportCode: DEFAULT_ORIGIN_HUB,
   budgetUSD: "",
   startDate: "",
   endDate: "",
-  adults: "2",
+  adults: "1",
   children: "0",
   interests: [],
 };
@@ -46,6 +59,30 @@ export function SearchForm() {
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [results, setResults] = useState<RecommendationResult[]>([]);
   const [tripContext, setTripContext] = useState<TripContext | null>(null);
+
+  // Origen por defecto: ya no siempre Dallas. Prioridad: 1) ?origin=XXX en
+  // la URL (viene de los links "Find your trip" de las páginas por ciudad
+  // en apps/www, ej. best-trips-from-atlanta linkea con ?origin=ATL) — si
+  // está, ni siquiera hace falta geo-detectar. 2) si no hay override,
+  // reusa la misma detección por IP que ya usa /api/discover (gratis, sin
+  // permiso del navegador). Si ninguna de las dos aplica, se queda con
+  // DEFAULT_ORIGIN_HUB del estado inicial.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const originParam = params.get("origin");
+    if (originParam && (ORIGIN_HUBS as readonly string[]).includes(originParam)) {
+      setForm((f) => ({ ...f, originAirportCode: originParam as OriginHub }));
+      return;
+    }
+    fetch("/api/discover")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data: { originAirportCode: OriginHub }) => {
+        setForm((f) => ({ ...f, originAirportCode: data.originAirportCode }));
+      })
+      .catch(() => {
+        // sin señal de geo — se queda con DEFAULT_ORIGIN_HUB, no es un error visible
+      });
+  }, []);
 
   function toggleInterest(tag: InterestTag) {
     setForm((f) => ({
@@ -76,6 +113,14 @@ export function SearchForm() {
     }
     if (!adults || adults < 1) {
       setError("At least 1 adult is required.");
+      return;
+    }
+    if (adults > MAX_ADULTS) {
+      setError(`Max ${MAX_ADULTS} adults per search.`);
+      return;
+    }
+    if (children > MAX_CHILDREN) {
+      setError(`Max ${MAX_CHILDREN} children per search.`);
       return;
     }
     if (form.interests.length === 0) {
@@ -128,17 +173,7 @@ export function SearchForm() {
           options={ORIGIN_OPTIONS}
         />
 
-        <TextInput
-          label="Total budget (USD)"
-          name="budget"
-          type="number"
-          min={0}
-          placeholder="2000"
-          value={form.budgetUSD}
-          onChange={(e) => setForm((f) => ({ ...f, budgetUSD: e.target.value }))}
-        />
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <TextInput
             label="Departure date"
             name="startDate"
@@ -155,24 +190,36 @@ export function SearchForm() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <TextInput
             label="Adults"
             name="adults"
             type="number"
             min={1}
+            max={MAX_ADULTS}
             value={form.adults}
-            onChange={(e) => setForm((f) => ({ ...f, adults: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, adults: clampedNumberInput(e.target.value, MAX_ADULTS) }))}
           />
           <TextInput
             label="Children"
             name="children"
             type="number"
             min={0}
+            max={MAX_CHILDREN}
             value={form.children}
-            onChange={(e) => setForm((f) => ({ ...f, children: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, children: clampedNumberInput(e.target.value, MAX_CHILDREN) }))}
           />
         </div>
+
+        <TextInput
+          label="Total budget (USD)"
+          name="budget"
+          type="number"
+          min={0}
+          placeholder="2000"
+          value={form.budgetUSD}
+          onChange={(e) => setForm((f) => ({ ...f, budgetUSD: e.target.value }))}
+        />
 
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium text-ink">What are you looking for?</span>

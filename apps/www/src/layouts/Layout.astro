@@ -24,6 +24,13 @@ const { title, description, showAdRails = false } = Astro.props;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    {/* Google AdSense — verificación de sitio (2026-08-07). No es un secreto,
+       va público en el HTML de cualquier sitio con AdSense. */}
+    <script
+      async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7378357249241251"
+      crossorigin="anonymous"
+    ></script>
   </head>
   <body class="min-h-screen bg-bg text-ink antialiased">
     {
