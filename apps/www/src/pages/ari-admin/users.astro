@@ -1,6 +1,6 @@
 ---
 import { env } from "cloudflare:workers";
-import "../../styles/global.css";
+import AdminLayout from "../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../lib/requireAdminSession";
 import { listDocuments } from "@aritrips/data";
 
@@ -28,114 +28,102 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
 }
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex, nofollow" />
-    <title>Admins — AriTrips Admin</title>
-  </head>
-  <body class="min-h-screen bg-bg text-ink antialiased">
-    <div class="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12">
-      <div class="flex items-center justify-between">
-        <div>
-          <a href="/ari-admin" class="text-sm text-muted hover:text-accent">&larr; Dashboard</a>
-          <h1 class="text-2xl font-semibold text-ink">Admins</h1>
-          <p class="text-sm text-muted">Who can log into this panel.</p>
-        </div>
-      </div>
-
-      {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
-
-      <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
-        {
-          admins.map((a) => (
-            <div class="flex items-center justify-between gap-3 p-4">
-              <div>
-                <p class="text-sm font-medium text-ink">{String(a.email ?? a.id)}</p>
-                {typeof a.createdAt === "string" && <p class="text-xs text-muted">Added {new Date(a.createdAt).toLocaleDateString()}</p>}
-              </div>
-              <button
-                type="button"
-                data-delete-email={String(a.email ?? a.id)}
-                class="delete-admin-btn rounded-md border border-rule px-3 py-1.5 text-xs text-ink hover:border-red-500 hover:text-red-600"
-              >
-                Remove
-              </button>
-            </div>
-          ))
-        }
-        {admins.length === 0 && !loadError && <p class="p-4 text-sm text-muted">No admins yet.</p>}
-      </div>
-
-      <form id="add-admin-form" class="flex flex-col gap-4 rounded-lg border border-rule bg-surface p-6">
-        <h2 class="text-base font-semibold text-ink">Add an admin</h2>
-        <label class="flex flex-col gap-1.5 text-sm">
-          <span class="font-medium text-ink">Email</span>
-          <input
-            type="email"
-            name="email"
-            required
-            class="rounded-md border border-rule bg-surface px-3 py-2 text-ink focus:outline focus:outline-2 focus:outline-accent"
-          />
-        </label>
-        <label class="flex flex-col gap-1.5 text-sm">
-          <span class="font-medium text-ink">Password (min. 8 characters)</span>
-          <input
-            type="password"
-            name="password"
-            required
-            minlength="8"
-            class="rounded-md border border-rule bg-surface px-3 py-2 text-ink focus:outline focus:outline-2 focus:outline-accent"
-          />
-        </label>
-        <p id="add-admin-error" class="hidden text-sm text-red-600 dark:text-red-400"></p>
-        <button
-          type="submit"
-          class="self-start rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90"
-        >
-          Add admin
-        </button>
-      </form>
+<AdminLayout title="Admins — AriTrips Admin" session={session} active="admins">
+  <div class="flex max-w-2xl flex-col gap-8">
+    <div>
+      <h1 class="text-2xl font-semibold text-ink">Admins</h1>
+      <p class="text-sm text-muted">Who can log into this panel.</p>
     </div>
 
-    <script>
-      const form = document.getElementById("add-admin-form") as HTMLFormElement;
-      const errorEl = document.getElementById("add-admin-error") as HTMLParagraphElement;
+    {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
 
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        errorEl.classList.add("hidden");
-        const formData = new FormData(form);
-        const res = await fetch("/api/admin/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: formData.get("email"), password: formData.get("password") }),
-        });
-        if (res.ok) {
-          window.location.reload();
-          return;
-        }
+    <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+      {
+        admins.map((a) => (
+          <div class="flex items-center justify-between gap-3 p-4">
+            <div>
+              <p class="text-sm font-medium text-ink">{String(a.email ?? a.id)}</p>
+              {typeof a.createdAt === "string" && <p class="text-xs text-muted">Added {new Date(a.createdAt).toLocaleDateString()}</p>}
+            </div>
+            <button
+              type="button"
+              data-delete-email={String(a.email ?? a.id)}
+              class="delete-admin-btn rounded-md border border-rule px-3 py-1.5 text-xs text-ink hover:border-red-500 hover:text-red-600"
+            >
+              Remove
+            </button>
+          </div>
+        ))
+      }
+      {admins.length === 0 && !loadError && <p class="p-4 text-sm text-muted">No admins yet.</p>}
+    </div>
+
+    <form id="add-admin-form" class="flex flex-col gap-4 rounded-lg border border-rule bg-surface p-6">
+      <h2 class="text-base font-semibold text-ink">Add an admin</h2>
+      <label class="flex flex-col gap-1.5 text-sm">
+        <span class="font-medium text-ink">Email</span>
+        <input
+          type="email"
+          name="email"
+          required
+          class="rounded-md border border-rule bg-surface px-3 py-2 text-ink focus:outline focus:outline-2 focus:outline-accent"
+        />
+      </label>
+      <label class="flex flex-col gap-1.5 text-sm">
+        <span class="font-medium text-ink">Password (min. 8 characters)</span>
+        <input
+          type="password"
+          name="password"
+          required
+          minlength="8"
+          class="rounded-md border border-rule bg-surface px-3 py-2 text-ink focus:outline focus:outline-2 focus:outline-accent"
+        />
+      </label>
+      <p id="add-admin-error" class="hidden text-sm text-red-600 dark:text-red-400"></p>
+      <button
+        type="submit"
+        class="self-start rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90"
+      >
+        Add admin
+      </button>
+    </form>
+  </div>
+</AdminLayout>
+
+<script>
+  const form = document.getElementById("add-admin-form") as HTMLFormElement;
+  const errorEl = document.getElementById("add-admin-error") as HTMLParagraphElement;
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorEl.classList.add("hidden");
+    const formData = new FormData(form);
+    const res = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: formData.get("email"), password: formData.get("password") }),
+    });
+    if (res.ok) {
+      window.location.reload();
+      return;
+    }
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    errorEl.textContent = data.error || "Couldn't add admin.";
+    errorEl.classList.remove("hidden");
+  });
+
+  document.querySelectorAll<HTMLButtonElement>(".delete-admin-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const email = btn.dataset.deleteEmail;
+      if (!email) return;
+      if (!window.confirm(`Remove ${email} from the admin panel?`)) return;
+      const res = await fetch(`/api/admin/users?email=${encodeURIComponent(email)}`, { method: "DELETE" });
+      if (res.ok) {
+        window.location.reload();
+      } else {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        errorEl.textContent = data.error || "Couldn't add admin.";
-        errorEl.classList.remove("hidden");
-      });
-
-      document.querySelectorAll<HTMLButtonElement>(".delete-admin-btn").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const email = btn.dataset.deleteEmail;
-          if (!email) return;
-          if (!window.confirm(`Remove ${email} from the admin panel?`)) return;
-          const res = await fetch(`/api/admin/users?email=${encodeURIComponent(email)}`, { method: "DELETE" });
-          if (res.ok) {
-            window.location.reload();
-          } else {
-            const data = (await res.json().catch(() => ({}))) as { error?: string };
-            window.alert(data.error || "Couldn't remove admin.");
-          }
-        });
-      });
-    </script>
-  </body>
-</html>
+        window.alert(data.error || "Couldn't remove admin.");
+      }
+    });
+  });
+</script>

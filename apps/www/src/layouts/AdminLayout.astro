@@ -1,0 +1,165 @@
+---
+import "../styles/global.css";
+import type { AdminSession } from "@aritrips/data";
+
+// Shell compartido de todo /ari-admin/* (menos login y el editor Puck,
+// que necesita el ancho completo de pantalla) — sidebar fijo con las 11
+// secciones del Backoffice (ver [[project_travel_package_builder]]) y un
+// toggle de tema claro/oscuro (2026-08-07, a pedido explícito del
+// usuario: "en vez de cards quiero... sidebar menu" + "opción de ver ese
+// dashboard en versión light o dark"). El toggle escribe data-theme en
+// <html> y lo persiste en localStorage — packages/ui/tokens.css ya tenía
+// los tokens para data-theme="dark"/"light" preparados, solo faltaba el
+// mecanismo real para escribirlos.
+export interface Props {
+  title: string;
+  session: AdminSession;
+  active?: string | null;
+}
+
+const { title, session, active = null } = Astro.props;
+
+const SECTIONS: { key: string; href?: string; title: string }[] = [
+  { key: "pages", href: "/ari-admin/pages", title: "Pages" },
+  { key: "partners", href: "/ari-admin/partners", title: "Partners" },
+  { key: "admins", href: "/ari-admin/users", title: "Admins" },
+  { key: "travel-rules", title: "Travel Rules" },
+  { key: "travel-profiles", title: "Travel Profiles" },
+  { key: "scoring", title: "Scoring" },
+  { key: "analytics", title: "Analytics" },
+  { key: "ai-logs", title: "AI Logs" },
+  { key: "searches", title: "Searches" },
+  { key: "recommendations", title: "Recommendations" },
+  { key: "settings", title: "Settings" },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title}</title>
+    <script is:inline>
+      // Bloqueante a propósito, antes de pintar — evita el flash de tema
+      // equivocado que se vería si esto corriera en el script de abajo.
+      (function () {
+        try {
+          var stored = localStorage.getItem("ari-admin-theme");
+          if (stored === "light" || stored === "dark") {
+            document.documentElement.setAttribute("data-theme", stored);
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="min-h-screen bg-bg text-ink antialiased">
+    <div class="flex min-h-screen">
+      <aside class="flex w-60 shrink-0 flex-col justify-between border-r border-rule bg-surface px-4 py-6">
+        <div class="flex flex-col gap-6">
+          <a href="/ari-admin" class="flex flex-col gap-0.5">
+            <span class="text-sm font-medium uppercase tracking-wide text-accent">AriTrips</span>
+            <span class="text-lg font-semibold text-ink">Dashboard</span>
+          </a>
+
+          <nav class="flex flex-col gap-1">
+            {
+              SECTIONS.map((s) =>
+                s.href ? (
+                  <a
+                    href={s.href}
+                    class={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      s.key === active ? "bg-accent/10 text-accent" : "text-ink hover:bg-bg"
+                    }`}
+                  >
+                    {s.title}
+                  </a>
+                ) : (
+                  <div class="flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm text-muted opacity-60">
+                    <span>{s.title}</span>
+                    <span class="rounded-full bg-rule/60 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide">
+                      Soon
+                    </span>
+                  </div>
+                )
+              )
+            }
+          </nav>
+        </div>
+
+        <div class="flex flex-col gap-4">
+          <div class="flex items-center gap-1 rounded-md border border-rule p-1" role="group" aria-label="Theme">
+            <button
+              type="button"
+              id="theme-light-btn"
+              data-theme-value="light"
+              class="theme-toggle-btn flex-1 rounded px-2 py-1.5 text-xs font-medium text-muted"
+            >
+              ☀️ Light
+            </button>
+            <button
+              type="button"
+              id="theme-dark-btn"
+              data-theme-value="dark"
+              class="theme-toggle-btn flex-1 rounded px-2 py-1.5 text-xs font-medium text-muted"
+            >
+              🌙 Dark
+            </button>
+          </div>
+
+          <div class="flex flex-col gap-2 border-t border-rule pt-4">
+            <p class="truncate text-xs text-muted" title={session.email}>{session.email}</p>
+            <button
+              id="logout-btn"
+              type="button"
+              class="self-start rounded-md border border-rule px-3 py-1.5 text-xs text-ink hover:border-accent hover:text-accent"
+            >
+              Log out
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <main class="flex-1 overflow-y-auto px-8 py-10">
+        <slot />
+      </main>
+    </div>
+
+    <script>
+      const THEME_KEY = "ari-admin-theme";
+      const lightBtn = document.getElementById("theme-light-btn") as HTMLButtonElement;
+      const darkBtn = document.getElementById("theme-dark-btn") as HTMLButtonElement;
+
+      function currentTheme(): "light" | "dark" {
+        const stored = localStorage.getItem(THEME_KEY);
+        if (stored === "light" || stored === "dark") return stored;
+        return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+
+      function applyActiveStyles(theme: "light" | "dark") {
+        for (const btn of [lightBtn, darkBtn]) {
+          const isActive = btn.dataset.themeValue === theme;
+          btn.classList.toggle("bg-accent", isActive);
+          btn.classList.toggle("text-accent-ink", isActive);
+          btn.classList.toggle("text-muted", !isActive);
+        }
+      }
+
+      function setTheme(theme: "light" | "dark") {
+        document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem(THEME_KEY, theme);
+        applyActiveStyles(theme);
+      }
+
+      applyActiveStyles(currentTheme());
+      lightBtn?.addEventListener("click", () => setTheme("light"));
+      darkBtn?.addEventListener("click", () => setTheme("dark"));
+
+      document.getElementById("logout-btn")?.addEventListener("click", async () => {
+        await fetch("/api/admin/logout", { method: "POST" });
+        window.location.href = "/ari-admin/login";
+      });
+    </script>
+  </body>
+</html>

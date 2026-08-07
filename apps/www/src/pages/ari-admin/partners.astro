@@ -1,6 +1,6 @@
 ---
 import { env } from "cloudflare:workers";
-import "../../styles/global.css";
+import AdminLayout from "../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../lib/requireAdminSession";
 import { listDocuments, PARTNER_CATEGORIES, PARTNER_LABELS, DEFAULT_PARTNER_CONFIG, type PartnerCategory } from "@aritrips/data";
 
@@ -35,92 +35,84 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
 }
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex, nofollow" />
-    <title>Partners — AriTrips Admin</title>
-  </head>
-  <body class="min-h-screen bg-bg text-ink antialiased">
-    <div class="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12">
-      <div>
-        <a href="/ari-admin" class="text-sm text-muted hover:text-accent">&larr; Dashboard</a>
-        <h1 class="text-2xl font-semibold text-ink">Partners</h1>
-        <p class="text-sm text-muted">Affiliate links shown on every result card — changes go live within ~5 minutes, no deploy needed.</p>
-      </div>
-
-      {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
-
-      <div class="flex flex-col gap-4">
-        {
-          PARTNER_CATEGORIES.map((category) => {
-            const entry = config[category];
-            const label = PARTNER_LABELS[category];
-            return (
-              <form class="partner-form flex flex-col gap-3 rounded-lg border border-rule bg-surface p-5" data-category={category}>
-                <div class="flex items-center justify-between">
-                  <h2 class="text-base font-semibold text-ink">{label.name}</h2>
-                  <label class="flex items-center gap-2 text-xs text-muted">
-                    <input type="checkbox" name="active" checked={entry.active} class="h-4 w-4" />
-                    Active
-                  </label>
-                </div>
-                <label class="flex flex-col gap-1.5 text-sm">
-                  <span class="font-medium text-ink">{label.valueLabel}</span>
-                  <input
-                    type="text"
-                    name="value"
-                    value={entry.value}
-                    class="rounded-md border border-rule bg-surface px-3 py-2 font-mono text-xs text-ink focus:outline focus:outline-2 focus:outline-accent"
-                  />
-                  <span class="text-xs text-muted">{label.helpText}</span>
-                </label>
-                <div class="flex items-center gap-3">
-                  <button
-                    type="submit"
-                    class="self-start rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-accent-ink hover:opacity-90"
-                  >
-                    Save
-                  </button>
-                  <span class="save-status text-xs text-muted" />
-                </div>
-              </form>
-            );
-          })
-        }
-      </div>
+<AdminLayout title="Partners — AriTrips Admin" session={session} active="partners">
+  <div class="flex max-w-2xl flex-col gap-8">
+    <div>
+      <h1 class="text-2xl font-semibold text-ink">Partners</h1>
+      <p class="text-sm text-muted">
+        Affiliate links shown on every result card — changes go live within ~5 minutes, no deploy needed.
+      </p>
     </div>
 
-    <script>
-      document.querySelectorAll<HTMLFormElement>(".partner-form").forEach((form) => {
-        form.addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const statusEl = form.querySelector<HTMLSpanElement>(".save-status")!;
-          const category = form.dataset.category;
-          const formData = new FormData(form);
-          statusEl.textContent = "Saving...";
+    {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
 
-          const res = await fetch("/api/admin/partners", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              category,
-              value: formData.get("value"),
-              active: formData.get("active") === "on",
-            }),
-          });
+    <div class="flex flex-col gap-4">
+      {
+        PARTNER_CATEGORIES.map((category) => {
+          const entry = config[category];
+          const label = PARTNER_LABELS[category];
+          return (
+            <form class="partner-form flex flex-col gap-3 rounded-lg border border-rule bg-surface p-5" data-category={category}>
+              <div class="flex items-center justify-between">
+                <h2 class="text-base font-semibold text-ink">{label.name}</h2>
+                <label class="flex items-center gap-2 text-xs text-muted">
+                  <input type="checkbox" name="active" checked={entry.active} class="h-4 w-4" />
+                  Active
+                </label>
+              </div>
+              <label class="flex flex-col gap-1.5 text-sm">
+                <span class="font-medium text-ink">{label.valueLabel}</span>
+                <input
+                  type="text"
+                  name="value"
+                  value={entry.value}
+                  class="rounded-md border border-rule bg-surface px-3 py-2 font-mono text-xs text-ink focus:outline focus:outline-2 focus:outline-accent"
+                />
+                <span class="text-xs text-muted">{label.helpText}</span>
+              </label>
+              <div class="flex items-center gap-3">
+                <button
+                  type="submit"
+                  class="self-start rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-accent-ink hover:opacity-90"
+                >
+                  Save
+                </button>
+                <span class="save-status text-xs text-muted" />
+              </div>
+            </form>
+          );
+        })
+      }
+    </div>
+  </div>
+</AdminLayout>
 
-          if (res.ok) {
-            statusEl.textContent = "Saved ✓";
-            setTimeout(() => (statusEl.textContent = ""), 2000);
-          } else {
-            const data = (await res.json().catch(() => ({}))) as { error?: string };
-            statusEl.textContent = data.error || "Failed to save.";
-          }
-        });
+<script>
+  document.querySelectorAll<HTMLFormElement>(".partner-form").forEach((form) => {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const statusEl = form.querySelector<HTMLSpanElement>(".save-status")!;
+      const category = form.dataset.category;
+      const formData = new FormData(form);
+      statusEl.textContent = "Saving...";
+
+      const res = await fetch("/api/admin/partners", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category,
+          value: formData.get("value"),
+          active: formData.get("active") === "on",
+        }),
       });
-    </script>
-  </body>
-</html>
+
+      if (res.ok) {
+        statusEl.textContent = "Saved ✓";
+        setTimeout(() => (statusEl.textContent = ""), 2000);
+      } else {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        statusEl.textContent = data.error || "Failed to save.";
+      }
+    });
+  });
+</script>
