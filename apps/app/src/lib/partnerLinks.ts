@@ -1,12 +1,18 @@
 /**
- * Links de afiliados — Fase 1 (MVP): genéricos, no personalizados a la
- * búsqueda con un ID de afiliado, porque todavía no hay ninguna cuenta de
- * partner aprobada (ver Affiliate Integration & API Contracts). Son URLs
- * públicas de búsqueda real de cada proveedor, no enlaces monetizados —
- * el día que se aprueben cuentas, estas mismas funciones son las que
- * cambian para agregar el parámetro de afiliado, no hay que tocar el resto
- * del código (mismo principio que StaticPriceAdapter → adapter real).
+ * Links de afiliados. Vuelos: Kiwi.com vía Travelpayouts, primera cuenta
+ * de afiliado real aprobada (2026-08-07) — reemplaza a Google Flights,
+ * que nunca tuvo programa de afiliados (no pagaba comisión, era solo un
+ * link de búsqueda genérico). El resto de categorías (hotel/actividad/
+ * seguro/eSIM) siguen siendo genéricas hasta que se aprueben esas cuentas
+ * — mismo principio de adapter que el resto del proyecto: cuando se
+ * aprueben, solo cambian estas funciones, no el resto del código.
  */
+
+// Marcador de afiliado real de la cuenta de Travelpayouts (Kiwi.com),
+// generado desde su panel — NO es secreto (va en URLs públicas que se
+// muestran al usuario final), a diferencia de las credenciales de
+// Firestore, que sí lo son.
+const KIWI_AFFILIATE_ID = "travelpayoutsdeeplink_aritrips.com_151b853c366e4bd4acb1c8f5c-761476";
 
 export interface PartnerLinkInput {
   originAirportCode: string;
@@ -29,11 +35,12 @@ export function buildPartnerLinks(input: PartnerLinkInput): PartnerLinks {
   const { originAirportCode, destinationAirportCode, destinationName, startDate, endDate, adults } = input;
   const rooms = Math.ceil(adults / 2);
 
-  const flight = new URL("https://www.google.com/travel/flights");
-  flight.searchParams.set("origin", originAirportCode);
-  flight.searchParams.set("destination", destinationAirportCode);
-  flight.searchParams.set("departure_date", startDate);
-  flight.searchParams.set("return_date", endDate);
+  const flight = new URL("https://www.kiwi.com/deep");
+  flight.searchParams.set("affilid", KIWI_AFFILIATE_ID);
+  flight.searchParams.set("from", originAirportCode);
+  flight.searchParams.set("to", destinationAirportCode);
+  flight.searchParams.set("departure", startDate);
+  flight.searchParams.set("return", endDate);
   flight.searchParams.set("adults", String(adults));
 
   const hotel = new URL("https://www.booking.com/searchresults.html");
