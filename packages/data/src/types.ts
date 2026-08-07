@@ -80,8 +80,12 @@ export interface Destination {
   idealTripLengthDays: { min: number; max: number };
   seasons: Season[];
 
-  // Fase 2 — opcionales hasta que exista fuente de datos confiable
+  // safetyIndex: curado desde advisories públicos (Travel.State.Gov / FCDO),
+  // alimenta Safety Engine (Ari Core v1) — ver recommend.ts. Opcional en el
+  // tipo por robustez (fallback neutral si falta), pero los 40 destinos
+  // activos ya lo tienen curado.
   safetyIndex?: { value: number; source: string; updatedAt: string };
+  // Fase 2 — opcional hasta que exista fuente de datos confiable
   internetQualityIndex?: number;
   avgDailyFoodCostUSD?: number;
   avgLocalTransportCostUSD?: number;
@@ -160,8 +164,10 @@ export interface Recommendation {
     budgetFit: number;
     activitiesMatch: number;
     seasonFit: number;
+    weatherComfort: number;
     travelTime: number;
     valueRating: number;
+    safety: number;
   };
   finalScore: number;
   rank: number; // 1-5

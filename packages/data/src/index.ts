@@ -5,6 +5,7 @@ export { destinationCoordinates } from "./destinations/coordinates";
 export { generatePriceSnapshotsForDestination, generateAllPriceSnapshots } from "./priceSnapshots";
 export { getRecommendations } from "./recommend";
 export type { RecommendationInput, ScoredDestination, CostBreakdown } from "./recommend";
+export { SCORING_WEIGHTS_V1 } from "./scoringWeights";
 export { ORIGIN_HUB_COORDS, DEFAULT_ORIGIN_HUB, nearestOriginHub } from "./originGeo";
 export { getDiscoverPicks, getDiscoverDetail } from "./discover";
 export type { DiscoverSlot, DiscoverPick, DiscoverDetail } from "./discover";

@@ -14,6 +14,7 @@ import type { Destination } from "../types";
 export const destinations: Destination[] = [
   {
     id: "cancun",
+    safetyIndex: { value: 76, source: "US State Dept advisory — Quintana Roo, level 2", updatedAt: "2026-08-07" },
     name: "Cancún",
     country: "México",
     region: "Caribe mexicano",
@@ -52,6 +53,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "puerto-vallarta",
+    safetyIndex: { value: 54, source: "US State Dept advisory — Jalisco, level 3 (zona de resort tratada como más segura en la práctica, sin rebaja oficial)", updatedAt: "2026-08-07" },
     name: "Puerto Vallarta",
     country: "México",
     region: "Pacífico mexicano",
@@ -90,6 +92,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "punta-cana",
+    safetyIndex: { value: 76, source: "US State Dept advisory — República Dominicana, level 2", updatedAt: "2026-08-07" },
     name: "Punta Cana",
     country: "República Dominicana",
     region: "Caribe",
@@ -128,6 +131,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "cabo-san-lucas",
+    safetyIndex: { value: 80, source: "US State Dept advisory — Baja California Sur, level 2 (sin restricciones para empleados de gobierno)", updatedAt: "2026-08-07" },
     name: "Cabo San Lucas",
     country: "México",
     region: "Baja California Sur",
@@ -166,6 +170,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "tulum",
+    safetyIndex: { value: 76, source: "US State Dept advisory — Quintana Roo, level 2", updatedAt: "2026-08-07" },
     name: "Tulum",
     country: "México",
     region: "Caribe mexicano",
@@ -204,6 +209,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "costa-rica-guanacaste",
+    safetyIndex: { value: 76, source: "US State Dept advisory — Costa Rica, level 2", updatedAt: "2026-08-07" },
     name: "Guanacaste (Costa Rica)",
     country: "Costa Rica",
     region: "Centroamérica",
@@ -242,6 +248,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "cartagena",
+    safetyIndex: { value: 52, source: "US State Dept advisory — Colombia, level 3 (fuera de las zonas explícitas de 'no viajar')", updatedAt: "2026-08-07" },
     name: "Cartagena",
     country: "Colombia",
     region: "Caribe colombiano",
@@ -280,6 +287,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "medellin",
+    safetyIndex: { value: 52, source: "US State Dept advisory — Colombia, level 3 (fuera de las zonas explícitas de 'no viajar')", updatedAt: "2026-08-07" },
     name: "Medellín",
     country: "Colombia",
     region: "Andes colombianos",
@@ -316,6 +324,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "cusco",
+    safetyIndex: { value: 80, source: "US State Dept advisory — Perú, level 2 (Cusco/Valle Sagrado/Machu Picchu explícitamente fuera de las zonas de mayor riesgo)", updatedAt: "2026-08-07" },
     name: "Cusco / Valle Sagrado",
     country: "Perú",
     region: "Andes peruanos",
@@ -354,6 +363,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "buenos-aires",
+    safetyIndex: { value: 92, source: "US State Dept advisory — Argentina, level 1", updatedAt: "2026-08-07" },
     name: "Buenos Aires",
     country: "Argentina",
     region: "Cono Sur",
@@ -392,6 +402,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "mexico-city",
+    safetyIndex: { value: 76, source: "US State Dept advisory — Ciudad de México, level 2 (riesgo dominante es hurto/carterismo, no violencia de cárteles)", updatedAt: "2026-08-07" },
     name: "Ciudad de México",
     country: "México",
     region: "Centro de México",
@@ -430,6 +441,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "nassau",
+    safetyIndex: { value: 76, source: "US State Dept advisory — Bahamas, level 2 (zona de riesgo específica es 'Over the Hill', fuera del circuito turístico)", updatedAt: "2026-08-07" },
     name: "Nassau",
     country: "Bahamas",
     region: "Caribe",
@@ -473,6 +485,7 @@ export const destinations: Destination[] = [
 
   {
     id: "panama-city",
+    safetyIndex: { value: 78, source: "US State Dept advisory — Panamá, level 2 (Darién/Golfo de los Mosquitos en level 4, lejos de Ciudad de Panamá)", updatedAt: "2026-08-07" },
     name: "Ciudad de Panamá",
     country: "Panamá",
     region: "Centroamérica",
@@ -510,6 +523,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "roatan",
+    safetyIndex: { value: 58, source: "US State Dept advisory — Honduras, level 3 nacional (Islas de la Bahía consideradas mucho más seguras que el continente, sin rebaja oficial)", updatedAt: "2026-08-07" },
     name: "Roatán",
     country: "Honduras",
     region: "Caribe centroamericano",
@@ -547,6 +561,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "aruba",
+    safetyIndex: { value: 92, source: "US State Dept advisory — Aruba, level 1", updatedAt: "2026-08-07" },
     name: "Aruba",
     country: "Aruba",
     region: "Caribe",
@@ -583,6 +598,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "new-orleans",
+    safetyIndex: { value: 88, source: "Doméstico (EE.UU.) — no aplica advisory del State Dept sobre su propio país", updatedAt: "2026-08-07" },
     name: "Nueva Orleans",
     country: "Estados Unidos",
     region: "Sur de EE.UU.",
@@ -621,6 +637,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "san-diego",
+    safetyIndex: { value: 88, source: "Doméstico (EE.UU.) — no aplica advisory del State Dept sobre su propio país", updatedAt: "2026-08-07" },
     name: "San Diego",
     country: "Estados Unidos",
     region: "Costa oeste de EE.UU.",
@@ -657,6 +674,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "banff",
+    safetyIndex: { value: 92, source: "US State Dept advisory — Canadá, level 1", updatedAt: "2026-08-07" },
     name: "Banff",
     country: "Canadá",
     region: "Montañas Rocosas canadienses",
@@ -695,6 +713,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "oaxaca",
+    safetyIndex: { value: 78, source: "US State Dept advisory — Oaxaca, level 2 (sin restricciones para las zonas turísticas: Oaxaca City, Monte Albán, Puerto Escondido, Huatulco)", updatedAt: "2026-08-07" },
     name: "Oaxaca",
     country: "México",
     region: "Sur de México",
@@ -732,6 +751,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "turks-and-caicos",
+    safetyIndex: { value: 74, source: "US State Dept advisory — Turks y Caicos, level 2 (crimen concentrado en Providenciales, el hub turístico principal)", updatedAt: "2026-08-07" },
     name: "Turks y Caicos",
     country: "Turks y Caicos",
     region: "Caribe",
@@ -770,6 +790,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "montego-bay",
+    safetyIndex: { value: 74, source: "US State Dept advisory — Jamaica, level 2 (bajó de level 3 en enero 2026; nota reciente es por recuperación del huracán Melissa, no crimen)", updatedAt: "2026-08-07" },
     name: "Montego Bay",
     country: "Jamaica",
     region: "Caribe",
@@ -814,6 +835,7 @@ export const destinations: Destination[] = [
 
   {
     id: "las-vegas",
+    safetyIndex: { value: 88, source: "Doméstico (EE.UU.) — no aplica advisory del State Dept sobre su propio país", updatedAt: "2026-08-07" },
     name: "Las Vegas",
     country: "Estados Unidos",
     region: "Suroeste de EE.UU.",
@@ -852,6 +874,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "orlando",
+    safetyIndex: { value: 88, source: "Doméstico (EE.UU.) — no aplica advisory del State Dept sobre su propio país", updatedAt: "2026-08-07" },
     name: "Orlando",
     country: "Estados Unidos",
     region: "Florida, EE.UU.",
@@ -890,6 +913,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "honolulu",
+    safetyIndex: { value: 88, source: "Doméstico (EE.UU.) — no aplica advisory del State Dept sobre su propio país", updatedAt: "2026-08-07" },
     name: "Honolulu",
     country: "Estados Unidos",
     region: "Hawái, EE.UU.",
@@ -927,6 +951,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "quebec-city",
+    safetyIndex: { value: 92, source: "US State Dept advisory — Canadá, level 1", updatedAt: "2026-08-07" },
     name: "Ciudad de Quebec",
     country: "Canadá",
     region: "Quebec, Canadá",
@@ -965,6 +990,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "whistler",
+    safetyIndex: { value: 92, source: "US State Dept advisory — Canadá, level 1", updatedAt: "2026-08-07" },
     name: "Whistler",
     country: "Canadá",
     region: "Columbia Británica, Canadá",
@@ -1003,6 +1029,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "curacao",
+    safetyIndex: { value: 92, source: "US State Dept advisory — Curazao, level 1", updatedAt: "2026-08-07" },
     name: "Curazao",
     country: "Curazao",
     region: "Caribe",
@@ -1039,6 +1066,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "mazatlan",
+    safetyIndex: { value: 42, source: "US State Dept advisory — Sinaloa, level 4 nacional ('Do Not Travel'), con excepción documentada para quien llega por avión/barco y se queda en la zona turística", updatedAt: "2026-08-07" },
     name: "Mazatlán",
     country: "México",
     region: "Pacífico mexicano",
@@ -1077,6 +1105,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "belize",
+    safetyIndex: { value: 82, source: "US State Dept advisory — Belice, level 2 nacional (Belize City Southside en level 3 aparte; San Pedro/Ambergris Caye considerada tranquila)", updatedAt: "2026-08-07" },
     name: "Ambergris Caye",
     country: "Belice",
     region: "Caribe centroamericano",
@@ -1114,6 +1143,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "aspen",
+    safetyIndex: { value: 88, source: "Doméstico (EE.UU.) — no aplica advisory del State Dept sobre su propio país", updatedAt: "2026-08-07" },
     name: "Aspen",
     country: "Estados Unidos",
     region: "Colorado, EE.UU.",
@@ -1161,6 +1191,7 @@ export const destinations: Destination[] = [
 
   {
     id: "rio-de-janeiro",
+    safetyIndex: { value: 70, source: "US State Dept advisory — Brasil, level 2 nacional (con nota explícita de 'no viajar a favelas en ningún momento'; Zona Sur con patrullaje dedicado)", updatedAt: "2026-08-07" },
     name: "Río de Janeiro",
     country: "Brasil",
     region: "Sudeste de Brasil",
@@ -1199,6 +1230,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "san-juan",
+    safetyIndex: { value: 88, source: "Doméstico (territorio de EE.UU.) — no aplica advisory separado", updatedAt: "2026-08-07" },
     name: "San Juan",
     country: "Puerto Rico",
     region: "Caribe (territorio de EE.UU.)",
@@ -1237,6 +1269,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "galapagos",
+    safetyIndex: { value: 86, source: "US State Dept advisory — Ecuador, level 2 nacional (Galápagos fuera de todas las zonas continentales marcadas; descrito como el destino más seguro del país)", updatedAt: "2026-08-07" },
     name: "Islas Galápagos",
     country: "Ecuador",
     region: "Islas Galápagos, Ecuador",
@@ -1274,6 +1307,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "grand-cayman",
+    safetyIndex: { value: 92, source: "US State Dept advisory — Islas Caimán, level 1", updatedAt: "2026-08-07" },
     name: "Gran Caimán",
     country: "Islas Caimán",
     region: "Caribe",
@@ -1312,6 +1346,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "st-lucia",
+    safetyIndex: { value: 72, source: "US State Dept advisory — Santa Lucía, level 2 (subió en julio 2026, con nota de huéspedes de resort victimizados)", updatedAt: "2026-08-07" },
     name: "Santa Lucía",
     country: "Santa Lucía",
     region: "Caribe",
@@ -1350,6 +1385,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "antigua-guatemala",
+    safetyIndex: { value: 64, source: "US State Dept advisory — Guatemala, level 3 nacional (Antigua fuera de las zonas restringidas, con policía turística DISETUR dedicada)", updatedAt: "2026-08-07" },
     name: "Antigua Guatemala",
     country: "Guatemala",
     region: "Centroamérica",
@@ -1387,6 +1423,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "bogota",
+    safetyIndex: { value: 52, source: "US State Dept advisory — Colombia, level 3 (fuera de las zonas explícitas de 'no viajar')", updatedAt: "2026-08-07" },
     name: "Bogotá",
     country: "Colombia",
     region: "Andes colombianos",
@@ -1423,6 +1460,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "nashville",
+    safetyIndex: { value: 88, source: "Doméstico (EE.UU.) — no aplica advisory del State Dept sobre su propio país", updatedAt: "2026-08-07" },
     name: "Nashville",
     country: "Estados Unidos",
     region: "Tennessee, EE.UU.",
@@ -1461,6 +1499,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "guadalajara",
+    safetyIndex: { value: 48, source: "US State Dept advisory — Jalisco, level 3 (capital del estado, sin excepción de zona turística documentada)", updatedAt: "2026-08-07" },
     name: "Guadalajara",
     country: "México",
     region: "Jalisco, México",
@@ -1499,6 +1538,7 @@ export const destinations: Destination[] = [
   },
   {
     id: "iguazu-falls",
+    safetyIndex: { value: 92, source: "US State Dept advisory — Argentina, level 1", updatedAt: "2026-08-07" },
     name: "Cataratas del Iguazú",
     country: "Argentina",
     region: "Misiones, Argentina",

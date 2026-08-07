@@ -5,6 +5,7 @@
  * "prueba" y la "implementación real" diverjan silenciosamente.
  */
 import type { Destination, InterestTag, OriginHub, PriceSnapshot, Recommendation } from "./types";
+import { SCORING_WEIGHTS_V1 } from "./scoringWeights";
 
 export interface RecommendationInput {
   originAirportCode: OriginHub;
@@ -40,6 +41,26 @@ function budgetFit(ratio: number): number {
 
 function seasonFitScore(rainfallLevel: "low" | "medium" | "high"): number {
   return { low: 100, medium: 85, high: 65 }[rainfallLevel];
+}
+
+// Confort de temperatura durante el viaje — deliberadamente NO mira lluvia,
+// para no contar la misma señal dos veces (rainfallLevel ya pesa en Season
+// Fit). Banda ideal 20-28°C sobre el punto medio de la temporada; penaliza
+// por grado de distancia hacia cualquiera de los dos extremos.
+function weatherComfortScore(avgTempC: { min: number; max: number }): number {
+  const mid = (avgTempC.min + avgTempC.max) / 2;
+  const IDEAL_LOW = 20;
+  const IDEAL_HIGH = 28;
+  if (mid >= IDEAL_LOW && mid <= IDEAL_HIGH) return 100;
+  const distance = mid < IDEAL_LOW ? IDEAL_LOW - mid : mid - IDEAL_HIGH;
+  return Math.max(30, Math.round(100 - distance * 6));
+}
+
+// safetyIndex.value viene curado a mano desde advisories públicos (ver
+// destinations/index.ts). Fallback neutral solo por robustez de tipos —
+// los 40 destinos activos ya lo tienen curado.
+function safetyScore(destination: Destination): number {
+  return destination.safetyIndex?.value ?? 70;
 }
 
 function travelTimeScore(durationMin: number, tripDays: number): number {
@@ -108,6 +129,14 @@ function buildReasons(
       text: `Rated as ${destination.valueRating >= 75 ? "excellent" : "good"} overall value`,
       weight: subScores.valueRating,
     },
+    {
+      text: subScores.weatherComfort >= 85 ? "Comfortable temperatures for your trip" : "Weather is manageable, if not ideal",
+      weight: subScores.weatherComfort,
+    },
+    {
+      text: subScores.safety >= 85 ? "Rated as a very safe destination" : "Generally safe — standard travel precautions apply",
+      weight: subScores.safety,
+    },
   ];
   return candidates
     .sort((a, b) => b.weight - a.weight)
@@ -154,16 +183,21 @@ export function getRecommendations(
       budgetFit: Math.round(budgetFit(ratio) * 10) / 10,
       activitiesMatch: Math.round(activitiesMatchScore(destination, input.interests) * 10) / 10,
       seasonFit: seasonFitScore(season.rainfallLevel),
+      weatherComfort: weatherComfortScore(season.avgTempC),
       travelTime: travelTimeScore(snapshot.avgFlightDurationMinutes, tripDays),
       valueRating: destination.valueRating,
+      safety: safetyScore(destination),
     };
 
+    const w = SCORING_WEIGHTS_V1.weights;
     const finalScore =
-      0.2 * subScores.budgetFit +
-      0.25 * subScores.activitiesMatch +
-      0.15 * subScores.seasonFit +
-      0.15 * subScores.travelTime +
-      0.25 * subScores.valueRating;
+      w.budgetFit * subScores.budgetFit +
+      w.activitiesMatch * subScores.activitiesMatch +
+      w.valueRating * subScores.valueRating +
+      w.seasonFit * subScores.seasonFit +
+      w.weatherComfort * subScores.weatherComfort +
+      w.travelTime * subScores.travelTime +
+      w.safety * subScores.safety;
 
     results.push({
       destination,
