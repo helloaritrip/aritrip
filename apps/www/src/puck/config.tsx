@@ -36,6 +36,7 @@ type HeroProps = {
   subheading: string;
   ctaLabel: string;
   ctaHref: string;
+  backgroundImageQuery?: string;
 };
 
 type HeadingProps = {
@@ -127,25 +128,54 @@ export const config: Config<Props> = {
         subheading: { type: "textarea" },
         ctaLabel: { type: "text" },
         ctaHref: { type: "text" },
+        backgroundImageQuery: { type: "text" },
       },
       defaultProps: {
         heading: "Find the best trip you can take on your budget.",
         subheading: "Flight, hotel, and activities — not just a flight price.",
         ctaLabel: "Start planning",
         ctaHref: "/",
+        backgroundImageQuery: "",
       },
-      render: ({ heading, subheading, ctaLabel, ctaHref }) => (
-        <section className="flex flex-col items-center gap-6 px-6 py-20 text-center">
-          <h1 className="max-w-2xl text-4xl font-semibold text-balance text-ink sm:text-5xl">{heading}</h1>
-          <p className="max-w-xl text-lg text-muted">{subheading}</p>
-          <a
-            href={ctaHref}
-            className="inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 text-base font-medium text-accent-ink hover:opacity-90"
+      render: ({ heading, subheading, ctaLabel, ctaHref, backgroundImageQuery }) => {
+        const hasImage = Boolean(backgroundImageQuery);
+        return (
+          <section
+            className={`relative flex flex-col items-center gap-6 overflow-hidden px-6 text-center ${
+              hasImage ? "py-28 sm:py-40" : "py-20"
+            }`}
           >
-            {ctaLabel}
-          </a>
-        </section>
-      ),
+            {hasImage && (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element -- viene del proxy de imágenes propio */}
+                <img
+                  src={imageProxyUrl(backgroundImageQuery, backgroundImageQuery)}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                {/* Degradado oscuro de abajo hacia arriba — más fuerte donde va el texto,
+                    para que el h1/subheading sean legibles sobre cualquier foto sin
+                    necesitar curar el punto de contraste de cada imagen a mano. */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/55 to-black/20" />
+              </>
+            )}
+            <h1
+              className={`relative max-w-2xl text-4xl font-semibold text-balance sm:text-5xl ${
+                hasImage ? "text-white" : "text-ink"
+              }`}
+            >
+              {heading}
+            </h1>
+            <p className={`relative max-w-xl text-lg ${hasImage ? "text-white/85" : "text-muted"}`}>{subheading}</p>
+            <a
+              href={ctaHref}
+              className="relative inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 text-base font-medium text-accent-ink hover:opacity-90"
+            >
+              {ctaLabel}
+            </a>
+          </section>
+        );
+      },
     },
     Heading: {
       fields: {

@@ -4,9 +4,16 @@ import "../styles/global.css";
 interface Props {
   title: string;
   description: string;
+  // Reserva el espacio para 2 rieles verticales de anuncio (formato
+  // "skyscraper", 160x600) a los costados del contenido — layout listo,
+  // sin ningún script de anuncio real todavía (pendiente de aprobación de
+  // Google AdSense, ver memoria/chat 2026-08-07). Se ocultan por completo
+  // debajo de 1400px de ancho, como cualquier skyscraper real: no hay
+  // espacio para ellos en pantallas angostas ni en mobile.
+  showAdRails?: boolean;
 }
 
-const { title, description } = Astro.props;
+const { title, description, showAdRails = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -19,6 +26,26 @@ const { title, description } = Astro.props;
     <meta name="description" content={description} />
   </head>
   <body class="min-h-screen bg-bg text-ink antialiased">
-    <slot />
+    {
+      showAdRails ? (
+        <div class="mx-auto flex max-w-[1400px] justify-center gap-5">
+          <aside class="sticky top-5 hidden h-[600px] w-[160px] shrink-0 flex-col items-center justify-center rounded-lg border-2 border-dashed border-rule px-3 text-center text-xs text-muted min-[1400px]:flex">
+            Ad space reserved
+            <br />
+            160×600
+          </aside>
+          <div class="min-w-0 flex-1">
+            <slot />
+          </div>
+          <aside class="sticky top-5 hidden h-[600px] w-[160px] shrink-0 flex-col items-center justify-center rounded-lg border-2 border-dashed border-rule px-3 text-center text-xs text-muted min-[1400px]:flex">
+            Ad space reserved
+            <br />
+            160×600
+          </aside>
+        </div>
+      ) : (
+        <slot />
+      )
+    }
   </body>
 </html>

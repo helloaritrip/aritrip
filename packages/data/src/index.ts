@@ -6,6 +6,13 @@ export { generatePriceSnapshotsForDestination, generateAllPriceSnapshots } from 
 export { getRecommendations } from "./recommend";
 export type { RecommendationInput, ScoredDestination, CostBreakdown } from "./recommend";
 export { SCORING_WEIGHTS_V1 } from "./scoringWeights";
-export { ORIGIN_HUB_COORDS, DEFAULT_ORIGIN_HUB, nearestOriginHub } from "./originGeo";
+export {
+  ORIGIN_HUB_COORDS,
+  DEFAULT_ORIGIN_HUB,
+  nearestOriginHub,
+  ORIGIN_LABELS,
+  ORIGIN_OPTIONS,
+  ORIGIN_IMAGE_QUERY,
+} from "./originGeo";
 export { getDiscoverPicks, getDiscoverDetail } from "./discover";
 export type { DiscoverSlot, DiscoverPick, DiscoverDetail } from "./discover";

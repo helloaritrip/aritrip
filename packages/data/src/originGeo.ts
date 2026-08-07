@@ -31,6 +31,73 @@ export const ORIGIN_HUB_COORDS: Record<OriginHub, { lat: number; lon: number }> 
 /** Fallback cuando no hay señal de geolocalización (dev local sin proxy de Cloudflare, o visitante fuera del footprint). */
 export const DEFAULT_ORIGIN_HUB: OriginHub = "DFW";
 
+/**
+ * Nombre de ciudad legible por hub — antes vivía duplicado solo en
+ * apps/app (originLabels.ts, que ahora re-exporta desde acá). Compartido
+ * porque apps/www también lo necesita para generar contenido por ciudad.
+ */
+export const ORIGIN_LABELS: Record<OriginHub, string> = {
+  JFK: "New York (JFK)",
+  MIA: "Miami (MIA)",
+  DFW: "Dallas (DFW)",
+  LAX: "Los Angeles (LAX)",
+  ORD: "Chicago (ORD)",
+  YYZ: "Toronto (YYZ)",
+  YVR: "Vancouver (YVR)",
+  MEX: "Mexico City (MEX)",
+  ATL: "Atlanta (ATL)",
+  BOS: "Boston (BOS)",
+  SEA: "Seattle (SEA)",
+  DEN: "Denver (DEN)",
+  IAH: "Houston (IAH)",
+  PHX: "Phoenix (PHX)",
+  SFO: "San Francisco (SFO)",
+  YUL: "Montreal (YUL)",
+  PTY: "Panama City (PTY)",
+  MCO: "Orlando (MCO)",
+  LAS: "Las Vegas (LAS)",
+  MTY: "Monterrey (MTY)",
+  CUN: "Cancún (CUN)",
+  GDL: "Guadalajara (GDL)",
+  IAD: "Washington, D.C. (IAD)",
+  CLT: "Charlotte (CLT)",
+};
+
+export const ORIGIN_OPTIONS = ORIGIN_HUBS.map((code) => ({ value: code, label: ORIGIN_LABELS[code] }));
+
+/**
+ * Query de imagen por hub de origen (vía el mismo proxy de Wikimedia que
+ * ya usan los destinos) — para el fondo del Hero en las páginas "Best
+ * trips from {City}" de apps/www. Es la ciudad de ORIGEN, no un destino
+ * del catálogo, por eso vive acá y no en destinations/index.ts.
+ */
+export const ORIGIN_IMAGE_QUERY: Record<OriginHub, string> = {
+  JFK: "new york city skyline manhattan",
+  MIA: "miami skyline beach",
+  DFW: "dallas texas skyline downtown",
+  LAX: "los angeles skyline downtown",
+  ORD: "chicago skyline lake michigan",
+  YYZ: "toronto skyline cn tower",
+  YVR: "vancouver skyline mountains",
+  MEX: "mexico city skyline angel independencia",
+  ATL: "atlanta skyline downtown",
+  BOS: "boston skyline harbor",
+  SEA: "seattle skyline space needle",
+  DEN: "denver skyline rocky mountains",
+  IAH: "houston skyline downtown",
+  PHX: "phoenix skyline desert",
+  SFO: "san francisco skyline golden gate bridge",
+  YUL: "montreal skyline downtown",
+  PTY: "panama city skyline skyscrapers",
+  MCO: "orlando skyline downtown",
+  LAS: "las vegas strip skyline night",
+  MTY: "monterrey skyline cerro de la silla",
+  CUN: "cancun hotel zone aerial beach",
+  GDL: "guadalajara cathedral skyline",
+  IAD: "washington dc skyline capitol",
+  CLT: "charlotte skyline downtown",
+};
+
 function haversineDistanceKm(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
   const R = 6371;
   const dLat = ((b.lat - a.lat) * Math.PI) / 180;

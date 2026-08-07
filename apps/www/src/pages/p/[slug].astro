@@ -25,6 +25,6 @@ const { data } = Astro.props as { data: Data<Props> };
 const pageTitle = (data.root.props?.title as string | undefined) ?? "AriTrips";
 ---
 
-<Layout title={pageTitle} description={pageTitle}>
+<Layout title={pageTitle} description={pageTitle} showAdRails>
   <Render config={config} data={data} />
 </Layout>

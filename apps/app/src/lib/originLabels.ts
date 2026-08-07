@@ -1,30 +1,4 @@
-import { ORIGIN_HUBS, type OriginHub } from "@aritrips/data";
-
-export const ORIGIN_LABELS: Record<OriginHub, string> = {
-  JFK: "New York (JFK)",
-  MIA: "Miami (MIA)",
-  DFW: "Dallas (DFW)",
-  LAX: "Los Angeles (LAX)",
-  ORD: "Chicago (ORD)",
-  YYZ: "Toronto (YYZ)",
-  YVR: "Vancouver (YVR)",
-  MEX: "Mexico City (MEX)",
-  ATL: "Atlanta (ATL)",
-  BOS: "Boston (BOS)",
-  SEA: "Seattle (SEA)",
-  DEN: "Denver (DEN)",
-  IAH: "Houston (IAH)",
-  PHX: "Phoenix (PHX)",
-  SFO: "San Francisco (SFO)",
-  YUL: "Montreal (YUL)",
-  PTY: "Panama City (PTY)",
-  MCO: "Orlando (MCO)",
-  LAS: "Las Vegas (LAS)",
-  MTY: "Monterrey (MTY)",
-  CUN: "Cancún (CUN)",
-  GDL: "Guadalajara (GDL)",
-  IAD: "Washington, D.C. (IAD)",
-  CLT: "Charlotte (CLT)",
-};
-
-export const ORIGIN_OPTIONS = ORIGIN_HUBS.map((code) => ({ value: code, label: ORIGIN_LABELS[code] }));
+// Movido a packages/data (2026-08-07) — apps/www también lo necesita para
+// generar contenido por ciudad. Re-exportado acá para no romper imports
+// existentes (`@/lib/originLabels`) en ResultCard/DestinationModal.
+export { ORIGIN_LABELS, ORIGIN_OPTIONS } from "@aritrips/data";
