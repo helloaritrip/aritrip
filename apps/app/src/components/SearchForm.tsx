@@ -20,6 +20,17 @@ function clampedNumberInput(raw: string, max: number): string {
   return n > max ? String(max) : raw;
 }
 
+// Local date, not UTC — un date picker que use toISOString() puede
+// mostrar "ayer" como mínimo cerca de medianoche para husos horarios
+// negativos (América).
+function getTodayISODate(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 const INTEREST_OPTIONS: { value: InterestTag; label: string }[] = [
   { value: "beach", label: "Beach" },
   { value: "adventure", label: "Adventure" },
@@ -59,6 +70,7 @@ export function SearchForm() {
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [results, setResults] = useState<RecommendationResult[]>([]);
   const [tripContext, setTripContext] = useState<TripContext | null>(null);
+  const todayISODate = getTodayISODate();
 
   // Origen por defecto: ya no siempre Dallas. Prioridad: 1) ?origin=XXX en
   // la URL (viene de los links "Find your trip" de las páginas por ciudad
@@ -178,6 +190,7 @@ export function SearchForm() {
             label="Departure date"
             name="startDate"
             type="date"
+            min={todayISODate}
             value={form.startDate}
             onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
           />
@@ -185,12 +198,13 @@ export function SearchForm() {
             label="Return date"
             name="endDate"
             type="date"
+            min={form.startDate || todayISODate}
             value={form.endDate}
             onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-4 gap-3 sm:gap-4">
           <TextInput
             label="Adults"
             name="adults"
@@ -209,17 +223,18 @@ export function SearchForm() {
             value={form.children}
             onChange={(e) => setForm((f) => ({ ...f, children: clampedNumberInput(e.target.value, MAX_CHILDREN) }))}
           />
+          <div className="col-span-2">
+            <TextInput
+              label="Total budget (USD)"
+              name="budget"
+              type="number"
+              min={0}
+              placeholder="2000"
+              value={form.budgetUSD}
+              onChange={(e) => setForm((f) => ({ ...f, budgetUSD: e.target.value }))}
+            />
+          </div>
         </div>
-
-        <TextInput
-          label="Total budget (USD)"
-          name="budget"
-          type="number"
-          min={0}
-          placeholder="2000"
-          value={form.budgetUSD}
-          onChange={(e) => setForm((f) => ({ ...f, budgetUSD: e.target.value }))}
-        />
 
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium text-ink">What are you looking for?</span>
