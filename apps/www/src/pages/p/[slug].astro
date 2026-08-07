@@ -22,7 +22,7 @@ export function getStaticPaths() {
 }
 
 const { data } = Astro.props as { data: Data<Props> };
-const pageTitle = (data.root.props?.title as string | undefined) ?? "Travel Package Builder";
+const pageTitle = (data.root.props?.title as string | undefined) ?? "AriTrips";
 ---
 
 <Layout title={pageTitle} description={pageTitle}>

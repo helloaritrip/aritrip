@@ -2,7 +2,7 @@
 	"$schema": "./node_modules/wrangler/config-schema.json",
 	"compatibility_date": "2026-08-06",
 	"compatibility_flags": ["global_fetch_strictly_public", "nodejs_compat"],
-	"name": "travel-package-builder-www",
+	"name": "aritrips-www",
 	"main": "@astrojs/cloudflare/entrypoints/server",
 	"assets": {
 		"directory": "./dist",

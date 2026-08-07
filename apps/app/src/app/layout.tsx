@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Travel Package Builder",
+  title: "AriTrips",
   description: "Find the best trip you can take on your budget.",
 };
 

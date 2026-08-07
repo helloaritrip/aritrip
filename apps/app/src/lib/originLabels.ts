@@ -1,4 +1,4 @@
-import { ORIGIN_HUBS, type OriginHub } from "@travel-package-builder/data";
+import { ORIGIN_HUBS, type OriginHub } from "@aritrips/data";
 
 export const ORIGIN_LABELS: Record<OriginHub, string> = {
   JFK: "New York (JFK)",

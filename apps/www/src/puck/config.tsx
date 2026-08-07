@@ -1,5 +1,5 @@
 import type { Config } from "@measured/puck";
-import { destinations } from "@travel-package-builder/data";
+import { destinations } from "@aritrips/data";
 
 // El proxy de imágenes vive en apps/app (no se duplica acá) — apuntar
 // cross-origin al mismo endpoint público, sin problema de CORS para <img>.

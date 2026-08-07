@@ -1,6 +1,6 @@
-# apps/www — Travel Package Builder marketing site
+# apps/www — AriTrips marketing site
 
-Astro + Tailwind v4 + React (islands vía `@astrojs/react`) + Cloudflare adapter. Sirve `www.travelbuilder.com` — contenido/SEO, no la aplicación (eso es `apps/app`). Ver el documento "Frontend: Next.js + Astro" (Sprint -1) para el razonamiento completo de por qué son dos frontends separados.
+Astro + Tailwind v4 + React (islands vía `@astrojs/react`) + Cloudflare adapter. Sirve `aritrips.com` — contenido/SEO, no la aplicación (eso es `apps/app`, en `app.aritrips.com`). Ver el documento "Frontend: Next.js + Astro" (Sprint -1) para el razonamiento completo de por qué son dos frontends separados.
 
 ## Correr localmente
 

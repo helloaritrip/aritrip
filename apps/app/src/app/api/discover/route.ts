@@ -8,7 +8,7 @@ import {
   DEFAULT_ORIGIN_HUB,
   ORIGIN_HUBS,
   type OriginHub,
-} from "@travel-package-builder/data";
+} from "@aritrips/data";
 
 const priceSnapshots = generateAllPriceSnapshots(destinations);
 

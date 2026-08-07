@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ShareButton } from "@travel-package-builder/ui";
-import type { DiscoverSlot, OriginHub } from "@travel-package-builder/data";
+import { ShareButton } from "@aritrips/ui";
+import type { DiscoverSlot, OriginHub } from "@aritrips/data";
 import { ORIGIN_LABELS } from "@/lib/originLabels";
 
 type DiscoverPick = {

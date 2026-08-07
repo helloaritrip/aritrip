@@ -1,10 +1,10 @@
 "use client";
 
-import { ShareButton } from "@travel-package-builder/ui";
+import { ShareButton } from "@aritrips/ui";
 import { buildPartnerLinks } from "@/lib/partnerLinks";
 import { trackEvent } from "@/lib/trackEvent";
 import { ORIGIN_LABELS } from "@/lib/originLabels";
-import type { OriginHub } from "@travel-package-builder/data";
+import type { OriginHub } from "@aritrips/data";
 
 export type RecommendationResult = {
   destinationId: string;

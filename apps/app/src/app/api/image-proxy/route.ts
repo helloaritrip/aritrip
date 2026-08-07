@@ -47,7 +47,7 @@ async function searchWikimediaImageUrl(query: string): Promise<string | null> {
   searchUrl.searchParams.set("origin", "*");
 
   const searchRes = await fetch(searchUrl, {
-    headers: { "User-Agent": "TravelPackageBuilder/0.1 (MVP, dev environment)" },
+    headers: { "User-Agent": "AriTrips/0.1 (aritrips.com; helloari.trip@gmail.com)" },
   });
   if (!searchRes.ok) return null;
 
@@ -73,7 +73,7 @@ export async function GET(request: Request) {
     if (!imageUrl) return fallbackResponse();
 
     const imageRes = await fetch(imageUrl, {
-      headers: { "User-Agent": "TravelPackageBuilder/0.1 (MVP, dev environment)" },
+      headers: { "User-Agent": "AriTrips/0.1 (aritrips.com; helloari.trip@gmail.com)" },
     });
     if (!imageRes.ok || !imageRes.body) return fallbackResponse();
 

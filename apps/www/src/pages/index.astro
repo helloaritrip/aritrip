@@ -1,7 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { Button, SkylineIllustration } from "@travel-package-builder/ui";
-import { destinations, ORIGIN_HUBS } from "@travel-package-builder/data";
+import { Button, SkylineIllustration } from "@aritrips/ui";
+import { destinations, ORIGIN_HUBS } from "@aritrips/data";
 
 // Cuenta real del catálogo, no un número fijo que se desactualiza — mismo
 // error que ya corregimos dos veces en apps/app.
@@ -27,12 +27,12 @@ const steps = [
 ---
 
 <Layout
-  title="Travel Package Builder — Find the best trip you can take on your budget"
+  title="AriTrips — Find the best trip you can take on your budget"
   description="Tell us your budget and we'll show you which destinations actually fit — real flight, hotel, and activity costs, not just a flight price."
 >
   <main class="mx-auto flex max-w-5xl flex-col gap-24 px-6 py-20">
     <section class="flex flex-col items-center gap-6 text-center">
-      <p class="text-sm font-medium uppercase tracking-wide text-accent">Travel Package Builder</p>
+      <p class="text-sm font-medium uppercase tracking-wide text-accent">AriTrips</p>
       <h1 class="max-w-2xl text-4xl font-semibold text-balance text-ink sm:text-5xl">
         Find the best trip you can take on your budget.
       </h1>
@@ -77,7 +77,7 @@ const steps = [
   <footer class="relative overflow-hidden bg-brand-blue-mid text-white">
     <SkylineIllustration className="absolute inset-0 h-full w-full" />
     <div class="relative mx-auto flex max-w-5xl flex-col items-center gap-4 px-6 py-14 text-center">
-      <p class="text-lg font-semibold">Travel Package Builder</p>
+      <p class="text-lg font-semibold">AriTrips</p>
       <div class="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
         <a href={APP_URL} class="hover:text-highlight">Home</a>
         <a href={`${APP_URL}/privacy`} class="hover:text-highlight">Privacy</a>

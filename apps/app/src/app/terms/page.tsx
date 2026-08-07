@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
 
-export const metadata: Metadata = { title: "Terms of Service — Travel Package Builder" };
+export const metadata: Metadata = { title: "Terms of Service — AriTrips" };
 
 export default function TermsPage() {
   return (
@@ -10,7 +10,7 @@ export default function TermsPage() {
 
       <h2>What this is</h2>
       <p>
-        Travel Package Builder helps you discover destinations that fit a budget you set, and points
+        AriTrips helps you discover destinations that fit a budget you set, and points
         you to third-party partners to book flights, hotels, activities, insurance, and eSIMs. We are
         not a travel agency, we do not sell tickets, and we do not process payments — every booking
         happens on the partner&apos;s own site, under their own terms.
@@ -41,7 +41,10 @@ export default function TermsPage() {
       <p>These terms will be replaced with a version reviewed by a lawyer before real launch.</p>
 
       <h2>Contact</h2>
-      <p>Questions about these terms: [contact email to be added before real launch].</p>
+      <p>
+        Questions about these terms:{" "}
+        <a href="mailto:helloari.trip@gmail.com">helloari.trip@gmail.com</a>.
+      </p>
     </LegalPage>
   );
 }

@@ -6,7 +6,7 @@ import {
   ORIGIN_HUBS,
   type OriginHub,
   type InterestTag,
-} from "@travel-package-builder/data";
+} from "@aritrips/data";
 
 // Fase 1 (MVP): catálogo y precios 100% estáticos, generados en memoria —
 // no depende de Firestore todavía. Ver Data Model / Affiliate Integration

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
 
-export const metadata: Metadata = { title: "Privacy Policy — Travel Package Builder" };
+export const metadata: Metadata = { title: "Privacy Policy — AriTrips" };
 
 export default function PrivacyPage() {
   return (
@@ -44,7 +44,10 @@ export default function PrivacyPage() {
       </p>
 
       <h2>Contact</h2>
-      <p>Questions about this policy: [contact email to be added before real launch].</p>
+      <p>
+        Questions about this policy:{" "}
+        <a href="mailto:helloari.trip@gmail.com">helloari.trip@gmail.com</a>.
+      </p>
     </LegalPage>
   );
 }

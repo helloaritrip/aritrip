@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { TextInput, Combobox, Chip, Button } from "@travel-package-builder/ui";
-import { destinations, type OriginHub, type InterestTag } from "@travel-package-builder/data";
+import { TextInput, Combobox, Chip, Button } from "@aritrips/ui";
+import { destinations, type OriginHub, type InterestTag } from "@aritrips/data";
 import { ResultCard, type RecommendationResult, type TripContext } from "./ResultCard";
 import { ORIGIN_OPTIONS } from "@/lib/originLabels";
 import { trackEvent } from "@/lib/trackEvent";
