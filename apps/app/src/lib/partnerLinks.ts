@@ -22,12 +22,6 @@ const KLOOK_AFFILIATE_ID = "api|13694|98e20227f64d4986a885e31b8-761476|pid|76147
 // aparte. Saily paga mejor (15% fijo) y es una relación directa.
 const SAILY_AFFILIATE_URL =
   "https://go.saily.site/aff_c?aff_id=8014&aff_sub=73bf4e0c4d474cfe94abf1c05-761476&offer_id=126";
-// KKday: segunda opción de actividades, a pedido del usuario, además de
-// Klook (no en reemplazo). No se encontró un patrón de URL de búsqueda
-// por destino que funcione (probado, 404) — homepage con el tracking
-// intacto, mismo patrón que seguro/eSIM cuando no hay deep link.
-const KKDAY_AFFILIATE_URL =
-  "https://www.kkday.com?utm_source=InvolveAsia&cid=6304&ud1=019fda6f10f573e685cf6bf6df483f01&ud2=103063";
 // Seguro: EKTA, primera cuenta real de esta categoría (25% de comisión,
 // ya aprobada en Travelpayouts) — reemplaza el placeholder de World
 // Nomads (nunca tuvo cuenta real; World Nomads/CJ sigue en cola aparte).
@@ -46,7 +40,6 @@ export interface PartnerLinks {
   flight: string;
   hotel: string;
   activity: string;
-  experiences: string;
   insurance: string;
   esim: string;
 }
@@ -78,10 +71,9 @@ export function buildPartnerLinks(input: PartnerLinkInput): PartnerLinks {
     flight: flight.toString(),
     hotel: hotel.toString(),
     activity: activity.toString(),
-    // Seguro y KKday no tienen deep link por destino disponible — homepage
-    // con el tracking intacto, mismo patrón que antes de tener cuentas
-    // reales, pero ahora con comisión real de verdad.
-    experiences: KKDAY_AFFILIATE_URL,
+    // Seguro no tiene deep link por destino disponible — homepage con el
+    // tracking intacto, mismo patrón que antes de tener cuentas reales,
+    // pero ahora con comisión real de verdad.
     insurance: EKTA_AFFILIATE_URL,
     esim: SAILY_AFFILIATE_URL,
   };

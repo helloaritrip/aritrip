@@ -1,6 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { Button, SkylineIllustration } from "@aritrips/ui";
+import { Button } from "@aritrips/ui";
 import { destinations, ORIGIN_HUBS } from "@aritrips/data";
 
 // Cuenta real del catálogo, no un número fijo que se desactualiza — mismo
@@ -74,9 +74,8 @@ const steps = [
     </section>
   </main>
 
-  <footer class="relative overflow-hidden bg-brand-blue-mid text-white">
-    <SkylineIllustration className="absolute inset-0 h-full w-full" />
-    <div class="relative mx-auto flex max-w-5xl flex-col items-center gap-4 px-6 py-14 text-center">
+  <footer class="bg-[#004bc4] text-white">
+    <div class="mx-auto flex max-w-5xl flex-col items-center gap-4 px-6 py-14 text-center">
       <p class="text-lg font-semibold">AriTrips</p>
       <div class="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
         <a href={APP_URL} class="hover:text-highlight">Home</a>

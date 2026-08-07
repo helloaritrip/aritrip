@@ -1,11 +1,9 @@
 import Link from "next/link";
-import { SkylineIllustration } from "@aritrips/ui";
 
 export function Footer() {
   return (
-    <footer className="relative overflow-hidden bg-brand-blue-mid text-white">
-      <SkylineIllustration className="absolute inset-0 h-full w-full" />
-      <div className="relative mx-auto flex max-w-5xl flex-col items-center gap-4 px-6 py-14 text-center">
+    <footer className="bg-[#004bc4] text-white">
+      <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 px-6 py-14 text-center">
         <p className="text-lg font-semibold">AriTrips</p>
         <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
           <Link href="/" className="hover:text-highlight">

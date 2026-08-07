@@ -13,7 +13,7 @@ export type TrackedEvent =
   | {
       name: "recommendation_clicked";
       destinationId: string;
-      category: "flight" | "hotel" | "activity" | "experiences" | "insurance" | "esim";
+      category: "flight" | "hotel" | "activity" | "insurance" | "esim";
     };
 
 export function trackEvent(event: TrackedEvent) {
