@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of PTY, a trip to Medellín can start around $1,070 for flight, hotel, and activities together — not just the flight. Here's what actually gives Panama City travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "Panama City's Tocumen airport is built as Copa Airlines' \"Hub of the Americas\" — which is exactly why Medellín gets near-daily service while Grand Cayman gets just two flights a week. Flying out of PTY, a trip to Medellín can start around $1,070 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Panama City",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from PTY",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Cancún — nonstop, ~2h49m",
+            "text": "Copa Airlines is the only nonstop carrier, about 40 flights a week (5–6 a day)."
+          },
+          {
+            "icon": "✈️",
+            "title": "Medellín — nonstop, ~1h21m–1h25m",
+            "text": "Copa Airlines flies it, densely — 61 flights a week, 7–9 a day, one of Copa's busiest regional routes."
+          },
+          {
+            "icon": "🔁",
+            "title": "Grand Cayman — nonstop, but only 2 flights/week",
+            "text": "Cayman Airways is the only carrier serving this route, and the schedule is genuinely thin — book well ahead of your dates."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Tocumen was purpose-built as Copa's 24/7 connecting hub for fast Caribbean and South America travel, and the frequency gap between these three routes reflects that directly: Medellín sits inside Copa's dense core network and gets near-hourly-feeling service, while Grand Cayman sits outside it and relies solely on twice-weekly Cayman Airways flights. Medellín also has a real, checkable cost advantage — average daily travel costs there run well below Panama City, making it a genuine budget weekend option. Panamanians travel visa-free to Mexico, Colombia, and the Dominican Republic-adjacent Caribbean, which removes a common trip-planning friction point across all three."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Panama City?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of PTY, not just which flight happens to be cheapest."
+            "question": "Why are there so few flights to Grand Cayman compared to Medellín?",
+            "answer": "Medellín rides Copa's own dense hub schedule (up to 9 flights a day), while Grand Cayman relies solely on Cayman Airways' twice-weekly service since it falls outside Copa's core network — book Cayman trips well ahead of your dates."
+          },
+          {
+            "question": "Is Medellín a realistic weekend trip from Panama City?",
+            "answer": "Yes — it's an 80-minute nonstop flight with near-daily frequency, and day-to-day costs in Medellín run well below Panama City, making it a genuine budget weekend option."
           }
         ]
       }

@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of MTY, a trip to Oaxaca can start around $926 for flight, hotel, and activities together — not just the flight. Here's what actually gives Monterrey travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "Monterrey is a VivaAerobus stronghold, and the Cancún route shows it — one of the carrier's densest routes anywhere, with up to 15 flights a day. Flying out of MTY, a trip to Oaxaca can start around $926 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Monterrey",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from MTY",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Cancún — nonstop, ~2h10m–2h30m",
+            "text": "VivaAerobus (dominant, ~69 flights/week) and Volaris combine for up to 15 flights a day."
+          },
+          {
+            "icon": "🔁",
+            "title": "Oaxaca — nonstop, but thin (~11 flights/week)",
+            "text": "VivaAerobus and Volaris fly it roughly once a day — plan ahead rather than booking last minute."
+          },
+          {
+            "icon": "✈️",
+            "title": "Cabo San Lucas — nonstop, ~1h55m–2h05m",
+            "text": "VivaAerobus is the only nonstop carrier, about 2–3 flights a day."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Monterrey–Cancún is one of VivaAerobus's densest routes system-wide, which keeps fares competitive and gives real schedule flexibility for a last-minute weekend trip. Monterrey's affluent business-travel segment has long favored Cabo San Lucas for golf and resort weekends. Oaxaca's comparatively sparse schedule — a single-digit number of flights a day at most — signals it's booked as a planned trip, not a spontaneous one."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Monterrey?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of MTY, not just which flight happens to be cheapest."
+            "question": "Is Cancún or Cabo San Lucas faster from Monterrey?",
+            "answer": "Both run roughly 2 to 2.5 hours nonstop, but Cancún has far more daily departures — up to 15 versus 2-3 for Cabo — giving more schedule flexibility and generally sharper fares."
+          },
+          {
+            "question": "How often does Monterrey fly to Oaxaca?",
+            "answer": "About once a day nonstop (roughly 11 flights a week) — plan ahead rather than booking last minute."
           }
         ]
       }

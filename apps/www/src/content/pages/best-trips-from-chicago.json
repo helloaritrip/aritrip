@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of ORD, a trip to Oaxaca can start around $1,130 for flight, hotel, and activities together — not just the flight. Here's what actually gives Chicago travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "Chicago is one of the only hubs we cover with a nonstop flight to Aspen — genuinely rare for a hub outside the Rockies or West Coast. Flying out of ORD, a trip to Oaxaca can start around $1,130 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Chicago",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from ORD",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Cancún — nonstop, ~3h53m–4h",
+            "text": "American, United, and Frontier combine for roughly 46 weekly nonstop flights."
+          },
+          {
+            "icon": "🔁",
+            "title": "Oaxaca — no nonstop",
+            "text": "The fastest routing, via Dallas, runs about 7h22m total."
+          },
+          {
+            "icon": "✈️",
+            "title": "Aspen — nonstop, ~3h20m",
+            "text": "American and United fly it direct, about 23 flights a week — notably rare for a hub this far from the Rockies or West Coast."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Chicago is unusually well-connected for a Midwest hub: nonstop to both Cancún and Aspen, a combination most East Coast hubs don't get. Oaxaca is sustained despite the required connection by real demand — Chicago has one of the largest Mexican-origin populations of any U.S. city outside the Southwest, concentrated around neighborhoods like Pilsen and Little Village."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Chicago?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of ORD, not just which flight happens to be cheapest."
+            "question": "What's the most convenient destination from Chicago?",
+            "answer": "Chicago uniquely has nonstop flights to both Cancún and Aspen — Oaxaca is the outlier here, requiring a connection that the other two don't."
+          },
+          {
+            "question": "Is there a direct flight from Chicago to Aspen?",
+            "answer": "Yes, on American and United, about 3h20m — genuinely rare for a hub this far from the Rockies or West Coast, where most Aspen nonstops are concentrated."
           }
         ]
       }

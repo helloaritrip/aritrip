@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of PHX, a trip to Oaxaca can start around $1,096 for flight, hotel, and activities together — not just the flight. Here's what actually gives Phoenix travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "Phoenix is one of just a few hubs — with Denver, LA, and San Francisco — that gets a daily nonstop to Aspen all winter, a real way to trade desert heat for snow. Flying out of PHX, a trip to Oaxaca can start around $1,096 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Phoenix",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from PHX",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Las Vegas — nonstop, ~1h16m",
+            "text": "Southwest, American, and Frontier all fly it direct — one of Phoenix's busiest short-haul routes."
+          },
+          {
+            "icon": "❄️",
+            "title": "Oaxaca — nonstop, but seasonal only",
+            "text": "American runs it nonstop for a limited part of the year; outside that window it connects via Dallas or Houston instead."
+          },
+          {
+            "icon": "✈️",
+            "title": "Aspen — nonstop, ~2h, daily in ski season",
+            "text": "American flies it nonstop daily from November through March."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Las Vegas is a short, direct hop that fits Phoenix's well-worn weekend circuit. Aspen stands out: Phoenix is one of only a handful of hubs we cover (alongside Denver, LA, and San Francisco) with daily nonstop winter ski service — a genuinely convenient way to escape the desert heat for snow. Oaxaca's nonstop is seasonal only, so most of the year it's a deliberate connection-required trip rather than an easy booking."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Phoenix?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of PHX, not just which flight happens to be cheapest."
+            "question": "Is Aspen doable as a weekend ski trip from Phoenix?",
+            "answer": "Yes — American flies nonstop daily in ski season, about 2 hours each way, which is notably easier than from Seattle or Las Vegas, neither of which has any nonstop Aspen service at all."
+          },
+          {
+            "question": "Is there a direct flight to Oaxaca from Phoenix?",
+            "answer": "Only seasonally — American runs it nonstop for part of the year; the rest of the year expect a connection via Dallas or Houston."
           }
         ]
       }

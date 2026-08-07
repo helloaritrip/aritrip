@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of DFW, a trip to Oaxaca can start around $1,028 for flight, hotel, and activities together — not just the flight. Here's what actually gives Dallas travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "All three of these are a nonstop flight from DFW — no connections, which isn't true from most other hubs on this list. Flying out of DFW, a trip to Oaxaca can start around $1,028 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Dallas",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from DFW",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Cancún — nonstop, ~2h47m",
+            "text": "American runs about 34 nonstop flights a week; Frontier and Sun Country also fly it direct. (Southwest flies Cancún too, but from Dallas Love Field, not DFW.)"
+          },
+          {
+            "icon": "✈️",
+            "title": "Oaxaca — nonstop, ~2h50m–3h06m",
+            "text": "American flies it nonstop about 7 times a week. Dallas and Houston are the only two hubs we cover with a direct flight to Oaxaca — everywhere else needs a connection."
+          },
+          {
+            "icon": "✈️",
+            "title": "Aspen — nonstop, ~2h24m",
+            "text": "American runs up to 3 nonstop flights a day during ski season — reportedly its single most-flown Aspen route from any hub in its network."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "American built DFW into its main Mexico leisure hub, and it shows: Dallas is one of only two hubs on this list with nonstop Oaxaca service, and DFW–Aspen is reportedly American's busiest Aspen route from anywhere it flies. If you're flying out of North Texas, none of these three requires a connection — that's not the case from most other cities here."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Dallas?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of DFW, not just which flight happens to be cheapest."
+            "question": "Can Oaxaca be a long weekend from Dallas?",
+            "answer": "Yes — it's a nonstop flight of about 3 hours each way. Dallas and Houston are the only two hubs we cover with direct Oaxaca service; everywhere else needs a connection."
+          },
+          {
+            "question": "Is Aspen easy to reach from Dallas?",
+            "answer": "Yes, more so than from almost anywhere else — American runs up to 3 nonstop flights a day during peak ski season, more frequency than most West Coast hubs get."
           }
         ]
       }

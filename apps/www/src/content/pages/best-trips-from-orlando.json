@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of MCO, a trip to Oaxaca can start around $1,164 for flight, hotel, and activities together — not just the flight. Here's what actually gives Orlando travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "Nassau is close enough from Orlando — under 1h35m — that it works as an add-on to a theme-park trip, not just a standalone vacation. Flying out of MCO, a trip to Oaxaca can start around $1,164 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Orlando",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from MCO",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Cancún — nonstop, ~2h10m–2h20m",
+            "text": "Southwest and JetBlue both fly it direct."
+          },
+          {
+            "icon": "🔁",
+            "title": "Oaxaca — no nonstop",
+            "text": "The fastest routing runs via Monterrey (~6h45m) or Mexico City (~7h22m) — Orlando is the clear outlier for Oaxaca access among Florida hubs."
+          },
+          {
+            "icon": "✈️",
+            "title": "Nassau — nonstop, ~1h20m–1h35m",
+            "text": "JetBlue, Bahamasair, and Southwest combine for about 29 weekly nonstop flights — the shortest hop of any route we researched across all 24 hubs."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "MCO–Nassau is short enough — under 1h35m with nearly 30 weekly nonstops across three airlines — that it genuinely functions as a side trip you can bolt onto an Orlando theme-park vacation rather than book on its own. Cancún is an easy budget-beach add-on too. Oaxaca is the honest outlier here: no nonstop exists, and the fastest connection still runs 6h45m or more each way."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Orlando?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of MCO, not just which flight happens to be cheapest."
+            "question": "Can I combine Orlando parks with a Bahamas side trip?",
+            "answer": "Yes — Nassau is under 1h35m away with roughly 30 weekly nonstop flights across three airlines, genuinely practical as an add-on rather than a separate trip."
+          },
+          {
+            "question": "Is Oaxaca doable from Orlando?",
+            "answer": "Not easily — there's no nonstop, and the fastest routing (via Monterrey or Mexico City) still runs 6h45m to 7h22m each way."
           }
         ]
       }

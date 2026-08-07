@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of IAD, a trip to Oaxaca can start around $1,198 for flight, hotel, and activities together — not just the flight. Here's what actually gives Washington, D.C. travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "D.C.'s Aspen connection runs deeper than tourism — the Aspen Institute's Security Forum runs in Aspen every summer and hosts a \"D.C. Edition\" in Washington each winter. Flying out of IAD, a trip to Oaxaca can start around $1,198 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Washington, D.C.",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from IAD",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Cancún — nonstop, ~3h50m",
+            "text": "United flies it nonstop about 14 times a week."
+          },
+          {
+            "icon": "🔁",
+            "title": "Oaxaca — no nonstop",
+            "text": "Routes via Houston or Dallas on United/American, roughly 8h27m total."
+          },
+          {
+            "icon": "🔁",
+            "title": "Aspen — no nonstop",
+            "text": "Funnels through Denver, averaging about 5h21m total."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Cancún's nonstop fits neatly into a standard federal-worker PTO pattern — quick out, quick back. Aspen has a genuinely documented D.C.-specific pull beyond tourism: the Aspen Institute runs its Security Forum in Aspen every summer, then a \"D.C. Edition\" of the same event in Washington each winter, creating real, verifiable traffic between the two cities among the policy crowd. Oaxaca draws modest, deliberate interest from D.C.'s foreign-service community despite the connection."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Washington, D.C.?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of IAD, not just which flight happens to be cheapest."
+            "question": "What's the easiest weekend trip from D.C.?",
+            "answer": "Cancún — it's the only one of the three that comfortably fits a 3-day weekend, with a nonstop under 4 hours."
+          },
+          {
+            "question": "Why does D.C. have a real connection to Aspen beyond tourism?",
+            "answer": "The Aspen Institute runs its Security Forum in Aspen every summer and a \"D.C. Edition\" of the same event in Washington each winter — documented, real traffic between the two cities among the policy world, not just vacationers."
           }
         ]
       }

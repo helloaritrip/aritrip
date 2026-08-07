@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of YVR, a trip to Oaxaca can start around $1,300 for flight, hotel, and activities together — not just the flight. Here's what actually gives Vancouver travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "Vancouverites already have Whistler nearby, so an Aspen trip from here is a deliberate choice for different terrain and snow — not a matter of convenience. Flying out of YVR, a trip to Oaxaca can start around $1,300 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Vancouver",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from YVR",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Las Vegas — nonstop, ~2h48m–2h50m",
+            "text": "Air Canada and WestJet fly it direct, about 22 weekly flights — one of the shortest international hops out of Vancouver."
+          },
+          {
+            "icon": "🔁",
+            "title": "Oaxaca — no nonstop",
+            "text": "Connects via a U.S. gateway or Mexico City; total trip time runs several hours longer than the other two routes."
+          },
+          {
+            "icon": "🔁",
+            "title": "Aspen — no nonstop",
+            "text": "Main connection points are Denver and LA; total air time alone runs 3h51m–7h47m before layovers."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Las Vegas's short nonstop makes it a real weekend-trip market from Vancouver — bachelor and bachelorette trips, girls' getaways, a quick dose of shows and entertainment. Oaxaca draws the same Day of the Dead and culinary interest seen from other hubs, worth the extra connection for travelers prioritizing culture over convenience. Aspen is the deliberate pick: Vancouver already has Whistler, so choosing Aspen means specifically wanting different terrain and drier snow, not an easier trip."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Vancouver?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of YVR, not just which flight happens to be cheapest."
+            "question": "Is there a direct flight from Vancouver to Las Vegas?",
+            "answer": "Yes, nonstop on Air Canada or WestJet, about 2h50m — the fastest of the three routes out of Vancouver by a wide margin."
+          },
+          {
+            "question": "Why would a Vancouverite fly to Aspen when Whistler is local?",
+            "answer": "Purely for variety — Aspen's terrain and snow quality draw skiers looking for a second, different mountain, even though it means a Denver or LA connection that Whistler doesn't require."
           }
         ]
       }

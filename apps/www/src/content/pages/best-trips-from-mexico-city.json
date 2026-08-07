@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of MEX, a trip to Oaxaca can start around $842 for flight, hotel, and activities together — not just the flight. Here's what actually gives Mexico City travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "Mexico City is home base for all three major Mexican airlines, and it shows — all three of these are nonstop, with Oaxaca the shortest hop of the bunch. Flying out of MEX, a trip to Oaxaca can start around $842 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Mexico City",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from MEX",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Cancún — nonstop, ~2h20m–2h30m",
+            "text": "Aeroméxico, Volaris, and VivaAerobus combine for 25–26 nonstop flights a day — Mexico's single busiest domestic route, and flagged as the country's cheapest domestic route in 2026."
+          },
+          {
+            "icon": "✈️",
+            "title": "Oaxaca — nonstop, ~1h20m",
+            "text": "The shortest of the three, on all three major carriers, about 4 flights a day — a genuinely realistic long weekend."
+          },
+          {
+            "icon": "✈️",
+            "title": "Cabo San Lucas — nonstop, ~2h30m",
+            "text": "Aeroméxico, Volaris, and VivaAerobus fly it, nearly 8 times a day combined."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Every major Mexican carrier is headquartered in Mexico City, and the competition on these trunk routes keeps both frequency and fares strong. Oaxaca's short 1h20m hop makes it realistic as an actual long weekend rather than a full vacation. Cabo San Lucas draws CDMX's wealthier travel segment specifically for golf and resort luxury, a different crowd than budget beach travel to Cancún."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Mexico City?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of MEX, not just which flight happens to be cheapest."
+            "question": "Do I need a passport for these flights?",
+            "answer": "No — Mexican citizens can fly domestically with just a voter ID (INE), driver's license, or other official government photo ID. A passport is only required for non-Mexican travelers on these routes."
+          },
+          {
+            "question": "Which of these is the shortest flight from Mexico City?",
+            "answer": "Oaxaca, at just 1h20m — genuinely doable as a long weekend rather than a full vacation."
           }
         ]
       }

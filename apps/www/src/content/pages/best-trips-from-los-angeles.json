@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of LAX, a trip to Oaxaca can start around $1,130 for flight, hotel, and activities together — not just the flight. Here's what actually gives Los Angeles travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "LA is one of very few U.S. cities with a nonstop flight to Oaxaca — a real byproduct of having one of the largest Oaxacan communities in the country. Flying out of LAX, a trip to Oaxaca can start around $1,130 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Los Angeles",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from LAX",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Las Vegas — nonstop, ~1h17m–1h20m",
+            "text": "LA's single most-flown route to Vegas — around 713 flights a month, the highest frequency of any hub we cover for any destination."
+          },
+          {
+            "icon": "✈️",
+            "title": "Oaxaca — nonstop, ~4h02m",
+            "text": "Volaris flies it direct about 4 times a week — LA is one of only a handful of U.S. gateways with nonstop Oaxaca service, alongside Houston, Dallas, and seasonally Phoenix."
+          },
+          {
+            "icon": "✈️",
+            "title": "Aspen — nonstop, ~2h32m",
+            "text": "Alaska, American, Delta, and United all fly it direct — about 18 flights a week combined, more airline choice than any other hub we cover for this route."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Vegas from LA is about as frequent as a route gets — practically an any-weekend trip. Oaxaca's nonstop isn't a coincidence: LA is home to one of the largest Oaxacan diaspora communities in the U.S., concentrated around Koreatown and Pico-Union, real and verifiable demand that most other cities' Oaxaca routes don't have behind them. Aspen offers more airline choice from LA than from almost any other hub we cover."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Los Angeles?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of LAX, not just which flight happens to be cheapest."
+            "question": "Is there a nonstop flight from LA to Oaxaca?",
+            "answer": "Yes — Volaris flies it nonstop in about 4 hours, notable because LA is one of very few U.S. cities with direct Oaxaca service at all."
+          },
+          {
+            "question": "Why does LA have such strong Oaxaca connectivity?",
+            "answer": "LA is home to one of the largest Oaxacan diaspora communities in the U.S., concentrated around Koreatown and Pico-Union — real, documented demand driving the direct route."
           }
         ]
       }

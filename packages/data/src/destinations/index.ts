@@ -403,7 +403,7 @@ export const destinations: Destination[] = [
   {
     id: "mexico-city",
     safetyIndex: { value: 76, source: "US State Dept advisory — Ciudad de México, level 2 (riesgo dominante es hurto/carterismo, no violencia de cárteles)", updatedAt: "2026-08-07" },
-    name: "Ciudad de México",
+    name: "Mexico City",
     country: "México",
     region: "Centro de México",
     airportCodes: ["MEX"],
@@ -486,7 +486,7 @@ export const destinations: Destination[] = [
   {
     id: "panama-city",
     safetyIndex: { value: 78, source: "US State Dept advisory — Panamá, level 2 (Darién/Golfo de los Mosquitos en level 4, lejos de Ciudad de Panamá)", updatedAt: "2026-08-07" },
-    name: "Ciudad de Panamá",
+    name: "Panama City",
     country: "Panamá",
     region: "Centroamérica",
     airportCodes: ["PTY"],
@@ -752,7 +752,7 @@ export const destinations: Destination[] = [
   {
     id: "turks-and-caicos",
     safetyIndex: { value: 74, source: "US State Dept advisory — Turks y Caicos, level 2 (crimen concentrado en Providenciales, el hub turístico principal)", updatedAt: "2026-08-07" },
-    name: "Turks y Caicos",
+    name: "Turks and Caicos",
     country: "Turks y Caicos",
     region: "Caribe",
     airportCodes: ["PLS"],
@@ -1270,7 +1270,7 @@ export const destinations: Destination[] = [
   {
     id: "galapagos",
     safetyIndex: { value: 86, source: "US State Dept advisory — Ecuador, level 2 nacional (Galápagos fuera de todas las zonas continentales marcadas; descrito como el destino más seguro del país)", updatedAt: "2026-08-07" },
-    name: "Islas Galápagos",
+    name: "Galápagos Islands",
     country: "Ecuador",
     region: "Islas Galápagos, Ecuador",
     airportCodes: ["GPS"],
@@ -1308,7 +1308,7 @@ export const destinations: Destination[] = [
   {
     id: "grand-cayman",
     safetyIndex: { value: 92, source: "US State Dept advisory — Islas Caimán, level 1", updatedAt: "2026-08-07" },
-    name: "Gran Caimán",
+    name: "Grand Cayman",
     country: "Islas Caimán",
     region: "Caribe",
     airportCodes: ["GCM"],
@@ -1347,7 +1347,7 @@ export const destinations: Destination[] = [
   {
     id: "st-lucia",
     safetyIndex: { value: 72, source: "US State Dept advisory — Santa Lucía, level 2 (subió en julio 2026, con nota de huéspedes de resort victimizados)", updatedAt: "2026-08-07" },
-    name: "Santa Lucía",
+    name: "Saint Lucia",
     country: "Santa Lucía",
     region: "Caribe",
     airportCodes: ["UVF"],
@@ -1539,7 +1539,7 @@ export const destinations: Destination[] = [
   {
     id: "iguazu-falls",
     safetyIndex: { value: 92, source: "US State Dept advisory — Argentina, level 1", updatedAt: "2026-08-07" },
-    name: "Cataratas del Iguazú",
+    name: "Iguazu Falls",
     country: "Argentina",
     region: "Misiones, Argentina",
     airportCodes: ["IGR"],

@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of ATL, a trip to Oaxaca can start around $1,130 for flight, hotel, and activities together — not just the flight. Here's what actually gives Atlanta travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "Delta flies nonstop from Atlanta to both a beach destination (Cancún) and a ski destination (Aspen) — Oaxaca is the one that needs a connection. Flying out of ATL, a trip to Oaxaca can start around $1,130 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Atlanta",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from ATL",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Cancún — nonstop, ~2h44m",
+            "text": "Delta runs about 43 nonstop flights a week out of its ATL hub."
+          },
+          {
+            "icon": "🔁",
+            "title": "Oaxaca — no nonstop from any airline",
+            "text": "Every routing connects — via Cancún, Dallas, Houston, or Mexico City — pushing total travel to 6.5–9+ hours each way."
+          },
+          {
+            "icon": "✈️",
+            "title": "Aspen — nonstop, ~4h01m",
+            "text": "Delta flies it nonstop, and recently doubled winter frequency to 2 flights a day — a real, growing route, not a token seasonal add."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Atlanta's nonstop coverage splits cleanly: easy direct access to a beach trip and a ski trip, but zero nonstop options to Oaxaca on any carrier. Delta's decision to double ATL–Aspen winter frequency to twice daily is a concrete signal of real, growing demand for that route specifically."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Atlanta?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of ATL, not just which flight happens to be cheapest."
+            "question": "Is Oaxaca doable as a long weekend from Atlanta?",
+            "answer": "It's tight — no nonstop exists on any airline, so realistic door-to-door time is 6.5+ hours each way with a layover, which eats into a short trip fast."
+          },
+          {
+            "question": "Is there a direct flight to Aspen from Atlanta?",
+            "answer": "Yes, on Delta — and they recently doubled winter frequency to twice a day, a real sign of growing demand on that specific route."
           }
         ]
       }

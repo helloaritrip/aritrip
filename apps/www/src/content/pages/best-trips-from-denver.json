@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of DEN, a trip to Oaxaca can start around $1,164 for flight, hotel, and activities together — not just the flight. Here's what actually gives Denver travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "Aspen from Denver is barely a flight at all — 51 minutes in the air — and plenty of locals just drive instead. Flying out of DEN, a trip to Oaxaca can start around $1,164 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Denver",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from DEN",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Las Vegas — nonstop, ~2h",
+            "text": "Three airlines combine for about 114 weekly flights (roughly 16 a day) — one of Denver's highest-frequency leisure routes."
+          },
+          {
+            "icon": "🔁",
+            "title": "Oaxaca — no nonstop",
+            "text": "Connects via Houston, Dallas, or Mexico City; total travel runs 4h44m–6h52m depending on the routing."
+          },
+          {
+            "icon": "🚗",
+            "title": "Aspen — nonstop, ~51 minutes (or a ~4-hour drive)",
+            "text": "United flies it nonstop, about 52 flights a week — essentially a puddle-jump. Many Denver-area travelers drive the I-70/Hwy 82 route instead, since it lets them bring ski gear and skip the small-airport shuttle; expect up to 6 hours in bad snow or holiday traffic."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Las Vegas is a routine, high-frequency weekend run from Denver. Aspen is essentially in-state — the flight takes less time than getting to the airport for some people, which is exactly why so many Front Range travelers just drive the I-70 corridor instead and skip flying altogether. Oaxaca is the deliberate cultural trip of the three: no nonstop exists, so it's booked as a real vacation, not an add-on."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Denver?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of DEN, not just which flight happens to be cheapest."
+            "question": "Should I fly or drive from Denver to Aspen?",
+            "answer": "Flying takes just 51 minutes, but once you factor in security and the shuttle to/from Aspen's small airport, driving the roughly 4-hour I-70/Hwy 82 route is often comparable and more flexible — except on peak ski weekends, when traffic or avalanche-control closures can stretch it to 6 hours."
+          },
+          {
+            "question": "Is Oaxaca a quick trip from Denver?",
+            "answer": "No — there's no nonstop, and connecting routes run 4h44m to 6h52m, so it's best treated as a dedicated trip rather than a quick escape."
           }
         ]
       }

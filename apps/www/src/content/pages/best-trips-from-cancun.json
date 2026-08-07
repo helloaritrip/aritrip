@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of CUN, a trip to Oaxaca can start around $892 for flight, hotel, and activities together — not just the flight. Here's what actually gives Cancún travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "There's no direct flight from Cancún to Turks and Caicos at all — nearly every routing connects through Miami, a genuine surprise for a Mexico-to-Caribbean hop. Flying out of CUN, a trip to Oaxaca can start around $892 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Cancún",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from CUN",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Punta Cana — nonstop, ~3h, but thin (~9 flights/week)",
+            "text": "Only Arajet (a Dominican budget carrier, 7/week) and Aerolíneas Argentinas (2/week) fly it direct — book around the limited schedule."
+          },
+          {
+            "icon": "✈️",
+            "title": "Oaxaca — nonstop, ~2h",
+            "text": "Volaris is the only nonstop carrier, about 9 flights a week; one-stop alternatives exist but push total travel to around 4h40m."
+          },
+          {
+            "icon": "🔁",
+            "title": "Turks and Caicos — no nonstop",
+            "text": "Nearly all routings connect through Miami, adding a U.S.-transit layover most travelers wouldn't expect on a Mexico-to-Caribbean trip."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Punta Cana from Cancún is a real but thin route — just 9 weekly departures across two small carriers — functioning almost like a way to compare the two most famous Caribbean beach destinations back to back, so it pays to book around the schedule. Oaxaca pairs a beach stay with an inland cultural detour — mole, mezcal, markets, and Day of the Dead in late October/early November, when Oaxaca hotel rates typically run 3–4x normal. Turks and Caicos, requiring a Miami connection, reads less like an easy add-on and more like a deliberate, pricier Caribbean upgrade."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Cancún?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of CUN, not just which flight happens to be cheapest."
+            "question": "Can I fly nonstop from Cancún to Turks and Caicos?",
+            "answer": "No — there's currently no direct service; nearly all routings connect through Miami, so budget meaningfully more total travel time than the Oaxaca or Punta Cana nonstops."
+          },
+          {
+            "question": "Is Punta Cana easy to add onto a Cancún trip?",
+            "answer": "There is a nonstop, but it's thin — only about 9 flights a week combined across two small carriers — so book your dates around the schedule rather than the other way around."
           }
         ]
       }

@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of SFO, a trip to Oaxaca can start around $1,198 for flight, hotel, and activities together — not just the flight. Here's what actually gives San Francisco travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "San Francisco's Mission District has a real, well-documented Oaxacan food scene — even though the flight to Oaxaca itself still requires a connection. Flying out of SFO, a trip to Oaxaca can start around $1,198 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from San Francisco",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from SFO",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Las Vegas — nonstop, ~1h43m",
+            "text": "About 68 weekly flights, roughly 10 a day."
+          },
+          {
+            "icon": "🔁",
+            "title": "Oaxaca — no nonstop",
+            "text": "Routes via Mexico City or Houston; total travel runs 5h31m–7h18m."
+          },
+          {
+            "icon": "❄️",
+            "title": "Aspen — nonstop, ~2h30m, but seasonal",
+            "text": "United flies it nonstop up to twice a day during ski season (roughly November–March); outside that window, service drops and you'll need to connect."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Vegas is a fast, frequent hop that needs no explanation. Oaxaca lacks a nonstop, but the Bay Area — especially San Francisco's Mission District — has a genuine, well-documented Oaxacan restaurant and community scene, giving Bay Area travelers a real culinary throughline even with a required connection. Aspen's direct winter service puts SF on par with Denver, LA, and Phoenix for convenience, but only in season."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from San Francisco?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of SFO, not just which flight happens to be cheapest."
+            "question": "Is there a nonstop flight from SF to Aspen?",
+            "answer": "Yes, but only seasonally — United runs it nonstop roughly November through March; outside those months, there's no direct service."
+          },
+          {
+            "question": "Why is Oaxaca worth the connection from SF?",
+            "answer": "The Bay Area, especially San Francisco's Mission District, has a well-documented Oaxacan restaurant and community scene — a real throughline even though the flight itself requires a stop."
           }
         ]
       }

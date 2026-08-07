@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of MIA, a trip to Oaxaca can start around $1,130 for flight, hotel, and activities together — not just the flight. Here's what actually gives Miami travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "Miami is the biggest U.S. gateway to Latin America and the Caribbean — Cancún from MIA is the shortest hop to Cancún of any hub we cover. Flying out of MIA, a trip to Oaxaca can start around $1,130 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Miami",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from MIA",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Cancún — nonstop, ~1h55m",
+            "text": "American flies it nonstop 4–6 times a day — the fastest Cancún route out of any hub on this site."
+          },
+          {
+            "icon": "🔁",
+            "title": "Oaxaca — no nonstop",
+            "text": "Routes via Mexico City on American or Aeroméxico, roughly 7.5 hours total — even Miami's huge Latin America network doesn't reach this smaller regional airport directly."
+          },
+          {
+            "icon": "✈️",
+            "title": "Grand Cayman — nonstop, ~1h40m–1h51m",
+            "text": "Both American and Cayman Airways fly it direct — English-speaking and USD-friendly on arrival, with no currency exchange to think about."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "American alone serves roughly 100 destinations across Latin America and the Caribbean from Miami — the deepest network of any hub we cover — which is why Cancún and Grand Cayman are both quick, easy nonstops. Oaxaca is the honest exception: it's a smaller regional airport that even Miami's reach doesn't connect to directly, so it routes through Mexico City instead."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Miami?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of MIA, not just which flight happens to be cheapest."
+            "question": "Why is there no direct Miami–Oaxaca flight given Miami's huge Latin America network?",
+            "answer": "Oaxaca is a smaller regional airport — even Miami's extensive network routes through Mexico City instead, adding up to roughly 7.5 hours total."
+          },
+          {
+            "question": "Is Grand Cayman easy to reach from Miami?",
+            "answer": "Yes — under 2 hours nonstop on two different airlines, and it's English-speaking with USD widely accepted, so there's less to plan around on arrival."
           }
         ]
       }

@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of YUL, a trip to Oaxaca can start around $1,300 for flight, hotel, and activities together — not just the flight. Here's what actually gives Montreal travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "Montreal has no comparable luxury ski resort in-province, so Aspen from here is the longest, most connection-heavy trip of the three — reserved for committed skiers. Flying out of YUL, a trip to Oaxaca can start around $1,300 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Montreal",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from YUL",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Cancún — nonstop, ~4h30m–5h",
+            "text": "Air Canada, Air Transat, and Flair all fly it direct, with high weekly frequency reflecting strong winter-sun demand out of Montreal."
+          },
+          {
+            "icon": "🔁",
+            "title": "Oaxaca — no nonstop",
+            "text": "Aeroméxico connects via Mexico City; American via a U.S. hub. Total travel runs 6h37m–10 hours."
+          },
+          {
+            "icon": "🔁",
+            "title": "Aspen — no nonstop",
+            "text": "The fastest routing, via Denver, runs about 6h56m total; routing through Chicago can push closer to 10 hours."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Montreal is one of the strongest snowbird-departure markets for Mexico beach routes, consistent with the broader shift of Canadian winter travel toward Mexico. Oaxaca lines up with Montreal's own strong food-tourism culture, even as a smaller, more deliberate booking than Cancún. Aspen is the honest outlier — with no comparable in-province luxury resort, travelers who choose it are accepting the longest, most connection-heavy of any route on this site, and tend to be committed powder or luxury skiers rather than casual travelers."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Montreal?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of YUL, not just which flight happens to be cheapest."
+            "question": "Is there a direct flight from Montreal to Cancún?",
+            "answer": "Yes — Air Canada, Air Transat, and Flair all fly it nonstop, averaging under 5 hours, the fastest and easiest of Montreal's three routes."
+          },
+          {
+            "question": "Is Aspen worth it from Montreal?",
+            "answer": "It's the longest, most connection-heavy of any route we cover — up to 10 hours via Chicago — realistically only for committed powder or luxury skiers, not a casual trip."
           }
         ]
       }

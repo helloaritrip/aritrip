@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of JFK, a trip to Oaxaca can start around $1,198 for flight, hotel, and activities together — not just the flight. Here's what actually gives New York travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "Cancún is the easy one from New York — Aspen, despite the demand, doesn't have a reliable nonstop from any New York airport. Flying out of JFK, a trip to Oaxaca can start around $1,198 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from New York",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from JFK",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Cancún — nonstop, ~4h15m–4h30m",
+            "text": "American, Delta, and JetBlue combine for 18–21 weekly nonstop flights."
+          },
+          {
+            "icon": "🔁",
+            "title": "Oaxaca — no nonstop",
+            "text": "The fastest routing (via Mexico City or Dallas) runs about 7h49m total."
+          },
+          {
+            "icon": "🔁",
+            "title": "Aspen — no reliable nonstop",
+            "text": "Standard routing connects through Denver, Chicago, or Dallas, 5–7 hours total. A small-jet carrier has run limited seasonal nonstop service around peak holidays in past winters, but it isn't a standing, bookable option most of the year."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Cancún's nonstop and flight frequency make it the low-friction default for a New York beach reset. Aspen pulls plenty of demand from the city despite the routing hassle — worth naming honestly rather than overselling a nonstop that isn't reliably there. Oaxaca draws New York's food-and-culture travel crowd even with a required connection."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from New York?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of JFK, not just which flight happens to be cheapest."
+            "question": "Is Aspen doable as a quick trip from NYC?",
+            "answer": "Not really — there's no reliable nonstop, and standard connections run 5–7 hours each way, so it's a multi-day trip rather than a weekend dash."
+          },
+          {
+            "question": "Is there a direct flight from NYC to Cancún?",
+            "answer": "Yes — American, Delta, and JetBlue all fly it nonstop at roughly 4h15m–4h30m, the easiest of the three routes from JFK."
           }
         ]
       }

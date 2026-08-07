@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of LAS, a trip to Oaxaca can start around $1,096 for flight, hotel, and activities together — not just the flight. Here's what actually gives Las Vegas travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "Two of the West's biggest tourism airports, and there's still no direct flight between Las Vegas and Aspen — you'll connect through Denver. Flying out of LAS, a trip to Oaxaca can start around $1,096 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Las Vegas",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from LAS",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Cancún — nonstop, ~4h30m",
+            "text": "Southwest flies it direct, but only about 5 flights a week — worth booking around the schedule."
+          },
+          {
+            "icon": "🔁",
+            "title": "Oaxaca — no nonstop",
+            "text": "Routes via Mexico City or Houston; total travel runs 8h05m–9h26m."
+          },
+          {
+            "icon": "🔁",
+            "title": "Aspen — no nonstop",
+            "text": "Despite both being major Mountain West leisure hubs, there's no direct link — expect a connection through Denver adding several hours."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Cancún's nonstop makes it the obvious beach-reset counter-trip to the Strip. Oaxaca is the bigger commitment of the three — no nonstop exists, which suits travelers wanting an authentic food-and-culture trip as a real contrast to casino tourism. The genuine surprise is Aspen: two of the West's biggest tourism airports, and still no direct air link between them."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Las Vegas?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of LAS, not just which flight happens to be cheapest."
+            "question": "Is there a direct flight from Vegas to Aspen?",
+            "answer": "No — despite both being major western leisure hubs, there's no nonstop route; expect a connection, commonly through Denver, adding several hours each way."
+          },
+          {
+            "question": "Is Cancún easy from Vegas?",
+            "answer": "There's a nonstop on Southwest, but it only runs about 5 times a week, so it's worth booking around the schedule rather than assuming daily availability."
           }
         ]
       }

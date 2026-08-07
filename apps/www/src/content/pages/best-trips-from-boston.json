@@ -19,8 +19,40 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-1",
-        "text": "Flying out of BOS, a trip to Oaxaca can start around $1,266 for flight, hotel, and activities together — not just the flight. Here's what actually gives Boston travelers the best value right now, pulled from our own cost data, not guesses."
+        "id": "text-intro",
+        "text": "New England already has regional skiing, so Aspen from Boston tends to be the once-a-season bigger trip, not a casual weekend. Flying out of BOS, a trip to Oaxaca can start around $1,266 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
+      }
+    },
+    {
+      "type": "Heading",
+      "props": {
+        "id": "heading-flights",
+        "text": "Getting there from Boston",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "FeatureGrid",
+      "props": {
+        "id": "flight-facts",
+        "heading": "Flight basics from BOS",
+        "features": [
+          {
+            "icon": "✈️",
+            "title": "Cancún — nonstop, ~4h20m",
+            "text": "JetBlue and Delta both fly it direct."
+          },
+          {
+            "icon": "🔁",
+            "title": "Oaxaca — no nonstop",
+            "text": "The fastest routing, via Dallas on American, runs about 8h19m total."
+          },
+          {
+            "icon": "🔁",
+            "title": "Aspen — no nonstop at all",
+            "text": "Mostly routes via Denver, also Chicago, Dallas, or Atlanta; the shortest connection still runs about 7h13m."
+          }
+        ]
       }
     },
     {
@@ -45,6 +77,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-why",
+        "text": "Cancún's nonstop and Boston's large college-age travel population make it the default easy pick. Aspen, despite requiring the longest connection of the three, still draws real demand from Boston — it reads as the bigger, once-a-season ski trip precisely because New Englanders already have regional mountains for anything more casual. Oaxaca, at 8+ hours connecting, is best treated as a deliberate 5-day-plus cultural trip, not a long weekend."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -55,8 +94,12 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Why these destinations from Boston?",
-            "answer": "We rank destinations by how well the full package — flight, hotel, and activities — fits a real budget flying out of BOS, not just which flight happens to be cheapest."
+            "question": "Is Oaxaca doable as a long weekend from Boston?",
+            "answer": "It's tight — the fastest connection runs about 8h19m each way, so realistically you'll want 5 or more days to make the travel time worth it."
+          },
+          {
+            "question": "Is Aspen worth the trip from Boston?",
+            "answer": "There's no nonstop — connections run 7h13m or more each way — so it's a bigger commitment than a quick ski weekend, which is why it tends to be the once-a-season trip rather than a regular one."
           }
         ]
       }
