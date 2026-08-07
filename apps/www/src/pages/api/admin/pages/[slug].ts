@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { env } from "cloudflare:workers";
 import { getDocument, setDocument } from "@aritrips/data";
 import { getAdminSession } from "../../../../lib/requireAdminSession";
 
@@ -8,18 +9,18 @@ function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
-function credentialsFrom(env: { FIREBASE_CLIENT_EMAIL?: string; FIREBASE_PRIVATE_KEY?: string }) {
-  if (!env.FIREBASE_CLIENT_EMAIL || !env.FIREBASE_PRIVATE_KEY) return null;
-  return { clientEmail: env.FIREBASE_CLIENT_EMAIL, privateKey: env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
+function credentialsFrom(e: { FIREBASE_CLIENT_EMAIL?: string; FIREBASE_PRIVATE_KEY?: string }) {
+  if (!e.FIREBASE_CLIENT_EMAIL || !e.FIREBASE_PRIVATE_KEY) return null;
+  return { clientEmail: e.FIREBASE_CLIENT_EMAIL, privateKey: e.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
 }
 
 // GET no requiere sesión — lo usa también /p/[slug].astro (páginas
 // públicas) para leer el contenido publicado. La escritura (PUT) sí.
-export const GET: APIRoute = async ({ params, locals }) => {
+export const GET: APIRoute = async ({ params }) => {
   const slug = params.slug;
   if (!slug) return json({ error: "Missing slug." }, 400);
 
-  const credentials = credentialsFrom(locals.runtime.env);
+  const credentials = credentialsFrom(env);
   if (!credentials) return json({ error: "Not configured." }, 503);
 
   const doc = await getDocument("pages", slug, credentials);
@@ -35,14 +36,14 @@ export const GET: APIRoute = async ({ params, locals }) => {
   return json({ ...doc, content }, 200);
 };
 
-export const PUT: APIRoute = async ({ params, request, cookies, locals }) => {
-  const session = await getAdminSession(cookies, locals.runtime.env);
+export const PUT: APIRoute = async ({ params, request, cookies }) => {
+  const session = await getAdminSession(cookies, env);
   if (!session) return json({ error: "Not logged in." }, 401);
 
   const slug = params.slug;
   if (!slug) return json({ error: "Missing slug." }, 400);
 
-  const credentials = credentialsFrom(locals.runtime.env);
+  const credentials = credentialsFrom(env);
   if (!credentials) return json({ error: "Not configured." }, 503);
 
   let body: {

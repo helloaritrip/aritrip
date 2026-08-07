@@ -1,4 +1,5 @@
 ---
+import { env } from "cloudflare:workers";
 import { PuckEditor } from "../../puck/PuckEditor";
 import { getAdminSession } from "../../lib/requireAdminSession";
 
@@ -6,12 +7,12 @@ import { getAdminSession } from "../../lib/requireAdminSession";
 // poder chequear la sesión en cada request — un editor de contenido
 // público sin login era un hueco de seguridad real una vez deployado.
 // Reemplaza el Basic Auth de una sola contraseña compartida (2026-08-07)
-// por sesiones reales por administrador — ver /admin/users.
+// por sesiones reales por administrador — ver /ari-admin/users.
 export const prerender = false;
 
-const session = await getAdminSession(Astro.cookies, Astro.locals.runtime.env);
+const session = await getAdminSession(Astro.cookies, env);
 if (!session) {
-  return Astro.redirect(`/admin/login?next=${encodeURIComponent(Astro.url.pathname + Astro.url.search)}`);
+  return Astro.redirect(`/ari-admin/login?next=${encodeURIComponent(Astro.url.pathname + Astro.url.search)}`);
 }
 ---
 

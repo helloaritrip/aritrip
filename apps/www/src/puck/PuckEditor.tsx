@@ -49,8 +49,10 @@ export function PuckEditor() {
     const s = params.get("slug") || "untitled";
     setSlug(s);
 
+    type FetchedPage = PageMeta & { content: Data<Props> };
+
     fetch(`/api/admin/pages/${encodeURIComponent(s)}`)
-      .then((res) => (res.ok ? res.json() : res.status === 404 ? null : Promise.reject()))
+      .then((res): Promise<FetchedPage | null> => (res.ok ? res.json() : res.status === 404 ? Promise.resolve(null) : Promise.reject()))
       .then((doc) => {
         if (doc) {
           setInitialData(doc.content as Data<Props>);

@@ -72,11 +72,11 @@ export const prerender = false;
 
         if (res.ok) {
           const next = new URLSearchParams(window.location.search).get("next");
-          window.location.href = next && next.startsWith("/") ? next : "/admin";
+          window.location.href = next && next.startsWith("/") ? next : "/ari-admin";
           return;
         }
 
-        const data = await res.json().catch(() => ({}));
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
         errorEl.textContent = data.error || "Login failed.";
         errorEl.classList.remove("hidden");
       });

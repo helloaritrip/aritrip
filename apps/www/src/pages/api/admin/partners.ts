@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { env } from "cloudflare:workers";
 import { setDocument, PARTNER_CATEGORIES, type PartnerCategory } from "@aritrips/data";
 import { getAdminSession } from "../../../lib/requireAdminSession";
 
@@ -8,11 +9,11 @@ function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
-export const PUT: APIRoute = async ({ request, cookies, locals }) => {
-  const session = await getAdminSession(cookies, locals.runtime.env);
+export const PUT: APIRoute = async ({ request, cookies }) => {
+  const session = await getAdminSession(cookies, env);
   if (!session) return json({ error: "Not logged in." }, 401);
 
-  const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = locals.runtime.env;
+  const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
   if (!FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) return json({ error: "Not configured." }, 503);
   const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
 

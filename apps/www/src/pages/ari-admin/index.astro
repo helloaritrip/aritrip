@@ -1,18 +1,19 @@
 ---
+import { env } from "cloudflare:workers";
 import "../../styles/global.css";
 import { getAdminSession } from "../../lib/requireAdminSession";
 
 export const prerender = false;
 
-const session = await getAdminSession(Astro.cookies, Astro.locals.runtime.env);
+const session = await getAdminSession(Astro.cookies, env);
 if (!session) {
-  return Astro.redirect("/admin/login");
+  return Astro.redirect("/ari-admin/login");
 }
 
 const sections = [
-  { href: "/admin/pages", title: "Pages", description: "Edit content pages built with the Puck templates." },
-  { href: "/admin/partners", title: "Partners", description: "Affiliate links — flight, hotel, activities, insurance, eSIM." },
-  { href: "/admin/users", title: "Users", description: "Who can log into this panel." },
+  { href: "/ari-admin/pages", title: "Pages", description: "Edit content pages built with the Puck templates." },
+  { href: "/ari-admin/partners", title: "Partners", description: "Affiliate links — flight, hotel, activities, insurance, eSIM." },
+  { href: "/ari-admin/users", title: "Users", description: "Who can log into this panel." },
 ];
 ---
 
@@ -60,7 +61,7 @@ const sections = [
     <script>
       document.getElementById("logout-btn")?.addEventListener("click", async () => {
         await fetch("/api/admin/logout", { method: "POST" });
-        window.location.href = "/admin/login";
+        window.location.href = "/ari-admin/login";
       });
     </script>
   </body>

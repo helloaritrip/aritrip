@@ -9,14 +9,15 @@
  * de Firestore, igual que /p/[slug].astro.
  */
 import type { APIRoute } from "astro";
+import { env } from "cloudflare:workers";
 import { listDocuments } from "@aritrips/data";
 
 export const prerender = false;
 
 const SITE_URL = "https://aritrips.com";
 
-export const GET: APIRoute = async ({ locals }) => {
-  const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = locals.runtime.env;
+export const GET: APIRoute = async () => {
+  const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
 
   const urls = [{ loc: `${SITE_URL}/`, priority: "1.0" }];
 

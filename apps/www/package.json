@@ -28,6 +28,7 @@
     "wrangler": "^4.119.0"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.10"
+    "@astrojs/check": "^0.9.10",
+    "@cloudflare/workers-types": "^5.20260804.1"
   }
 }

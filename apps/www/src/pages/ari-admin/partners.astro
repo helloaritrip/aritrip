@@ -1,16 +1,17 @@
 ---
+import { env } from "cloudflare:workers";
 import "../../styles/global.css";
 import { getAdminSession } from "../../lib/requireAdminSession";
 import { listDocuments, PARTNER_CATEGORIES, PARTNER_LABELS, DEFAULT_PARTNER_CONFIG, type PartnerCategory } from "@aritrips/data";
 
 export const prerender = false;
 
-const session = await getAdminSession(Astro.cookies, Astro.locals.runtime.env);
+const session = await getAdminSession(Astro.cookies, env);
 if (!session) {
-  return Astro.redirect(`/admin/login?next=${encodeURIComponent(Astro.url.pathname)}`);
+  return Astro.redirect(`/ari-admin/login?next=${encodeURIComponent(Astro.url.pathname)}`);
 }
 
-const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = Astro.locals.runtime.env;
+const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
 const config = { ...DEFAULT_PARTNER_CONFIG };
 let loadError: string | null = null;
 
@@ -45,7 +46,7 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
   <body class="min-h-screen bg-bg text-ink antialiased">
     <div class="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12">
       <div>
-        <a href="/admin" class="text-sm text-muted hover:text-accent">&larr; Admin</a>
+        <a href="/ari-admin" class="text-sm text-muted hover:text-accent">&larr; Admin</a>
         <h1 class="text-2xl font-semibold text-ink">Partners</h1>
         <p class="text-sm text-muted">Affiliate links shown on every result card — changes go live within ~5 minutes, no deploy needed.</p>
       </div>
@@ -115,7 +116,7 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
             statusEl.textContent = "Saved ✓";
             setTimeout(() => (statusEl.textContent = ""), 2000);
           } else {
-            const data = await res.json().catch(() => ({}));
+            const data = (await res.json().catch(() => ({}))) as { error?: string };
             statusEl.textContent = data.error || "Failed to save.";
           }
         });

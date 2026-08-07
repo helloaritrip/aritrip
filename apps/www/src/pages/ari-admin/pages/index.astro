@@ -1,16 +1,17 @@
 ---
+import { env } from "cloudflare:workers";
 import "../../../styles/global.css";
 import { getAdminSession } from "../../../lib/requireAdminSession";
 import { listDocuments } from "@aritrips/data";
 
 export const prerender = false;
 
-const session = await getAdminSession(Astro.cookies, Astro.locals.runtime.env);
+const session = await getAdminSession(Astro.cookies, env);
 if (!session) {
-  return Astro.redirect(`/admin/login?next=${encodeURIComponent(Astro.url.pathname)}`);
+  return Astro.redirect(`/ari-admin/login?next=${encodeURIComponent(Astro.url.pathname)}`);
 }
 
-const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = Astro.locals.runtime.env;
+const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
 let pages: { id: string; title?: unknown; status?: unknown; template?: unknown; updatedAt?: unknown }[] = [];
 let loadError: string | null = null;
 
@@ -41,7 +42,7 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
     <div class="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-12">
       <div class="flex items-center justify-between">
         <div>
-          <a href="/admin" class="text-sm text-muted hover:text-accent">&larr; Admin</a>
+          <a href="/ari-admin" class="text-sm text-muted hover:text-accent">&larr; Admin</a>
           <h1 class="text-2xl font-semibold text-ink">Pages</h1>
           <p class="text-sm text-muted">Built with the Puck templates — {pages.length} page{pages.length === 1 ? "" : "s"}.</p>
         </div>
@@ -69,7 +70,7 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
       <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
         {
           pages.map((p) => (
-            <a href={`/admin/edit?slug=${encodeURIComponent(p.id)}`} class="flex items-center justify-between gap-3 p-4 hover:bg-bg">
+            <a href={`/ari-admin/edit?slug=${encodeURIComponent(p.id)}`} class="flex items-center justify-between gap-3 p-4 hover:bg-bg">
               <div>
                 <p class="text-sm font-medium text-ink">{String(p.title ?? p.id)}</p>
                 <p class="text-xs text-muted">/p/{p.id}</p>
@@ -94,7 +95,7 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
         const form = e.target as HTMLFormElement;
         const slug = new FormData(form).get("slug");
         if (typeof slug === "string" && slug) {
-          window.location.href = `/admin/edit?slug=${encodeURIComponent(slug)}`;
+          window.location.href = `/ari-admin/edit?slug=${encodeURIComponent(slug)}`;
         }
       });
     </script>

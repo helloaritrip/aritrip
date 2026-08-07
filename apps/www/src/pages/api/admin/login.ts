@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { env } from "cloudflare:workers";
 import { getDocument, verifyPassword, signSession } from "@aritrips/data";
 import { SESSION_COOKIE } from "../../../lib/requireAdminSession";
 
@@ -8,8 +9,8 @@ function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
-export const POST: APIRoute = async ({ request, cookies, locals }) => {
-  const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, SESSION_SECRET } = locals.runtime.env;
+export const POST: APIRoute = async ({ request, cookies }) => {
+  const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, SESSION_SECRET } = env;
   if (!FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY || !SESSION_SECRET) {
     return json({ error: "Admin panel isn't configured yet (missing secrets)." }, 503);
   }

@@ -6,6 +6,7 @@
 // bajar un archivo, ubicarlo a mano, commitear y redeployar para que se
 // viera. SSR es lo que hace que publicar sea instantáneo de verdad — cero
 // <script> igual que antes, esto es fetch server-side, no client-side.
+import { env } from "cloudflare:workers";
 import type { Data } from "@measured/puck";
 import { Render } from "@measured/puck";
 import { getDocument } from "@aritrips/data";
@@ -15,18 +16,25 @@ import Layout from "../../layouts/Layout.astro";
 export const prerender = false;
 
 const slug = Astro.params.slug;
-const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = Astro.locals.runtime.env;
+const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
 
 if (!slug || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
   return new Response("Not found", { status: 404 });
 }
 
-const doc = await getDocument("pages", slug, {
-  clientEmail: FIREBASE_CLIENT_EMAIL,
-  privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-});
+let doc: Record<string, unknown> | null;
+try {
+  doc = await getDocument("pages", slug, {
+    clientEmail: FIREBASE_CLIENT_EMAIL,
+    privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+  });
+} catch {
+  // Un problema real de Firestore (no solo "no existe") no debe tirar un
+  // 500 sin explicación — se ve igual que "no encontrado" para el visitante.
+  return new Response("Not found", { status: 404 });
+}
 
-// Drafts no son públicos — solo visibles desde /admin/edit.
+// Drafts no son públicos — solo visibles desde /ari-admin/edit.
 if (!doc || doc.status !== "published" || typeof doc.contentJson !== "string") {
   return new Response("Not found", { status: 404 });
 }
