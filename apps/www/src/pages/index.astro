@@ -1,12 +1,20 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { Button } from "@aritrips/ui";
-import { destinations, ORIGIN_HUBS } from "@aritrips/data";
+import { destinations, ORIGIN_HUBS, ORIGIN_LABELS } from "@aritrips/data";
+import { cityName, hubPageSlug } from "../lib/citySlug";
 
 // Cuenta real del catálogo, no un número fijo que se desactualiza — mismo
 // error que ya corregimos dos veces en apps/app.
 const destinationCount = destinations.length;
 const originCount = ORIGIN_HUBS.length;
+
+// Links a las 24 páginas "Best trips from {city}" (generate-hub-pages.ts)
+// — sin esto quedan huérfanas: ni Google ni un usuario real las encuentra.
+const cityLinks = ORIGIN_HUBS.map((hub) => ({
+  city: cityName(ORIGIN_LABELS[hub]),
+  href: `/p/${hubPageSlug(ORIGIN_LABELS[hub])}`,
+})).sort((a, b) => a.city.localeCompare(b.city));
 
 const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -71,6 +79,19 @@ const steps = [
       <Button href={APP_URL} variant="secondary">
         See where you can go
       </Button>
+    </section>
+
+    <section class="flex flex-col gap-6">
+      <h2 class="text-center text-2xl font-semibold text-ink">Trip ideas by city</h2>
+      <div class="flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm">
+        {
+          cityLinks.map((link) => (
+            <a href={link.href} class="text-muted hover:text-accent">
+              Best trips from {link.city}
+            </a>
+          ))
+        }
+      </div>
     </section>
   </main>
 
