@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ShareButton } from "@aritrips/ui";
 import type { DiscoverSlot, OriginHub } from "@aritrips/data";
 import { ORIGIN_LABELS } from "@/lib/originLabels";
+import { DestinationModal } from "./DestinationModal";
 
 type DiscoverPick = {
   slot: DiscoverSlot;
@@ -29,6 +30,7 @@ const SLOT_LABEL: Record<DiscoverSlot, string> = {
 export function DiscoverSection() {
   const [data, setData] = useState<DiscoverResponse | null>(null);
   const [failed, setFailed] = useState(false);
+  const [openDestinationId, setOpenDestinationId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/discover")
@@ -58,19 +60,52 @@ export function DiscoverSection() {
 
       <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
         {ordered.map((pick) => (
-          <DiscoverCard key={pick.slot} pick={pick} emphasized={pick.slot === "recommended"} />
+          <DiscoverCard
+            key={pick.slot}
+            pick={pick}
+            emphasized={pick.slot === "recommended"}
+            onOpen={() => setOpenDestinationId(pick.destinationId)}
+          />
         ))}
       </div>
+
+      {openDestinationId && (
+        <DestinationModal
+          destinationId={openDestinationId}
+          originAirportCode={data.originAirportCode}
+          onClose={() => setOpenDestinationId(null)}
+        />
+      )}
     </section>
   );
 }
 
-function DiscoverCard({ pick, emphasized }: { pick: DiscoverPick; emphasized: boolean }) {
+function DiscoverCard({
+  pick,
+  emphasized,
+  onOpen,
+}: {
+  pick: DiscoverPick;
+  emphasized: boolean;
+  onOpen: () => void;
+}) {
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
 
   return (
+    // No es un <button> a propósito: adentro ya hay un <button> real
+    // (ShareButton) — anidar botones es HTML inválido y rompe el click.
+    // role="button" + onKeyDown le da el mismo comportamiento accesible.
     <div
-      className={`flex flex-col overflow-hidden rounded-lg border bg-surface ${
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      className={`flex cursor-pointer flex-col overflow-hidden rounded-lg border bg-surface text-left transition-shadow hover:shadow-md ${
         emphasized ? "border-accent shadow-md sm:-translate-y-2" : "border-rule"
       }`}
     >

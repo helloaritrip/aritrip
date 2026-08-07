@@ -28,15 +28,15 @@ export interface DiscoverPick {
   imageQuery: string;
 }
 
-const DEFAULT_TRIP_DAYS = 5;
-const DEFAULT_ADULTS = 2;
+export const DEFAULT_TRIP_DAYS = 5;
+export const DEFAULT_ADULTS = 2;
 
 // Cuánto pesa la accesibilidad desde el origen frente al campo curado
 // absoluto — se mantiene minoritario a propósito, para que "recomendado"
 // siga leyendo como "buen valor" y no colapse en "lo más cercano".
 const ACCESSIBILITY_WEIGHT = 0.35;
 
-function defaultMonth(): number {
+export function defaultMonth(): number {
   const now = new Date();
   const twoMonthsOut = now.getMonth() + 2; // 0-indexed + 2 => ~2 meses adelante
   return (twoMonthsOut % 12) + 1;
@@ -112,4 +112,90 @@ export function getDiscoverPicks(
   pickBy("dream", "luxuryScore");
 
   return picks;
+}
+
+export interface DiscoverDetail {
+  destinationId: string;
+  destinationAirportCode: string;
+  name: string;
+  country: string;
+  imageQuery: string;
+  tripDays: number;
+  adults: number;
+  startDate: string; // ISO yyyy-mm-dd, misma fecha de referencia usada para el clima/precio
+  endDate: string;
+  totalEstimatedCostUSD: number;
+  costBreakdown: { flightUSD: number; hotelUSD: number; activitiesUSD: number };
+  weather: { avgTempMinC: number; avgTempMaxC: number; rainfallLevel: "low" | "medium" | "high" } | null;
+  signatureExperiences: string[];
+  insiderNotes: string;
+}
+
+// Mismo desfase de "~2 meses adelante" que defaultMonth(), pero devuelve
+// fechas reales (con año) para poder armar links de reserva — defaultMonth()
+// solo da el número de mes porque es lo único que necesita el matching
+// contra PriceSnapshot.month.
+function defaultDateRange(): { startDate: string; endDate: string } {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() + 2, 15);
+  const end = new Date(start);
+  end.setDate(end.getDate() + DEFAULT_TRIP_DAYS);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  return { startDate: iso(start), endDate: iso(end) };
+}
+
+/**
+ * Detalle completo para UNA card de Discover cuando el usuario hace clic
+ * — no pasa por el motor de recomendación (`getRecommendations`) porque
+ * ese necesita presupuesto/intereses que todavía no existen en este punto
+ * del flujo (el usuario no llenó el formulario). Usa los mismos supuestos
+ * por default que ya calculaban `estimatedFromUSD` en los picks (5
+ * noches, 2 adultos, ~2 meses adelante) para que el precio mostrado acá
+ * coincida exacto con el de la card. Los "highlights" son la ficha
+ * curada real del destino (signatureExperiences/insiderNotes), no
+ * "reasons" algorítmicas — no hay intereses del usuario con qué
+ * calcularlas todavía.
+ */
+export function getDiscoverDetail(
+  destinationId: string,
+  originAirportCode: OriginHub,
+  destinations: Destination[],
+  priceSnapshots: PriceSnapshot[],
+  month: number = defaultMonth()
+): DiscoverDetail | null {
+  const destination = destinations.find((d) => d.id === destinationId && d.status === "active");
+  if (!destination) return null;
+
+  const snapshot = priceSnapshots.find(
+    (p) => p.destinationId === destinationId && p.originAirportCode === originAirportCode && p.month === month
+  );
+  if (!snapshot) return null;
+
+  const costBreakdown = {
+    flightUSD: Math.round(snapshot.avgFlightCostUSD * DEFAULT_ADULTS),
+    hotelUSD: Math.round(snapshot.avgHotelCostPerNightUSD.mid * DEFAULT_TRIP_DAYS),
+    activitiesUSD: Math.round(snapshot.avgActivityCostPerDayUSD * DEFAULT_ADULTS * DEFAULT_TRIP_DAYS),
+  };
+
+  const season = destination.seasons.find((s) => s.months.includes(month));
+  const { startDate, endDate } = defaultDateRange();
+
+  return {
+    destinationId: destination.id,
+    destinationAirportCode: destination.airportCodes[0],
+    name: destination.name,
+    country: destination.country,
+    imageQuery: destination.imageQuery,
+    tripDays: DEFAULT_TRIP_DAYS,
+    adults: DEFAULT_ADULTS,
+    startDate,
+    endDate,
+    totalEstimatedCostUSD: costBreakdown.flightUSD + costBreakdown.hotelUSD + costBreakdown.activitiesUSD,
+    costBreakdown,
+    weather: season
+      ? { avgTempMinC: season.avgTempC.min, avgTempMaxC: season.avgTempC.max, rainfallLevel: season.rainfallLevel }
+      : null,
+    signatureExperiences: destination.signatureExperiences,
+    insiderNotes: destination.insiderNotes,
+  };
 }
