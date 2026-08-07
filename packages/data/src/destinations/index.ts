@@ -165,7 +165,7 @@ export const destinations: Destination[] = [
       "Your dollar stretches less here than almost anywhere else in this list — it's the right call when you're prioritizing luxury and romance over squeezing the most out of your budget.",
     powerPlugType: ["A", "B"],
     mobileCoverageQuality: "high",
-    imageQuery: "cabo san lucas arch sunset boat",
+    imageQuery: "Cabo San Lucas arch",
     status: "active",
   },
   {
@@ -475,7 +475,7 @@ export const destinations: Destination[] = [
       "A very short hop from Miami (1h15), making it a great weekend trip from that hub specifically — but you're paying a premium for the proximity to the US, so it doesn't stretch your budget as far as some other options.",
     powerPlugType: ["A", "B"],
     mobileCoverageQuality: "high",
-    imageQuery: "nassau bahamas turquoise water beach",
+    imageQuery: "Nassau Bahamas harbour",
     status: "active",
   },
 
@@ -746,7 +746,7 @@ export const destinations: Destination[] = [
       "Widely considered Mexico's best food destination, at a fraction of the cost of Mexico City or the Riviera Maya — and a shorter flight than Medellín from most US hubs.",
     powerPlugType: ["A", "B"],
     mobileCoverageQuality: "medium",
-    imageQuery: "oaxaca mexico colorful market mezcal",
+    imageQuery: "Oaxaca street market",
     status: "active",
   },
   {
@@ -1177,7 +1177,7 @@ export const destinations: Destination[] = [
       "The most expensive destination in the catalog — the ultimate domestic dream trip for snow and luxury, aimed at an even more exclusive crowd than Whistler.",
     powerPlugType: ["A", "B"],
     mobileCoverageQuality: "medium",
-    imageQuery: "aspen colorado ski mountains luxury",
+    imageQuery: "Aspen Colorado downtown",
     status: "active",
   },
 
