@@ -1,5 +1,33 @@
 ---
 import { PuckEditor } from "../../puck/PuckEditor";
+
+// SSR solo en esta página (el resto del sitio sigue siendo estático) para
+// poder chequear el header Authorization en cada request — un editor de
+// contenido público sin login era un hueco de seguridad real una vez
+// deployado (antes no importaba porque solo corría local).
+export const prerender = false;
+
+const expectedUser = import.meta.env.ADMIN_USERNAME;
+const expectedPass = import.meta.env.ADMIN_PASSWORD;
+
+function unauthorized() {
+  return new Response("Authentication required", {
+    status: 401,
+    headers: { "WWW-Authenticate": 'Basic realm="AriTrips Admin"' },
+  });
+}
+
+const authHeader = Astro.request.headers.get("authorization");
+if (!expectedUser || !expectedPass) {
+  return unauthorized();
+}
+if (!authHeader?.startsWith("Basic ")) {
+  return unauthorized();
+}
+const [user, pass] = atob(authHeader.slice(6)).split(":");
+if (user !== expectedUser || pass !== expectedPass) {
+  return unauthorized();
+}
 ---
 
 <!doctype html>
