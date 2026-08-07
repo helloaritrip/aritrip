@@ -8,7 +8,7 @@
         "heading": "Best trips from Dallas on a budget",
         "subheading": "Real flight, hotel, and activity costs for the destinations that actually fit what you have to spend.",
         "ctaLabel": "Find your trip",
-        "ctaHref": "http://localhost:3000"
+        "ctaHref": "https://app.aritrips.com"
       }
     },
     {
@@ -31,7 +31,7 @@
       "props": {
         "id": "cta-1",
         "label": "See prices for your dates",
-        "href": "http://localhost:3000",
+        "href": "https://app.aritrips.com",
         "variant": "primary"
       }
     }
