@@ -43,7 +43,7 @@ export default function TermsPage() {
       <h2>Contact</h2>
       <p>
         Questions about these terms:{" "}
-        <a href="mailto:helloari.trip@gmail.com">helloari.trip@gmail.com</a>.
+        <a href="mailto:hello@aritrips.com">hello@aritrips.com</a>.
       </p>
     </LegalPage>
   );
