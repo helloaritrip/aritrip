@@ -10,7 +10,11 @@
 export type TrackedEvent =
   | { name: "search_performed"; originAirportCode: string; budgetUSD: number }
   | { name: "recommendation_shown"; destinationId: string; rank: number; finalScore: number }
-  | { name: "recommendation_clicked"; destinationId: string; category: "flight" | "hotel" | "activity" | "insurance" | "esim" };
+  | {
+      name: "recommendation_clicked";
+      destinationId: string;
+      category: "flight" | "hotel" | "activity" | "experiences" | "insurance" | "esim";
+    };
 
 export function trackEvent(event: TrackedEvent) {
   if (process.env.NODE_ENV !== "production") {

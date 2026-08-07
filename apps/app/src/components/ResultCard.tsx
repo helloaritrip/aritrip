@@ -31,6 +31,7 @@ const CTA_LABELS = {
   flight: "✈ Flights",
   hotel: "🏨 Hotel",
   activity: "🎟 Activities",
+  experiences: "🎫 Experiences",
   insurance: "🛡 Insurance",
   esim: "📶 eSIM",
 } as const;
