@@ -10,10 +10,26 @@ if (!session) {
   return Astro.redirect("/ari-admin/login");
 }
 
+// El panel es un Backoffice (administra el negocio), no solo un CMS
+// (administra contenido) — Pages/Partners/Admins es lo único construido
+// hoy, el resto queda reservado en el nav a propósito (2026-08-07) para
+// no tener que rediseñar la IA cuando le toque el turno a Ari Core v2
+// (Travel Rules/Profiles/Scoring) y a analytics propio (Analytics/AI
+// Logs/Searches/Recommendations). No implementar la lógica de esas
+// secciones todavía — choca con la decisión ya tomada de frenar el
+// motor hasta tener tráfico real.
 const sections = [
   { href: "/ari-admin/pages", title: "Pages", description: "Edit content pages built with the Puck templates." },
   { href: "/ari-admin/partners", title: "Partners", description: "Affiliate links — flight, hotel, activities, insurance, eSIM." },
-  { href: "/ari-admin/users", title: "Users", description: "Who can log into this panel." },
+  { href: "/ari-admin/users", title: "Admins", description: "Who can log into this panel." },
+  { title: "Travel Rules", description: "Business rules that steer Ari Core's recommendations — edit without touching code." },
+  { title: "Travel Profiles", description: "Traveler archetypes and preference presets used to personalize results." },
+  { title: "Scoring", description: "Weights and formulas behind the recommendation engine." },
+  { title: "Analytics", description: "Traffic, conversion, and revenue per visit across the funnel." },
+  { title: "AI Logs", description: "Audit trail of what Ari Core recommended and why." },
+  { title: "Searches", description: "Search history — what travelers are actually looking for." },
+  { title: "Recommendations", description: "Every recommendation shown, kept for review and tuning." },
+  { title: "Settings", description: "Site-wide configuration." },
 ];
 ---
 
@@ -26,26 +42,38 @@ const sections = [
     <title>Admin — AriTrips</title>
   </head>
   <body class="min-h-screen bg-bg text-ink antialiased">
-    <div class="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-12">
+    <div class="mx-auto flex max-w-4xl flex-col gap-8 px-6 py-12">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-medium uppercase tracking-wide text-accent">AriTrips</p>
-          <h1 class="text-2xl font-semibold text-ink">Admin panel</h1>
+          <h1 class="text-2xl font-semibold text-ink">Dashboard</h1>
         </div>
         <p class="text-sm text-muted">{session.email}</p>
       </div>
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {
-          sections.map((s) => (
-            <a
-              href={s.href}
-              class="flex flex-col gap-2 rounded-lg border border-rule bg-surface p-5 transition-shadow hover:shadow-md"
-            >
-              <span class="text-base font-semibold text-ink">{s.title}</span>
-              <span class="text-sm text-muted">{s.description}</span>
-            </a>
-          ))
+          sections.map((s) =>
+            s.href ? (
+              <a
+                href={s.href}
+                class="flex flex-col gap-2 rounded-lg border border-rule bg-surface p-5 transition-shadow hover:shadow-md"
+              >
+                <span class="text-base font-semibold text-ink">{s.title}</span>
+                <span class="text-sm text-muted">{s.description}</span>
+              </a>
+            ) : (
+              <div class="flex flex-col gap-2 rounded-lg border border-dashed border-rule bg-surface/50 p-5 opacity-70">
+                <span class="flex items-center justify-between gap-2">
+                  <span class="text-base font-semibold text-ink">{s.title}</span>
+                  <span class="rounded-full bg-rule/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted">
+                    Coming soon
+                  </span>
+                </span>
+                <span class="text-sm text-muted">{s.description}</span>
+              </div>
+            )
+          )
         }
       </div>
 
