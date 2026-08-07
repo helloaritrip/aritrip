@@ -1,0 +1,67 @@
+---
+import "../../styles/global.css";
+import { getAdminSession } from "../../lib/requireAdminSession";
+
+export const prerender = false;
+
+const session = await getAdminSession(Astro.cookies, Astro.locals.runtime.env);
+if (!session) {
+  return Astro.redirect("/admin/login");
+}
+
+const sections = [
+  { href: "/admin/pages", title: "Pages", description: "Edit content pages built with the Puck templates." },
+  { href: "/admin/partners", title: "Partners", description: "Affiliate links — flight, hotel, activities, insurance, eSIM." },
+  { href: "/admin/users", title: "Users", description: "Who can log into this panel." },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Admin — AriTrips</title>
+  </head>
+  <body class="min-h-screen bg-bg text-ink antialiased">
+    <div class="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-12">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium uppercase tracking-wide text-accent">AriTrips</p>
+          <h1 class="text-2xl font-semibold text-ink">Admin panel</h1>
+        </div>
+        <p class="text-sm text-muted">{session.email}</p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {
+          sections.map((s) => (
+            <a
+              href={s.href}
+              class="flex flex-col gap-2 rounded-lg border border-rule bg-surface p-5 transition-shadow hover:shadow-md"
+            >
+              <span class="text-base font-semibold text-ink">{s.title}</span>
+              <span class="text-sm text-muted">{s.description}</span>
+            </a>
+          ))
+        }
+      </div>
+
+      <button
+        id="logout-btn"
+        type="button"
+        class="self-start rounded-md border border-rule px-3 py-1.5 text-sm text-ink hover:border-accent hover:text-accent"
+      >
+        Log out
+      </button>
+    </div>
+
+    <script>
+      document.getElementById("logout-btn")?.addEventListener("click", async () => {
+        await fetch("/api/admin/logout", { method: "POST" });
+        window.location.href = "/admin/login";
+      });
+    </script>
+  </body>
+</html>

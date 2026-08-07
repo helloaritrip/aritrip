@@ -1,30 +1,47 @@
 ---
-// Páginas de contenido armadas con Puck: cada .json en src/content/pages
-// se resuelve en build time vía import.meta.glob (Vite), no node:fs — el
-// adaptador de Cloudflare corre getStaticPaths dentro de una emulación
-// del runtime de Workers incluso en build, donde node:fs no se comporta
-// como en Node normal. import.meta.glob es la forma correcta en Astro/Vite
-// para esto, funciona igual sin importar el adapter de destino.
+// Páginas de contenido armadas con Puck — leídas de Firestore (colección
+// `pages`) en cada request, no prerenderizadas en build time (2026-08-07,
+// panel de admin). Antes esto leía src/content/pages/*.json vía
+// import.meta.glob en build time: "Publicar" desde el editor requería
+// bajar un archivo, ubicarlo a mano, commitear y redeployar para que se
+// viera. SSR es lo que hace que publicar sea instantáneo de verdad — cero
+// <script> igual que antes, esto es fetch server-side, no client-side.
 import type { Data } from "@measured/puck";
 import { Render } from "@measured/puck";
+import { getDocument } from "@aritrips/data";
 import { config, type Props } from "../../puck/config";
 import Layout from "../../layouts/Layout.astro";
 
-export function getStaticPaths() {
-  const modules = import.meta.glob<Data<Props>>("../../content/pages/*.json", {
-    eager: true,
-    import: "default",
-  });
-  return Object.entries(modules).map(([filePath, data]) => {
-    const slug = filePath.split("/").pop()!.replace(/\.json$/, "");
-    return { params: { slug }, props: { data } };
-  });
+export const prerender = false;
+
+const slug = Astro.params.slug;
+const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = Astro.locals.runtime.env;
+
+if (!slug || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
+  return new Response("Not found", { status: 404 });
 }
 
-const { data } = Astro.props as { data: Data<Props> };
-const pageTitle = (data.root.props?.title as string | undefined) ?? "AriTrips";
+const doc = await getDocument("pages", slug, {
+  clientEmail: FIREBASE_CLIENT_EMAIL,
+  privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+});
+
+// Drafts no son públicos — solo visibles desde /admin/edit.
+if (!doc || doc.status !== "published" || typeof doc.contentJson !== "string") {
+  return new Response("Not found", { status: 404 });
+}
+
+let data: Data<Props>;
+try {
+  data = JSON.parse(doc.contentJson) as Data<Props>;
+} catch {
+  return new Response("Not found", { status: 404 });
+}
+
+const pageTitle = (data.root.props?.title as string | undefined) || (doc.title as string | undefined) || "AriTrips";
+const pageDescription = (doc.description as string | undefined) || pageTitle;
 ---
 
-<Layout title={pageTitle} description={pageTitle} showAdRails>
+<Layout title={pageTitle} description={pageDescription} showAdRails>
   <Render config={config} data={data} />
 </Layout>

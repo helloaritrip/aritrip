@@ -1,30 +1,41 @@
 /**
  * Sitemap simple, sin dependencia nueva (@astrojs/sitemap) — mismo
  * principio de "tecnología aburrida" que el resto del sitio. Lista la
- * home + cada página en src/content/pages/*.json, descubiertas con el
- * mismo import.meta.glob que ya usa src/pages/p/[slug].astro, así que
- * cualquier página nueva que se agregue ahí aparece acá solo sin tocar
- * este archivo.
+ * home + cada página publicada en Firestore (colección `pages`) — ahora
+ * que /p/[slug].astro lee de ahí en vez de src/content/pages/*.json
+ * (2026-08-07, panel de admin), el sitemap tiene que leer la misma
+ * fuente para no quedar desincronizado con lo que realmente existe.
+ * SSR (no prerender): necesita el request-time env para las credenciales
+ * de Firestore, igual que /p/[slug].astro.
  */
 import type { APIRoute } from "astro";
-import type { Data } from "@measured/puck";
-import type { Props } from "../puck/config";
+import { listDocuments } from "@aritrips/data";
 
-export const prerender = true;
+export const prerender = false;
 
 const SITE_URL = "https://aritrips.com";
 
-export const GET: APIRoute = () => {
-  const modules = import.meta.glob<Data<Props>>("../content/pages/*.json", {
-    eager: true,
-    import: "default",
-  });
-  const slugs = Object.keys(modules).map((filePath) => filePath.split("/").pop()!.replace(/\.json$/, ""));
+export const GET: APIRoute = async ({ locals }) => {
+  const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = locals.runtime.env;
 
-  const urls = [
-    { loc: `${SITE_URL}/`, priority: "1.0" },
-    ...slugs.map((slug) => ({ loc: `${SITE_URL}/p/${slug}/`, priority: "0.8" })),
-  ];
+  const urls = [{ loc: `${SITE_URL}/`, priority: "1.0" }];
+
+  if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+    try {
+      const pages = await listDocuments("pages", {
+        clientEmail: FIREBASE_CLIENT_EMAIL,
+        privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+      });
+      for (const page of pages) {
+        if (page.status === "published") {
+          urls.push({ loc: `${SITE_URL}/p/${page.id}/`, priority: "0.8" });
+        }
+      }
+    } catch {
+      // Sitemap parcial (solo la home) es mejor que un 500 — Google
+      // reintenta solo en la próxima pasada.
+    }
+  }
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

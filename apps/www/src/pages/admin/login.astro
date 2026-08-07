@@ -1,0 +1,85 @@
+---
+import "../../styles/global.css";
+
+// Página pública en el sentido de que no requiere sesión para verse (es
+// justamente donde se crea la sesión), pero noindex — no es contenido del
+// sitio. SSR para poder eventualmente redirigir server-side si ya hay
+// sesión válida (no implementado todavía, no es crítico).
+export const prerender = false;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Admin login — AriTrips</title>
+  </head>
+  <body class="flex min-h-screen items-center justify-center bg-bg text-ink antialiased">
+    <form id="login-form" class="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-rule bg-surface p-8">
+      <div class="flex flex-col gap-1 text-center">
+        <p class="text-sm font-medium uppercase tracking-wide text-accent">AriTrips</p>
+        <h1 class="text-xl font-semibold text-ink">Admin login</h1>
+      </div>
+
+      <label class="flex flex-col gap-1.5 text-sm">
+        <span class="font-medium text-ink">Email</span>
+        <input
+          type="email"
+          name="email"
+          required
+          autocomplete="username"
+          class="rounded-md border border-rule bg-surface px-3 py-2 text-ink focus:outline focus:outline-2 focus:outline-accent"
+        />
+      </label>
+
+      <label class="flex flex-col gap-1.5 text-sm">
+        <span class="font-medium text-ink">Password</span>
+        <input
+          type="password"
+          name="password"
+          required
+          autocomplete="current-password"
+          class="rounded-md border border-rule bg-surface px-3 py-2 text-ink focus:outline focus:outline-2 focus:outline-accent"
+        />
+      </label>
+
+      <p id="login-error" class="hidden text-sm text-red-600 dark:text-red-400"></p>
+
+      <button
+        type="submit"
+        class="inline-flex items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90"
+      >
+        Log in
+      </button>
+    </form>
+
+    <script>
+      const form = document.getElementById("login-form") as HTMLFormElement;
+      const errorEl = document.getElementById("login-error") as HTMLParagraphElement;
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorEl.classList.add("hidden");
+        const formData = new FormData(form);
+
+        const res = await fetch("/api/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: formData.get("email"), password: formData.get("password") }),
+        });
+
+        if (res.ok) {
+          const next = new URLSearchParams(window.location.search).get("next");
+          window.location.href = next && next.startsWith("/") ? next : "/admin";
+          return;
+        }
+
+        const data = await res.json().catch(() => ({}));
+        errorEl.textContent = data.error || "Login failed.";
+        errorEl.classList.remove("hidden");
+      });
+    </script>
+  </body>
+</html>

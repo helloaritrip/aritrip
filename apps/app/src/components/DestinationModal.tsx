@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { buildPartnerLinks } from "@/lib/partnerLinks";
+import type { PartnerLinks } from "@/lib/partnerLinks";
 import { trackEvent } from "@/lib/trackEvent";
 import { ORIGIN_LABELS } from "@/lib/originLabels";
 import type { OriginHub } from "@aritrips/data";
@@ -21,6 +21,8 @@ type DestinationDetail = {
   weather: { avgTempMinC: number; avgTempMaxC: number; rainfallLevel: "low" | "medium" | "high" } | null;
   signatureExperiences: string[];
   insiderNotes: string;
+  // Resuelto server-side en /api/destination — ver apps/app/src/lib/partnerLinks.ts.
+  links: PartnerLinks;
 };
 
 const CTA_LABELS = {
@@ -77,16 +79,7 @@ export function DestinationModal({
     return () => document.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-  const links = detail
-    ? buildPartnerLinks({
-        originAirportCode,
-        destinationAirportCode: detail.destinationAirportCode,
-        destinationName: detail.name,
-        startDate: detail.startDate,
-        endDate: detail.endDate,
-        adults: detail.adults,
-      })
-    : null;
+  const links = detail?.links ?? null;
   const originLabel = ORIGIN_LABELS[originAirportCode] ?? originAirportCode;
 
   return (

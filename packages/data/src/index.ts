@@ -16,3 +16,9 @@ export {
 } from "./originGeo";
 export { getDiscoverPicks, getDiscoverDetail } from "./discover";
 export type { DiscoverSlot, DiscoverPick, DiscoverDetail } from "./discover";
+export { writeFirestoreDocument, setDocument, getDocument, listDocuments, deleteDocument } from "./firestore";
+export type { FirestoreCredentials } from "./firestore";
+export { hashPassword, verifyPassword, signSession, verifySession } from "./adminAuth";
+export type { AdminSession } from "./adminAuth";
+export { PARTNER_CATEGORIES, PARTNER_LABELS, DEFAULT_PARTNER_CONFIG } from "./partners";
+export type { PartnerCategory, PartnerConfigEntry, PartnerConfig } from "./partners";

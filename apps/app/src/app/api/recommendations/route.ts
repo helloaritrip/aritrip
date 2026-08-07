@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
   destinations,
   generateAllPriceSnapshots,
@@ -7,6 +8,7 @@ import {
   type OriginHub,
   type InterestTag,
 } from "@aritrips/data";
+import { getPartnerConfig, buildPartnerLinks } from "@/lib/partnerLinks";
 
 // Fase 1 (MVP): catálogo y precios 100% estáticos, generados en memoria —
 // no depende de Firestore todavía. Ver Data Model / Affiliate Integration
@@ -58,6 +60,15 @@ export async function POST(request: Request) {
   // reexpone como texto/temperatura real para el usuario, no un placeholder.
   const month = new Date(startDate).getMonth() + 1;
 
+  // Resuelto una sola vez por búsqueda (no por resultado) — getPartnerConfig
+  // ya cachea en memoria ~5 min, pero no hace falta ni ese trabajo repetido
+  // dentro del mismo request.
+  const { env } = await getCloudflareContext({ async: true });
+  const partnerConfig = await getPartnerConfig({
+    FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL,
+    FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY,
+  });
+
   return NextResponse.json({
     recommendations: results.map((r) => {
       const season = r.destination.seasons.find((s) => s.months.includes(month));
@@ -80,6 +91,17 @@ export async function POST(request: Request) {
         weather: season
           ? { avgTempMinC: season.avgTempC.min, avgTempMaxC: season.avgTempC.max, rainfallLevel: season.rainfallLevel }
           : null,
+        links: buildPartnerLinks(
+          {
+            originAirportCode: originAirportCode as OriginHub,
+            destinationAirportCode: r.destination.airportCodes[0],
+            destinationName: r.destination.name,
+            startDate,
+            endDate,
+            adults: Number(adults) || 1,
+          },
+          partnerConfig
+        ),
       };
     }),
   });

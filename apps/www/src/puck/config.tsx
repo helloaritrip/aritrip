@@ -138,18 +138,19 @@ export const config: Config<Props> = {
         backgroundImageQuery: "",
       },
       render: ({ heading, subheading, ctaLabel, ctaHref, backgroundImageQuery }) => {
-        const hasImage = Boolean(backgroundImageQuery);
+        const bg = backgroundImageQuery || undefined;
+        const hasImage = Boolean(bg);
         return (
           <section
             className={`relative flex flex-col items-center gap-6 overflow-hidden px-6 text-center ${
               hasImage ? "py-28 sm:py-40" : "py-20"
             }`}
           >
-            {hasImage && (
+            {bg && (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element -- viene del proxy de imágenes propio */}
                 <img
-                  src={imageProxyUrl(backgroundImageQuery, backgroundImageQuery)}
+                  src={imageProxyUrl(bg, bg)}
                   alt=""
                   className="absolute inset-0 h-full w-full object-cover"
                 />

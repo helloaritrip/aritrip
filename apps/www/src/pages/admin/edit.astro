@@ -1,32 +1,17 @@
 ---
 import { PuckEditor } from "../../puck/PuckEditor";
+import { getAdminSession } from "../../lib/requireAdminSession";
 
 // SSR solo en esta página (el resto del sitio sigue siendo estático) para
-// poder chequear el header Authorization en cada request — un editor de
-// contenido público sin login era un hueco de seguridad real una vez
-// deployado (antes no importaba porque solo corría local).
+// poder chequear la sesión en cada request — un editor de contenido
+// público sin login era un hueco de seguridad real una vez deployado.
+// Reemplaza el Basic Auth de una sola contraseña compartida (2026-08-07)
+// por sesiones reales por administrador — ver /admin/users.
 export const prerender = false;
 
-const expectedUser = import.meta.env.ADMIN_USERNAME;
-const expectedPass = import.meta.env.ADMIN_PASSWORD;
-
-function unauthorized() {
-  return new Response("Authentication required", {
-    status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="AriTrips Admin"' },
-  });
-}
-
-const authHeader = Astro.request.headers.get("authorization");
-if (!expectedUser || !expectedPass) {
-  return unauthorized();
-}
-if (!authHeader?.startsWith("Basic ")) {
-  return unauthorized();
-}
-const [user, pass] = atob(authHeader.slice(6)).split(":");
-if (user !== expectedUser || pass !== expectedPass) {
-  return unauthorized();
+const session = await getAdminSession(Astro.cookies, Astro.locals.runtime.env);
+if (!session) {
+  return Astro.redirect(`/admin/login?next=${encodeURIComponent(Astro.url.pathname + Astro.url.search)}`);
 }
 ---
 

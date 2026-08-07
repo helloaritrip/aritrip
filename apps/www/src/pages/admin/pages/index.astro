@@ -1,0 +1,102 @@
+---
+import "../../../styles/global.css";
+import { getAdminSession } from "../../../lib/requireAdminSession";
+import { listDocuments } from "@aritrips/data";
+
+export const prerender = false;
+
+const session = await getAdminSession(Astro.cookies, Astro.locals.runtime.env);
+if (!session) {
+  return Astro.redirect(`/admin/login?next=${encodeURIComponent(Astro.url.pathname)}`);
+}
+
+const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = Astro.locals.runtime.env;
+let pages: { id: string; title?: unknown; status?: unknown; template?: unknown; updatedAt?: unknown }[] = [];
+let loadError: string | null = null;
+
+if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+  try {
+    pages = await listDocuments("pages", {
+      clientEmail: FIREBASE_CLIENT_EMAIL,
+      privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+    });
+    pages.sort((a, b) => String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")));
+  } catch (err) {
+    loadError = err instanceof Error ? err.message : "Failed to load pages.";
+  }
+} else {
+  loadError = "Firestore isn't configured yet (missing secrets).";
+}
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Pages — AriTrips Admin</title>
+  </head>
+  <body class="min-h-screen bg-bg text-ink antialiased">
+    <div class="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-12">
+      <div class="flex items-center justify-between">
+        <div>
+          <a href="/admin" class="text-sm text-muted hover:text-accent">&larr; Admin</a>
+          <h1 class="text-2xl font-semibold text-ink">Pages</h1>
+          <p class="text-sm text-muted">Built with the Puck templates — {pages.length} page{pages.length === 1 ? "" : "s"}.</p>
+        </div>
+      </div>
+
+      {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
+
+      <form id="new-page-form" class="flex items-end gap-3 rounded-lg border border-rule bg-surface p-4">
+        <label class="flex flex-1 flex-col gap-1.5 text-sm">
+          <span class="font-medium text-ink">New page slug</span>
+          <input
+            type="text"
+            name="slug"
+            placeholder="e.g. best-trips-from-miami"
+            pattern="[a-z0-9-]+"
+            required
+            class="rounded-md border border-rule bg-surface px-3 py-2 text-ink focus:outline focus:outline-2 focus:outline-accent"
+          />
+        </label>
+        <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90">
+          Create
+        </button>
+      </form>
+
+      <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+        {
+          pages.map((p) => (
+            <a href={`/admin/edit?slug=${encodeURIComponent(p.id)}`} class="flex items-center justify-between gap-3 p-4 hover:bg-bg">
+              <div>
+                <p class="text-sm font-medium text-ink">{String(p.title ?? p.id)}</p>
+                <p class="text-xs text-muted">/p/{p.id}</p>
+              </div>
+              <span
+                class={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                  p.status === "published" ? "bg-accent/10 text-accent" : "bg-highlight/10 text-highlight"
+                }`}
+              >
+                {String(p.status ?? "draft")}
+              </span>
+            </a>
+          ))
+        }
+        {pages.length === 0 && !loadError && <p class="p-4 text-sm text-muted">No pages yet — create one above.</p>}
+      </div>
+    </div>
+
+    <script>
+      document.getElementById("new-page-form")?.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const form = e.target as HTMLFormElement;
+        const slug = new FormData(form).get("slug");
+        if (typeof slug === "string" && slug) {
+          window.location.href = `/admin/edit?slug=${encodeURIComponent(slug)}`;
+        }
+      });
+    </script>
+  </body>
+</html>

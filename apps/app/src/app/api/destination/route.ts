@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { destinations, generateAllPriceSnapshots, getDiscoverDetail, ORIGIN_HUBS, type OriginHub } from "@aritrips/data";
+import { getPartnerConfig, buildPartnerLinks } from "@/lib/partnerLinks";
 
 const priceSnapshots = generateAllPriceSnapshots(destinations);
 
@@ -26,5 +28,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Destination not available from this origin" }, { status: 404 });
   }
 
-  return NextResponse.json(detail);
+  const { env } = await getCloudflareContext({ async: true });
+  const partnerConfig = await getPartnerConfig({
+    FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL,
+    FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY,
+  });
+  const links = buildPartnerLinks(
+    {
+      originAirportCode: origin,
+      destinationAirportCode: detail.destinationAirportCode,
+      destinationName: detail.name,
+      startDate: detail.startDate,
+      endDate: detail.endDate,
+      adults: detail.adults,
+    },
+    partnerConfig
+  );
+
+  return NextResponse.json({ ...detail, links });
 }

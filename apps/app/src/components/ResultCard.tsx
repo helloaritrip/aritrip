@@ -1,7 +1,7 @@
 "use client";
 
 import { ShareButton } from "@aritrips/ui";
-import { buildPartnerLinks } from "@/lib/partnerLinks";
+import type { PartnerLinks } from "@/lib/partnerLinks";
 import { trackEvent } from "@/lib/trackEvent";
 import { ORIGIN_LABELS } from "@/lib/originLabels";
 import type { OriginHub } from "@aritrips/data";
@@ -18,6 +18,10 @@ export type RecommendationResult = {
   rank: number;
   imageQuery: string;
   weather: { avgTempMinC: number; avgTempMaxC: number; rainfallLevel: "low" | "medium" | "high" } | null;
+  // Resueltos server-side en /api/recommendations (lee Firestore, con
+  // fallback) — el componente ya no arma los links él mismo, ver
+  // apps/app/src/lib/partnerLinks.ts.
+  links: PartnerLinks;
 };
 
 export type TripContext = {
@@ -57,14 +61,7 @@ function formatDateRange(startDate: string, endDate: string): string {
 }
 
 export function ResultCard({ result, tripContext }: { result: RecommendationResult; tripContext: TripContext }) {
-  const links = buildPartnerLinks({
-    originAirportCode: tripContext.originAirportCode,
-    destinationAirportCode: result.destinationAirportCode,
-    destinationName: result.name,
-    startDate: tripContext.startDate,
-    endDate: tripContext.endDate,
-    adults: tripContext.adults,
-  });
+  const links = result.links;
   const originLabel = ORIGIN_LABELS[tripContext.originAirportCode as OriginHub] ?? tripContext.originAirportCode;
   const [topReason, ...otherReasons] = result.reasons;
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";

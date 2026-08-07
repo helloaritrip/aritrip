@@ -1,31 +1,51 @@
 /**
- * Links de afiliados. Vuelos: Kiwi.com vía Travelpayouts, primera cuenta
- * de afiliado real aprobada (2026-08-07) — reemplaza a Google Flights,
- * que nunca tuvo programa de afiliados (no pagaba comisión, era solo un
- * link de búsqueda genérico). El resto de categorías (hotel/actividad/
- * seguro/eSIM) siguen siendo genéricas hasta que se aprueben esas cuentas
- * — mismo principio de adapter que el resto del proyecto: cuando se
- * aprueben, solo cambian estas funciones, no el resto del código.
+ * Links de afiliados. Los marcadores/IDs por categoría ahora se leen de
+ * Firestore (colección `partners`, editable desde /admin/partners en
+ * apps/www) en vez de estar hardcodeados acá — 2026-08-07, panel de
+ * admin. `buildPartnerLinks` se queda pura (arma URLs a partir de un
+ * PartnerConfig ya resuelto); `getPartnerConfig` es la única pieza que
+ * habla con Firestore, con cache en memoria (~5 min por isolate) y
+ * fallback a estos mismos valores hardcodeados si Firestore no responde
+ * — mismo principio defensivo que ya usa DiscoverSection: un problema
+ * de Firestore nunca debe romper la búsqueda de un usuario.
  */
+import {
+  listDocuments,
+  DEFAULT_PARTNER_CONFIG,
+  type FirestoreCredentials,
+  type PartnerCategory,
+  type PartnerConfig,
+} from "@aritrips/data";
 
-// Marcadores de afiliado reales de la cuenta de Travelpayouts — NO son
-// secretos (van en URLs públicas que se muestran al usuario final), a
-// diferencia de las credenciales de Firestore, que sí lo son.
-const KIWI_AFFILIATE_ID = "travelpayoutsdeeplink_aritrips.com_151b853c366e4bd4acb1c8f5c-761476";
-// Actividades: Klook en vez de GetYourGuide mientras esa solicitud está
-// en revisión en Travelpayouts (pide sitios con 2+ meses de antigüedad,
-// aritrips.com todavía no los tiene) — cambiar acá el día que se apruebe.
-const KLOOK_AFFILIATE_ID = "api|13694|98e20227f64d4986a885e31b8-761476|pid|761476";
-// eSIM: Saily en vez de Airalo — Airalo vía Travelpayouts resultó ser un
-// revendedor de su programa nativo en Impact.com (mismo destino final,
-// sin ventaja), así que se dejó pendiente aplicar directo a Impact
-// aparte. Saily paga mejor (15% fijo) y es una relación directa.
-const SAILY_AFFILIATE_URL =
-  "https://go.saily.site/aff_c?aff_id=8014&aff_sub=73bf4e0c4d474cfe94abf1c05-761476&offer_id=126";
-// Seguro: EKTA, primera cuenta real de esta categoría (25% de comisión,
-// ya aprobada en Travelpayouts) — reemplaza el placeholder de World
-// Nomads (nunca tuvo cuenta real; World Nomads/CJ sigue en cola aparte).
-const EKTA_AFFILIATE_URL = "https://ektatraveling.com?sub_id=8a42d90caacb4d49ba702b049-761476&utm_source=travelpayouts";
+export type { PartnerCategory, PartnerConfigEntry, PartnerConfig } from "@aritrips/data";
+
+let cachedConfig: { config: PartnerConfig; expiresAt: number } | null = null;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+export async function getPartnerConfig(env: { FIREBASE_CLIENT_EMAIL?: string; FIREBASE_PRIVATE_KEY?: string }): Promise<PartnerConfig> {
+  if (cachedConfig && cachedConfig.expiresAt > Date.now()) return cachedConfig.config;
+  if (!env.FIREBASE_CLIENT_EMAIL || !env.FIREBASE_PRIVATE_KEY) return DEFAULT_PARTNER_CONFIG;
+
+  try {
+    const credentials: FirestoreCredentials = {
+      clientEmail: env.FIREBASE_CLIENT_EMAIL,
+      privateKey: env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+    };
+    const docs = await listDocuments("partners", credentials);
+    const config: PartnerConfig = { ...DEFAULT_PARTNER_CONFIG };
+    for (const doc of docs) {
+      const category = doc.category as PartnerCategory;
+      if (category in config && typeof doc.value === "string") {
+        config[category] = { category, value: doc.value, active: doc.active !== false };
+      }
+    }
+    cachedConfig = { config, expiresAt: Date.now() + CACHE_TTL_MS };
+    return config;
+  } catch (err) {
+    console.error("[partners] Firestore read failed, falling back to defaults", err);
+    return DEFAULT_PARTNER_CONFIG;
+  }
+}
 
 export interface PartnerLinkInput {
   originAirportCode: string;
@@ -36,45 +56,46 @@ export interface PartnerLinkInput {
   adults: number;
 }
 
-export interface PartnerLinks {
-  flight: string;
-  hotel: string;
-  activity: string;
-  insurance: string;
-  esim: string;
-}
+export type PartnerLinks = Partial<Record<PartnerCategory, string>>;
 
-export function buildPartnerLinks(input: PartnerLinkInput): PartnerLinks {
-  const { originAirportCode, destinationAirportCode, destinationName, startDate, endDate, adults } = input;
+export function buildPartnerLinks(input: PartnerLinkInput, config: PartnerConfig): PartnerLinks {
+  const { destinationName, startDate, endDate, adults } = input;
   const rooms = Math.ceil(adults / 2);
+  const links: PartnerLinks = {};
 
-  const flight = new URL("https://www.kiwi.com/deep");
-  flight.searchParams.set("affilid", KIWI_AFFILIATE_ID);
-  flight.searchParams.set("from", originAirportCode);
-  flight.searchParams.set("to", destinationAirportCode);
-  flight.searchParams.set("departure", startDate);
-  flight.searchParams.set("return", endDate);
-  flight.searchParams.set("adults", String(adults));
+  if (config.flight.active) {
+    const flight = new URL("https://www.kiwi.com/deep");
+    flight.searchParams.set("affilid", config.flight.value);
+    flight.searchParams.set("from", input.originAirportCode);
+    flight.searchParams.set("to", input.destinationAirportCode);
+    flight.searchParams.set("departure", startDate);
+    flight.searchParams.set("return", endDate);
+    flight.searchParams.set("adults", String(adults));
+    links.flight = flight.toString();
+  }
 
-  const hotel = new URL("https://www.booking.com/searchresults.html");
-  hotel.searchParams.set("ss", destinationName);
-  hotel.searchParams.set("checkin", startDate);
-  hotel.searchParams.set("checkout", endDate);
-  hotel.searchParams.set("group_adults", String(adults));
-  hotel.searchParams.set("no_rooms", String(rooms));
+  if (config.hotel.active) {
+    const hotel = new URL("https://www.booking.com/searchresults.html");
+    hotel.searchParams.set("ss", destinationName);
+    hotel.searchParams.set("checkin", startDate);
+    hotel.searchParams.set("checkout", endDate);
+    hotel.searchParams.set("group_adults", String(adults));
+    hotel.searchParams.set("no_rooms", String(rooms));
+    if (config.hotel.value) hotel.searchParams.set("aid", config.hotel.value);
+    links.hotel = hotel.toString();
+  }
 
-  const activity = new URL("https://www.klook.com/search/result/");
-  activity.searchParams.set("query", destinationName);
-  activity.searchParams.set("aid", KLOOK_AFFILIATE_ID);
+  if (config.activity.active) {
+    const activity = new URL("https://www.klook.com/search/result/");
+    activity.searchParams.set("query", destinationName);
+    activity.searchParams.set("aid", config.activity.value);
+    links.activity = activity.toString();
+  }
 
-  return {
-    flight: flight.toString(),
-    hotel: hotel.toString(),
-    activity: activity.toString(),
-    // Seguro no tiene deep link por destino disponible — homepage con el
-    // tracking intacto, mismo patrón que antes de tener cuentas reales,
-    // pero ahora con comisión real de verdad.
-    insurance: EKTA_AFFILIATE_URL,
-    esim: SAILY_AFFILIATE_URL,
-  };
+  // Seguro y eSIM no tienen deep link por destino disponible — el "value"
+  // guardado es la URL completa de homepage con tracking, no un ID.
+  if (config.insurance.active) links.insurance = config.insurance.value;
+  if (config.esim.active) links.esim = config.esim.value;
+
+  return links;
 }
