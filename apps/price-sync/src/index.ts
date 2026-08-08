@@ -103,7 +103,7 @@ function buildAllRoutePairs(): RoutePair[] {
 
 interface TravelpayoutsFare {
   price: number;
-  duration: number;
+  durationOneWay: number;
   transfers: number;
   airline: string;
 }
@@ -128,13 +128,26 @@ async function fetchCheapestFare(pair: RoutePair, token: string): Promise<Travel
     return null;
   }
 
-  const body = (await res.json()) as { success: boolean; data?: Array<{ price: number; duration: number; transfers: number; airline: string }> };
+  const body = (await res.json()) as {
+    success: boolean;
+    data?: Array<{ price: number; duration: number; duration_to?: number; transfers: number; airline: string }>;
+  };
   if (!body.success || !body.data || body.data.length === 0) return null;
 
   const fare = body.data[0];
   if (typeof fare.price !== "number" || fare.price <= 0) return null;
 
-  return { price: fare.price, duration: fare.duration ?? 0, transfers: fare.transfers ?? 0, airline: fare.airline ?? "" };
+  // `duration` es el total ida+vuelta (confirmado probando la API en vivo:
+  // duration_to + duration_back == duration) — el resto del sistema
+  // (originBaseCosts.ts, travelTimeScore) espera la duración de UN solo
+  // tramo, así que hay que usar duration_to, no duration. Guardar el
+  // total acá metía un bug real: rutas con datos en vivo puntuaban mal
+  // en "Flight convenience" porque parecían el doble de largas de lo que
+  // son. Si no viene duration_to (no debería pasar, pero por las dudas),
+  // se aproxima a la mitad del total en vez de romper.
+  const durationOneWay = typeof fare.duration_to === "number" && fare.duration_to > 0 ? fare.duration_to : Math.round((fare.duration ?? 0) / 2);
+
+  return { price: fare.price, durationOneWay, transfers: fare.transfers ?? 0, airline: fare.airline ?? "" };
 }
 
 async function runFlightBatch(env: Env): Promise<{ processed: number; written: number; skipped: number; nextOffset: number; total: number }> {
@@ -165,7 +178,7 @@ async function runFlightBatch(env: Env): Promise<{ processed: number; written: n
             destinationId: pair.destinationId,
             originAirportCode: pair.originAirportCode,
             avgFlightCostUSD: Math.round(fare.price),
-            avgFlightDurationMinutes: Math.round(fare.duration),
+            avgFlightDurationMinutes: Math.round(fare.durationOneWay),
             transfers: fare.transfers,
             airline: fare.airline,
             capturedAt: new Date().toISOString(),
