@@ -20,6 +20,13 @@
  * nuevo solo, así los precios se mantienen frescos de forma continua
  * sin arriesgar el rate limit ni pasarse del tiempo de ejecución de una
  * sola invocación.
+ *
+ * Nota (2026-08-07): se intentó sumar el mismo tratamiento para hoteles
+ * vía la Hotellook Data API — descartado de inmediato, Hotellook cerró
+ * como marca en octubre 2025 y su API (engine.hotellook.com) ya no
+ * existe (404 en todo el dominio). Sin reemplazo activo conocido todavía
+ * en Travelpayouts — hotel/actividades siguen siendo 100% estimado
+ * curado, sin overlay real.
  */
 import { destinations, originBaseCosts, getDocument, setDocument, livePriceDocId, type FirestoreCredentials } from "@aritrips/data";
 
