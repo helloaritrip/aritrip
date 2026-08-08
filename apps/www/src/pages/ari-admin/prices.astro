@@ -1,0 +1,295 @@
+---
+import { env } from "cloudflare:workers";
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { getAdminSession } from "../../lib/requireAdminSession";
+import {
+  listDocuments,
+  destinations,
+  originBaseCosts,
+  destinationBaseStayCosts,
+  ORIGIN_LABELS,
+  type OriginHub,
+} from "@aritrips/data";
+
+export const prerender = false;
+
+const session = await getAdminSession(Astro.cookies, env);
+if (!session) {
+  return Astro.redirect(`/ari-admin/login?next=${encodeURIComponent(Astro.url.pathname)}`);
+}
+
+const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
+
+let liveFlightDocs: Record<string, unknown>[] = [];
+let liveHotelDocs: Record<string, unknown>[] = [];
+let loadError: string | null = null;
+
+if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+  try {
+    const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
+    const [flightDocs, hotelDocs] = await Promise.all([
+      listDocuments("livePrices", credentials),
+      listDocuments("liveHotelPrices", credentials),
+    ]);
+    liveFlightDocs = flightDocs.filter((d) => d.id !== "_cursor");
+    liveHotelDocs = hotelDocs.filter((d) => d.id !== "_cursor");
+  } catch (err) {
+    loadError = err instanceof Error ? err.message : "Failed to load live prices.";
+  }
+} else {
+  loadError = "Firestore isn't configured yet (missing secrets).";
+}
+
+// Solo los destinos que tienen datos curados (vuelo + hotel) son los que
+// el sistema de precios en vivo puede llegar a cubrir — el resto del
+// catálogo (si lo hay) no tiene ruta posible en apps/price-sync.
+const cityOptions = destinations
+  .filter((d) => destinationBaseStayCosts[d.id])
+  .map((d) => ({ id: d.id, name: d.name, country: d.country }))
+  .sort((a, b) => a.name.localeCompare(b.name));
+
+// Todo lo que el cliente necesita para filtrar/mostrar sin pegarle de
+// nuevo a Firestore — el catálogo completo es chico (40 destinos, unas
+// pocas centenas de rutas de vuelo como mucho), no hace falta un
+// endpoint aparte.
+const pageData = {
+  cities: cityOptions,
+  liveFlights: liveFlightDocs.map((d) => ({
+    destinationId: d.destinationId as string,
+    originAirportCode: d.originAirportCode as string,
+    originLabel: ORIGIN_LABELS[d.originAirportCode as OriginHub] ?? (d.originAirportCode as string),
+    avgFlightCostUSD: d.avgFlightCostUSD as number,
+    avgFlightDurationMinutes: d.avgFlightDurationMinutes as number,
+    airline: (d.airline as string) ?? "",
+    capturedAt: d.capturedAt as string,
+  })),
+  liveHotels: liveHotelDocs.map((d) => ({
+    destinationId: d.destinationId as string,
+    avgHotelCostPerNightUSD: d.avgHotelCostPerNightUSD as number,
+    capturedAt: d.capturedAt as string,
+  })),
+  originLabels: ORIGIN_LABELS,
+  curatedFlights: Object.fromEntries(
+    Object.entries(originBaseCosts).map(([destinationId, bases]) => [
+      destinationId,
+      Object.fromEntries(bases.map((b) => [b.originAirportCode, b.avgFlightCostUSD])),
+    ])
+  ),
+  curatedHotels: Object.fromEntries(
+    Object.entries(destinationBaseStayCosts).map(([destinationId, stay]) => [destinationId, stay.avgHotelCostPerNightUSD.mid])
+  ),
+};
+---
+
+<AdminLayout title="Live Prices — AriTrips Admin" session={session} active="live-prices">
+  <div class="flex max-w-3xl flex-col gap-8">
+    <div>
+      <h1 class="text-2xl font-semibold text-ink">Live Prices</h1>
+      <p class="text-sm text-muted">
+        Real flight and hotel prices fetched automatically by apps/price-sync, and when each one was last refreshed.
+        Search a city to see just that city — {cityOptions.length} destinations tracked, {liveFlightDocs.length} live
+        flight prices, {liveHotelDocs.length} live hotel prices right now.
+      </p>
+    </div>
+
+    {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
+
+    <div class="relative">
+      <input
+        id="city-search"
+        type="text"
+        autocomplete="off"
+        placeholder="Type a city — e.g. Cancún, Bogotá, Aspen..."
+        class="w-full rounded-md border border-rule bg-surface px-3 py-2 text-ink placeholder:text-muted focus:outline focus:outline-2 focus:outline-accent"
+      />
+      <div
+        id="city-dropdown"
+        class="absolute left-0 right-0 top-full z-10 mt-1 hidden max-h-72 overflow-y-auto rounded-md border border-rule bg-surface shadow-lg"
+      >
+      </div>
+    </div>
+
+    <div id="empty-state" class="rounded-lg border border-dashed border-rule bg-surface/50 p-8 text-center text-sm text-muted">
+      Search a city above to see its live pricing data.
+    </div>
+
+    <div id="city-result" class="hidden flex-col gap-6">
+      <div>
+        <h2 id="city-result-name" class="text-xl font-semibold text-ink"></h2>
+        <p id="city-result-country" class="text-sm text-muted"></p>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <h3 class="text-sm font-semibold uppercase tracking-wide text-muted">Hotel</h3>
+        <div id="hotel-result"></div>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <h3 class="text-sm font-semibold uppercase tracking-wide text-muted">Flights</h3>
+        <div id="flights-result" class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface"></div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script type="application/json" id="prices-data" is:inline set:html={JSON.stringify(pageData).replace(/</g, "\\u003c")} />
+
+<script>
+  type City = { id: string; name: string; country: string };
+  type LiveFlight = {
+    destinationId: string;
+    originAirportCode: string;
+    originLabel: string;
+    avgFlightCostUSD: number;
+    avgFlightDurationMinutes: number;
+    airline: string;
+    capturedAt: string;
+  };
+  type LiveHotel = { destinationId: string; avgHotelCostPerNightUSD: number; capturedAt: string };
+  type PageData = {
+    cities: City[];
+    liveFlights: LiveFlight[];
+    liveHotels: LiveHotel[];
+    originLabels: Record<string, string>;
+    curatedFlights: Record<string, Record<string, number>>;
+    curatedHotels: Record<string, number>;
+  };
+
+  const dataEl = document.getElementById("prices-data");
+  const data: PageData = JSON.parse(dataEl?.textContent || "{}");
+
+  const searchInput = document.getElementById("city-search") as HTMLInputElement;
+  const dropdown = document.getElementById("city-dropdown") as HTMLDivElement;
+  const emptyState = document.getElementById("empty-state") as HTMLDivElement;
+  const resultPanel = document.getElementById("city-result") as HTMLDivElement;
+  const resultName = document.getElementById("city-result-name") as HTMLHeadingElement;
+  const resultCountry = document.getElementById("city-result-country") as HTMLParagraphElement;
+  const hotelResult = document.getElementById("hotel-result") as HTMLDivElement;
+  const flightsResult = document.getElementById("flights-result") as HTMLDivElement;
+
+  function timeAgo(iso: string): string {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const mins = Math.round(diffMs / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.round(mins / 60);
+    if (hours < 48) return `${hours}h ago`;
+    return `${Math.round(hours / 24)}d ago`;
+  }
+
+  function renderDropdown(matches: City[]) {
+    if (matches.length === 0) {
+      dropdown.classList.add("hidden");
+      dropdown.innerHTML = "";
+      return;
+    }
+    dropdown.innerHTML = matches
+      .slice(0, 8)
+      .map(
+        (c) => `
+        <button type="button" data-city-id="${c.id}" class="city-option flex w-full flex-col gap-0.5 px-3 py-2 text-left hover:bg-bg">
+          <span class="text-sm font-medium text-ink">${c.name}</span>
+          <span class="text-xs text-muted">${c.country}</span>
+        </button>`
+      )
+      .join("");
+    dropdown.classList.remove("hidden");
+    dropdown.querySelectorAll<HTMLButtonElement>(".city-option").forEach((btn) => {
+      btn.addEventListener("click", () => selectCity(btn.dataset.cityId!));
+    });
+  }
+
+  // Sin esto, tipear "cancun" (sin tilde, lo natural al escribir rápido)
+  // no encontraba "Cancún" — normalize + strip de diacríticos hace que
+  // la búsqueda ignore tildes en los dos lados de la comparación.
+  function normalize(s: string): string {
+    return s
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase();
+  }
+
+  searchInput.addEventListener("input", () => {
+    const q = normalize(searchInput.value.trim());
+    if (!q) {
+      renderDropdown([]);
+      return;
+    }
+    const matches = data.cities.filter((c) => normalize(c.name).includes(q) || normalize(c.country).includes(q));
+    renderDropdown(matches);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!(e.target instanceof Node)) return;
+    if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.classList.add("hidden");
+    }
+  });
+
+  function selectCity(cityId: string) {
+    const city = data.cities.find((c) => c.id === cityId);
+    if (!city) return;
+
+    searchInput.value = city.name;
+    dropdown.classList.add("hidden");
+    emptyState.classList.add("hidden");
+    resultPanel.classList.remove("hidden");
+    resultPanel.classList.add("flex");
+
+    resultName.textContent = city.name;
+    resultCountry.textContent = city.country;
+
+    const hotel = data.liveHotels.find((h) => h.destinationId === cityId);
+    const curatedHotel = data.curatedHotels[cityId];
+    if (hotel) {
+      const diff = curatedHotel ? Math.round(((hotel.avgHotelCostPerNightUSD - curatedHotel) / curatedHotel) * 100) : null;
+      hotelResult.innerHTML = `
+        <div class="flex items-center justify-between rounded-lg border border-rule bg-surface p-4">
+          <div>
+            <p class="text-lg font-semibold text-accent">$${hotel.avgHotelCostPerNightUSD}<span class="text-sm font-normal text-muted"> / night</span></p>
+            ${diff !== null ? `<p class="text-xs text-muted">${diff >= 0 ? "+" : ""}${diff}% vs. curated estimate ($${curatedHotel}/night)</p>` : ""}
+          </div>
+          <p class="text-xs text-muted">Refreshed ${timeAgo(hotel.capturedAt)}</p>
+        </div>`;
+    } else {
+      hotelResult.innerHTML = `<div class="rounded-lg border border-dashed border-rule bg-surface/50 p-4 text-sm text-muted">
+        No live hotel price yet — still using the curated estimate${curatedHotel ? ` ($${curatedHotel}/night)` : ""}.
+      </div>`;
+    }
+
+    const flights = data.liveFlights.filter((f) => f.destinationId === cityId).sort((a, b) => a.originLabel.localeCompare(b.originLabel));
+    const curatedForCity = data.curatedFlights[cityId] || {};
+    const routesWithoutLiveData = Object.keys(curatedForCity).filter((origin) => !flights.some((f) => f.originAirportCode === origin));
+
+    if (flights.length === 0 && routesWithoutLiveData.length === 0) {
+      flightsResult.innerHTML = `<p class="p-4 text-sm text-muted">No flight routes tracked for this destination.</p>`;
+    } else {
+      const liveRows = flights
+        .map(
+          (f) => `
+        <div class="flex items-center justify-between gap-3 p-4">
+          <div>
+            <p class="text-sm font-medium text-ink">${f.originLabel}</p>
+            <p class="text-xs text-muted">${f.airline ? f.airline + " · " : ""}${Math.round(f.avgFlightDurationMinutes)} min</p>
+          </div>
+          <div class="text-right">
+            <p class="text-sm font-semibold text-accent">$${f.avgFlightCostUSD}</p>
+            <p class="text-xs text-muted">Refreshed ${timeAgo(f.capturedAt)}</p>
+          </div>
+        </div>`
+        )
+        .join("");
+      const pendingRows = routesWithoutLiveData
+        .sort((a, b) => (data.originLabels[a] || a).localeCompare(data.originLabels[b] || b))
+        .map(
+          (origin) => `
+        <div class="flex items-center justify-between gap-3 p-4 opacity-60">
+          <p class="text-sm text-ink">${data.originLabels[origin] || origin}</p>
+          <p class="text-xs text-muted">No live price yet — curated $${curatedForCity[origin]}</p>
+        </div>`
+        )
+        .join("");
+      flightsResult.innerHTML = liveRows + pendingRows;
+    }
+  }
+</script>
