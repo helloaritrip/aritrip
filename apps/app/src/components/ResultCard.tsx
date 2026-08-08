@@ -6,6 +6,16 @@ import { trackEvent } from "@/lib/trackEvent";
 import { ORIGIN_LABELS } from "@/lib/originLabels";
 import type { OriginHub } from "@aritrips/data";
 
+export type SubScores = {
+  budgetFit: number;
+  activitiesMatch: number;
+  seasonFit: number;
+  weatherComfort: number;
+  travelTime: number;
+  valueRating: number;
+  safety: number;
+};
+
 export type RecommendationResult = {
   destinationId: string;
   destinationAirportCode: string;
@@ -14,6 +24,7 @@ export type RecommendationResult = {
   totalEstimatedCostUSD: number;
   costBreakdown: { flightUSD: number; hotelUSD: number; activitiesUSD: number };
   finalScore: number;
+  subScores: SubScores;
   reasons: string[];
   rank: number;
   imageQuery: string;
@@ -50,6 +61,19 @@ const RAINFALL_ICON: Record<"low" | "medium" | "high", string> = {
   medium: "⛅",
   high: "🌧️",
 };
+
+// Mismo orden que buildReasons() en recommend.ts, para que el desglose
+// "abra la caja" en el mismo orden en que ya se explican los reasons[]
+// de texto — nada nuevo que aprender, solo más detalle de lo mismo.
+const SUB_SCORE_ROWS: { key: keyof SubScores; label: string }[] = [
+  { key: "budgetFit", label: "Budget fit" },
+  { key: "activitiesMatch", label: "Matches your interests" },
+  { key: "seasonFit", label: "Season fit" },
+  { key: "travelTime", label: "Flight convenience" },
+  { key: "valueRating", label: "Overall value" },
+  { key: "weatherComfort", label: "Weather comfort" },
+  { key: "safety", label: "Safety" },
+];
 
 function formatDateRange(startDate: string, endDate: string): string {
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
@@ -116,6 +140,27 @@ export function ResultCard({ result, tripContext }: { result: RecommendationResu
             ))}
           </ul>
         )}
+
+        <details className="group rounded-md border border-rule bg-bg text-xs">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3 font-medium text-ink marker:content-none">
+            <span>Why {result.finalScore}/100? See the full score breakdown</span>
+            <span className="text-muted transition-transform group-open:rotate-45">+</span>
+          </summary>
+          <div className="flex flex-col gap-2 border-t border-rule p-3">
+            {SUB_SCORE_ROWS.map(({ key, label }) => {
+              const value = Math.round(result.subScores[key]);
+              return (
+                <div key={key} className="flex items-center gap-2">
+                  <span className="w-36 shrink-0 text-muted">{label}</span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-rule">
+                    <div className="h-full rounded-full bg-accent" style={{ width: `${value}%` }} />
+                  </div>
+                  <span className="w-7 shrink-0 text-right font-medium text-ink">{value}</span>
+                </div>
+              );
+            })}
+          </div>
+        </details>
 
         <div className="grid grid-cols-3 gap-2 rounded-md border border-rule bg-bg p-3 text-center text-xs">
           <div>
