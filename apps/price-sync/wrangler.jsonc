@@ -1,0 +1,18 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"compatibility_date": "2026-08-07",
+	"name": "aritrips-price-sync",
+	"main": "src/index.ts",
+	"observability": {
+		"enabled": true
+	},
+	// Cada 15 min procesa un lote de ~40 rutas (ver BATCH_SIZE en
+	// src/index.ts) — con las 952 rutas del catálogo, un ciclo completo
+	// tarda ~6 horas y arranca de nuevo, así los precios se mantienen
+	// razonablemente frescos de forma continua. No es fetch(), no tiene
+	// dominio público — solo lo dispara Cloudflare solo, más un endpoint
+	// /run protegido por secret para probar a mano.
+	"triggers": {
+		"crons": ["*/15 * * * *"]
+	}
+}

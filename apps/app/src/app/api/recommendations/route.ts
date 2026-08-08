@@ -4,17 +4,22 @@ import {
   destinations,
   generateAllPriceSnapshots,
   getRecommendations,
+  applyLivePriceOverlay,
   ORIGIN_HUBS,
   type OriginHub,
   type InterestTag,
 } from "@aritrips/data";
 import { getPartnerConfig, buildPartnerLinks } from "@/lib/partnerLinks";
+import { getLivePrices } from "@/lib/livePrices";
 
-// Fase 1 (MVP): catálogo y precios 100% estáticos, generados en memoria —
-// no depende de Firestore todavía. Ver Data Model / Affiliate Integration
-// & API Contracts para el contrato completo y el plan de reemplazo por
-// datos reales en Fase 2.
-const priceSnapshots = generateAllPriceSnapshots(destinations);
+// Fase 1 (MVP): catálogo 100% estático, generado en memoria. Los precios
+// de vuelo empezaron como estimados curados a mano puros (2026-08-05);
+// desde 2026-08-07 se recalibran con precios reales cuando hay uno
+// disponible para esa ruta (ver apps/price-sync + applyLivePriceOverlay)
+// — el estimado curado sigue siendo la base y el fallback, nunca se
+// descarta. Ver Data Model / Affiliate Integration & API Contracts para
+// el contrato completo.
+const curatedPriceSnapshots = generateAllPriceSnapshots(destinations);
 
 export async function POST(request: Request) {
   let body: Record<string, unknown>;
@@ -42,6 +47,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Pick at least one interest" }, { status: 400 });
   }
 
+  // Resuelto una sola vez por búsqueda, antes de puntuar — getLivePrices y
+  // getPartnerConfig ya cachean en memoria (1h y 5min respectivamente), así
+  // que esto no le pega a Firestore en cada búsqueda.
+  const { env } = await getCloudflareContext({ async: true });
+  const livePrices = await getLivePrices({
+    FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL,
+    FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY,
+  });
+  const priceSnapshots = applyLivePriceOverlay(curatedPriceSnapshots, livePrices);
+
   const results = getRecommendations(
     {
       originAirportCode: originAirportCode as OriginHub,
@@ -60,10 +75,6 @@ export async function POST(request: Request) {
   // reexpone como texto/temperatura real para el usuario, no un placeholder.
   const month = new Date(startDate).getMonth() + 1;
 
-  // Resuelto una sola vez por búsqueda (no por resultado) — getPartnerConfig
-  // ya cachea en memoria ~5 min, pero no hace falta ni ese trabajo repetido
-  // dentro del mismo request.
-  const { env } = await getCloudflareContext({ async: true });
   const partnerConfig = await getPartnerConfig({
     FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL,
     FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY,

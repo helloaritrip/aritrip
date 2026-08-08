@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { destinations, generateAllPriceSnapshots, getDiscoverDetail, ORIGIN_HUBS, type OriginHub } from "@aritrips/data";
+import {
+  destinations,
+  generateAllPriceSnapshots,
+  applyLivePriceOverlay,
+  getDiscoverDetail,
+  ORIGIN_HUBS,
+  type OriginHub,
+} from "@aritrips/data";
 import { getPartnerConfig, buildPartnerLinks } from "@/lib/partnerLinks";
+import { getLivePrices } from "@/lib/livePrices";
 
-const priceSnapshots = generateAllPriceSnapshots(destinations);
+const curatedPriceSnapshots = generateAllPriceSnapshots(destinations);
 
 /**
  * Detalle completo de un destino para la card de Discover al hacer clic
@@ -23,12 +31,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid origin" }, { status: 400 });
   }
 
+  const { env } = await getCloudflareContext({ async: true });
+  const livePrices = await getLivePrices({
+    FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL,
+    FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY,
+  });
+  const priceSnapshots = applyLivePriceOverlay(curatedPriceSnapshots, livePrices);
+
   const detail = getDiscoverDetail(destinationId, origin as OriginHub, destinations, priceSnapshots);
   if (!detail) {
     return NextResponse.json({ error: "Destination not available from this origin" }, { status: 404 });
   }
 
-  const { env } = await getCloudflareContext({ async: true });
   const partnerConfig = await getPartnerConfig({
     FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL,
     FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY,

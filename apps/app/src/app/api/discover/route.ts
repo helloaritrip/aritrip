@@ -3,14 +3,16 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
   destinations,
   generateAllPriceSnapshots,
+  applyLivePriceOverlay,
   getDiscoverPicks,
   nearestOriginHub,
   DEFAULT_ORIGIN_HUB,
   ORIGIN_HUBS,
   type OriginHub,
 } from "@aritrips/data";
+import { getLivePrices } from "@/lib/livePrices";
 
-const priceSnapshots = generateAllPriceSnapshots(destinations);
+const curatedPriceSnapshots = generateAllPriceSnapshots(destinations);
 
 /**
  * Ubicación por IP vía Cloudflare (request.cf) — gratis, sin permiso del
@@ -43,6 +45,13 @@ export async function GET(request: Request) {
       // getCloudflareContext puede no estar disponible en algunos entornos — usamos el default.
     }
   }
+
+  const { env } = await getCloudflareContext({ async: true });
+  const livePrices = await getLivePrices({
+    FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL,
+    FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY,
+  });
+  const priceSnapshots = applyLivePriceOverlay(curatedPriceSnapshots, livePrices);
 
   const picks = getDiscoverPicks(originAirportCode, destinations, priceSnapshots);
 
