@@ -30,7 +30,13 @@ export interface Env {
   PRICE_SYNC_TRIGGER_KEY: string;
 }
 
-const BATCH_SIZE = 40;
+// Cloudflare Workers (plan free) limita a 50 subrequests salientes por
+// invocación — cada ruta gasta hasta 2 (Travelpayouts + Firestore), más
+// ~3 de overhead fijo (lectura/escritura del cursor + el intercambio de
+// token OAuth de Firestore) — 15 deja margen de sobra. Encontrado en
+// producción (2026-08-07): con 40 tiraba "Too many subrequests by
+// single Worker invocation".
+const BATCH_SIZE = 15;
 // ~1 request/segundo, bien por debajo del límite de 60/min de la API de
 // datos de Travelpayouts — margen a propósito, no hace falta apurar.
 const DELAY_BETWEEN_REQUESTS_MS = 1100;
