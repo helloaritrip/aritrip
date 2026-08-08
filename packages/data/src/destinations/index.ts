@@ -325,7 +325,7 @@ export const destinations: Destination[] = [
   {
     id: "cusco",
     safetyIndex: { value: 80, source: "US State Dept advisory — Perú, level 2 (Cusco/Valle Sagrado/Machu Picchu explícitamente fuera de las zonas de mayor riesgo)", updatedAt: "2026-08-07" },
-    name: "Cusco / Valle Sagrado",
+    name: "Cusco / Sacred Valley",
     country: "Peru",
     region: "Andes peruanos",
     airportCodes: ["CUZ"],
@@ -599,7 +599,7 @@ export const destinations: Destination[] = [
   {
     id: "new-orleans",
     safetyIndex: { value: 88, source: "Doméstico (EE.UU.) — no aplica advisory del State Dept sobre su propio país", updatedAt: "2026-08-07" },
-    name: "Nueva Orleans",
+    name: "New Orleans",
     country: "United States",
     region: "Sur de EE.UU.",
     airportCodes: ["MSY"],
@@ -952,7 +952,7 @@ export const destinations: Destination[] = [
   {
     id: "quebec-city",
     safetyIndex: { value: 92, source: "US State Dept advisory — Canadá, level 1", updatedAt: "2026-08-07" },
-    name: "Ciudad de Quebec",
+    name: "Quebec City",
     country: "Canada",
     region: "Quebec, Canadá",
     airportCodes: ["YQB"],

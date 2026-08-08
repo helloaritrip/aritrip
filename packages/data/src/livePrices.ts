@@ -1,5 +1,5 @@
 import type { PriceSnapshot } from "./types";
-import { originBaseCosts } from "./destinations/originBaseCosts";
+import { originBaseCosts, destinationBaseStayCosts } from "./destinations/originBaseCosts";
 
 /**
  * Un precio real (recién consultado a la API de datos de Travelpayouts,
@@ -51,6 +51,46 @@ export function applyLivePriceOverlay(snapshots: PriceSnapshot[], livePrices: Li
       ...snap,
       avgFlightCostUSD: Math.max(1, Math.round(snap.avgFlightCostUSD * scaleFactor)),
       avgFlightDurationMinutes: live.avgFlightDurationMinutes || snap.avgFlightDurationMinutes,
+      source: "provider_api",
+      capturedAt: live.capturedAt,
+    };
+  });
+}
+
+/**
+ * Mismo principio que LiveFlightPrice, pero el ancla es un solo hotel
+ * curado por destino (ver hotelKeys.ts — el endpoint que da el promedio
+ * de toda la ciudad está roto en Xotelo), no una ruta. Un doc por
+ * destinationId. Recalibra las 3 categorías curadas (budget/mid/premium)
+ * manteniendo la proporción entre ellas, igual que con vuelos.
+ */
+export interface LiveHotelPrice {
+  destinationId: string;
+  avgHotelCostPerNightUSD: number;
+  capturedAt: string; // ISO date
+}
+
+export function applyLiveHotelPriceOverlay(snapshots: PriceSnapshot[], liveHotelPrices: LiveHotelPrice[]): PriceSnapshot[] {
+  if (liveHotelPrices.length === 0) return snapshots;
+
+  const liveByDestination = new Map(liveHotelPrices.map((p) => [p.destinationId, p]));
+
+  return snapshots.map((snap) => {
+    const live = liveByDestination.get(snap.destinationId);
+    if (!live) return snap;
+
+    const base = destinationBaseStayCosts[snap.destinationId];
+    if (!base || base.avgHotelCostPerNightUSD.mid <= 0) return snap;
+
+    const scaleFactor = live.avgHotelCostPerNightUSD / base.avgHotelCostPerNightUSD.mid;
+
+    return {
+      ...snap,
+      avgHotelCostPerNightUSD: {
+        budget: Math.max(1, Math.round(snap.avgHotelCostPerNightUSD.budget * scaleFactor)),
+        mid: Math.max(1, Math.round(snap.avgHotelCostPerNightUSD.mid * scaleFactor)),
+        premium: Math.max(1, Math.round(snap.avgHotelCostPerNightUSD.premium * scaleFactor)),
+      },
       source: "provider_api",
       capturedAt: live.capturedAt,
     };

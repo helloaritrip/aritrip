@@ -4,12 +4,13 @@ import {
   destinations,
   generateAllPriceSnapshots,
   applyLivePriceOverlay,
+  applyLiveHotelPriceOverlay,
   getDiscoverDetail,
   ORIGIN_HUBS,
   type OriginHub,
 } from "@aritrips/data";
 import { getPartnerConfig, buildPartnerLinks } from "@/lib/partnerLinks";
-import { getLivePrices } from "@/lib/livePrices";
+import { getLivePrices, getLiveHotelPrices } from "@/lib/livePrices";
 
 const curatedPriceSnapshots = generateAllPriceSnapshots(destinations);
 
@@ -32,11 +33,11 @@ export async function GET(request: Request) {
   }
 
   const { env } = await getCloudflareContext({ async: true });
-  const livePrices = await getLivePrices({
-    FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL,
-    FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY,
-  });
-  const priceSnapshots = applyLivePriceOverlay(curatedPriceSnapshots, livePrices);
+  const [livePrices, liveHotelPrices] = await Promise.all([
+    getLivePrices({ FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY }),
+    getLiveHotelPrices({ FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY }),
+  ]);
+  const priceSnapshots = applyLiveHotelPriceOverlay(applyLivePriceOverlay(curatedPriceSnapshots, livePrices), liveHotelPrices);
 
   const detail = getDiscoverDetail(destinationId, origin as OriginHub, destinations, priceSnapshots);
   if (!detail) {

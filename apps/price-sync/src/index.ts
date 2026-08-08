@@ -1,34 +1,42 @@
 /**
- * Worker chico y separado (2026-08-07) cuyo único trabajo es mantener la
- * colección `livePrices` de Firestore con precios de vuelo reales,
- * consultados a la API de datos de Travelpayouts (misma cuenta que ya
- * usamos para Kiwi.com — no hace falta una cuenta nueva). apps/app lee
- * esa colección (ver apps/app/src/lib/livePrices.ts) y recalibra los
- * estimados curados de packages/data con esto — ver
+ * Worker chico y separado (2026-08-07) cuyo único trabajo es mantener
+ * dos colecciones de Firestore con precios reales:
+ *  - `livePrices` (vuelos) — Travelpayouts Data API (misma cuenta que ya
+ *    usamos para Kiwi.com, necesita TRAVELPAYOUTS_TOKEN).
+ *  - `liveHotelPrices` (hoteles) — Xotelo (xotelo.com, gratis, sin
+ *    token/cuenta) contra un hotel de gama media curado a mano por
+ *    destino (ver packages/data/src/hotelKeys.ts). Se intentó primero
+ *    con la Hotellook Data API de Travelpayouts — Hotellook cerró como
+ *    marca en octubre 2025, su API ya no existe. El endpoint /list de
+ *    Xotelo (promedio de toda una ciudad) también está roto en la
+ *    práctica; /rates (un hotel puntual) sí funciona, por eso el diseño
+ *    de "un hotel ancla por destino" en vez de un promedio real.
+ *
+ * apps/app lee esas colecciones (ver apps/app/src/lib/livePrices.ts) y
+ * recalibra los estimados curados de packages/data con esto — ver
  * packages/data/src/livePrices.ts para el porqué de recalibrar en vez
  * de reemplazar.
  *
  * Nadie dispara esto a mano en el día a día: Cloudflare lo despierta
- * solo cada 15 minutos (ver wrangler.jsonc). Cero costo/dependencia de
- * Claude en runtime — es un cron job común y corriente.
+ * solo en dos horarios distintos (ver wrangler.jsonc). Cero costo/
+ * dependencia de Claude en runtime — es un cron job común y corriente.
  *
- * Por qué en lotes y no todo de una: el catálogo tiene 952 combinaciones
- * origen×destino y la API gratuita limita a 60 consultas/minuto. Cada
- * corrida procesa un lote (BATCH_SIZE) y guarda en Firestore en qué
- * lote se quedó (`livePrices/_cursor`) para retomar ahí la próxima vez
- * — un ciclo completo del catálogo tarda unas horas, después arranca de
- * nuevo solo, así los precios se mantienen frescos de forma continua
- * sin arriesgar el rate limit ni pasarse del tiempo de ejecución de una
- * sola invocación.
- *
- * Nota (2026-08-07): se intentó sumar el mismo tratamiento para hoteles
- * vía la Hotellook Data API — descartado de inmediato, Hotellook cerró
- * como marca en octubre 2025 y su API (engine.hotellook.com) ya no
- * existe (404 en todo el dominio). Sin reemplazo activo conocido todavía
- * en Travelpayouts — hotel/actividades siguen siendo 100% estimado
- * curado, sin overlay real.
+ * Por qué en lotes y no todo de una: Cloudflare Workers (plan free)
+ * limita a 50 subrequests salientes por invocación, y cada ruta/hotel
+ * gasta hasta 2 (API externa + Firestore). Cada corrida procesa un
+ * lote y guarda en Firestore en qué lote se quedó (`_cursor`) para
+ * retomar ahí la próxima vez — vuelos (952 rutas) da la vuelta completa
+ * cada ~16h, hoteles (40 destinos) cada ~1h.
  */
-import { destinations, originBaseCosts, getDocument, setDocument, livePriceDocId, type FirestoreCredentials } from "@aritrips/data";
+import {
+  destinations,
+  originBaseCosts,
+  getDocument,
+  setDocument,
+  livePriceDocId,
+  HOTEL_KEYS,
+  type FirestoreCredentials,
+} from "@aritrips/data";
 
 export interface Env {
   TRAVELPAYOUTS_TOKEN: string;
@@ -37,16 +45,35 @@ export interface Env {
   PRICE_SYNC_TRIGGER_KEY: string;
 }
 
-// Cloudflare Workers (plan free) limita a 50 subrequests salientes por
-// invocación — cada ruta gasta hasta 2 (Travelpayouts + Firestore), más
-// ~3 de overhead fijo (lectura/escritura del cursor + el intercambio de
-// token OAuth de Firestore) — 15 deja margen de sobra. Encontrado en
-// producción (2026-08-07): con 40 tiraba "Too many subrequests by
-// single Worker invocation".
+// Ver wrangler.jsonc — deben quedar idénticos a "triggers.crons" para que
+// el dispatcher de abajo sepa cuál corrida le toca a cada uno.
+const HOTEL_CRON = "5-59/20 * * * *";
+
+// Encontrado en producción (2026-08-07): con 40 tiraba "Too many
+// subrequests by single Worker invocation" — el plan free de Workers
+// limita a 50 subrequests/invocación, esto deja margen de sobra.
 const BATCH_SIZE = 15;
-// ~1 request/segundo, bien por debajo del límite de 60/min de la API de
-// datos de Travelpayouts — margen a propósito, no hace falta apurar.
+const HOTEL_BATCH_SIZE = 15;
+// ~1 request/segundo — margen de sobra frente al límite de 60/min de
+// Travelpayouts; Xotelo no publica un límite pero se mantiene el mismo
+// ritmo por prolijidad, no hay apuro.
 const DELAY_BETWEEN_REQUESTS_MS = 1100;
+
+function credentialsFrom(env: Env): FirestoreCredentials {
+  return { clientEmail: env.FIREBASE_CLIENT_EMAIL, privateKey: env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function nextMonthPeriod(): string {
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// ---------- Vuelos (Travelpayouts Data API) ----------
 
 interface RoutePair {
   destinationId: string;
@@ -74,12 +101,6 @@ function buildAllRoutePairs(): RoutePair[] {
   return pairs;
 }
 
-function nextMonthPeriod(): string {
-  const now = new Date();
-  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
-}
-
 interface TravelpayoutsFare {
   price: number;
   duration: number;
@@ -103,7 +124,7 @@ async function fetchCheapestFare(pair: RoutePair, token: string): Promise<Travel
 
   const res = await fetch(url.toString(), { headers: { "Accept-Encoding": "gzip" } });
   if (!res.ok) {
-    console.warn(`[price-sync] ${pair.destinationId} from ${pair.originAirportCode}: HTTP ${res.status}`);
+    console.warn(`[price-sync] flight ${pair.destinationId} from ${pair.originAirportCode}: HTTP ${res.status}`);
     return null;
   }
 
@@ -116,15 +137,8 @@ async function fetchCheapestFare(pair: RoutePair, token: string): Promise<Travel
   return { price: fare.price, duration: fare.duration ?? 0, transfers: fare.transfers ?? 0, airline: fare.airline ?? "" };
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function runBatch(env: Env): Promise<{ processed: number; written: number; skipped: number; nextOffset: number; total: number }> {
-  const credentials: FirestoreCredentials = {
-    clientEmail: env.FIREBASE_CLIENT_EMAIL,
-    privateKey: env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-  };
+async function runFlightBatch(env: Env): Promise<{ processed: number; written: number; skipped: number; nextOffset: number; total: number }> {
+  const credentials = credentialsFrom(env);
 
   const allPairs = buildAllRoutePairs();
   const cursorDoc = await getDocument("livePrices", "_cursor", credentials);
@@ -161,7 +175,7 @@ async function runBatch(env: Env): Promise<{ processed: number; written: number;
         written += 1;
       }
     } catch (err) {
-      console.error(`[price-sync] ${pair.destinationId} from ${pair.originAirportCode}: failed`, err);
+      console.error(`[price-sync] flight ${pair.destinationId} from ${pair.originAirportCode}: failed`, err);
       skipped += 1;
     }
     await delay(DELAY_BETWEEN_REQUESTS_MS);
@@ -173,12 +187,91 @@ async function runBatch(env: Env): Promise<{ processed: number; written: number;
   return { processed: batch.length, written, skipped, nextOffset, total: allPairs.length };
 }
 
+// ---------- Hoteles (Xotelo, un hotel ancla curado por destino) ----------
+
+const HOTEL_TRIP_NIGHTS = 5;
+
+function hotelCheckInOut(): { checkIn: string; checkOut: string } {
+  const now = new Date();
+  const checkInDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const checkOutDate = new Date(checkInDate);
+  checkOutDate.setDate(checkOutDate.getDate() + HOTEL_TRIP_NIGHTS);
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return { checkIn: fmt(checkInDate), checkOut: fmt(checkOutDate) };
+}
+
+async function fetchHotelNightlyRate(hotelKey: string): Promise<number | null> {
+  const { checkIn, checkOut } = hotelCheckInOut();
+  const url = new URL("https://data.xotelo.com/api/rates");
+  url.searchParams.set("hotel_key", hotelKey);
+  url.searchParams.set("chk_in", checkIn);
+  url.searchParams.set("chk_out", checkOut);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    console.warn(`[price-sync] hotel ${hotelKey}: HTTP ${res.status}`);
+    return null;
+  }
+
+  const body = (await res.json()) as { error: string | null; result?: { rates?: Array<{ rate?: number }> } };
+  if (body.error || !body.result?.rates || body.result.rates.length === 0) return null;
+
+  const rates = body.result.rates.map((r) => r.rate).filter((r): r is number => typeof r === "number" && r > 0);
+  if (rates.length === 0) return null;
+
+  return rates.reduce((a, b) => a + b, 0) / rates.length;
+}
+
+async function runHotelBatch(env: Env): Promise<{ processed: number; written: number; skipped: number; nextOffset: number; total: number }> {
+  const credentials = credentialsFrom(env);
+
+  const allDestinationIds = Object.keys(HOTEL_KEYS).sort();
+  const cursorDoc = await getDocument("liveHotelPrices", "_cursor", credentials);
+  const offset = typeof cursorDoc?.offset === "number" ? cursorDoc.offset : 0;
+
+  const batch: string[] = [];
+  for (let i = 0; i < HOTEL_BATCH_SIZE && i < allDestinationIds.length; i++) {
+    batch.push(allDestinationIds[(offset + i) % allDestinationIds.length]);
+  }
+
+  let written = 0;
+  let skipped = 0;
+
+  for (const destinationId of batch) {
+    try {
+      const nightly = await fetchHotelNightlyRate(HOTEL_KEYS[destinationId]);
+      if (!nightly) {
+        skipped += 1;
+      } else {
+        await setDocument(
+          "liveHotelPrices",
+          destinationId,
+          { destinationId, avgHotelCostPerNightUSD: Math.round(nightly), capturedAt: new Date().toISOString() },
+          credentials
+        );
+        written += 1;
+      }
+    } catch (err) {
+      console.error(`[price-sync] hotel ${destinationId}: failed`, err);
+      skipped += 1;
+    }
+    await delay(DELAY_BETWEEN_REQUESTS_MS);
+  }
+
+  const nextOffset = allDestinationIds.length === 0 ? 0 : (offset + HOTEL_BATCH_SIZE) % allDestinationIds.length;
+  await setDocument("liveHotelPrices", "_cursor", { offset: nextOffset, updatedAt: new Date().toISOString() }, credentials);
+
+  return { processed: batch.length, written, skipped, nextOffset, total: allDestinationIds.length };
+}
+
 export default {
-  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    const job = controller.cron === HOTEL_CRON ? runHotelBatch(env) : runFlightBatch(env);
+    const label = controller.cron === HOTEL_CRON ? "hotels" : "flights";
     ctx.waitUntil(
-      runBatch(env)
-        .then((summary) => console.log("[price-sync] batch done", summary))
-        .catch((err) => console.error("[price-sync] batch failed", err))
+      job
+        .then((summary) => console.log(`[price-sync] ${label} batch done`, summary))
+        .catch((err) => console.error(`[price-sync] ${label} batch failed`, err))
     );
   },
 
@@ -186,12 +279,13 @@ export default {
   // secret simple (no hay nada sensible del lado del usuario acá, es un
   // worker interno sin dominio público conocido, pero evita que cualquiera
   // que adivine la URL gaste el rate limit de la API a lo pavo).
+  // ?mode=hotels para probar el lote de hoteles; por default corre vuelos.
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (url.searchParams.get("key") !== env.PRICE_SYNC_TRIGGER_KEY) {
       return new Response("Not found", { status: 404 });
     }
-    const summary = await runBatch(env);
+    const summary = url.searchParams.get("mode") === "hotels" ? await runHotelBatch(env) : await runFlightBatch(env);
     return new Response(JSON.stringify(summary, null, 2), { headers: { "Content-Type": "application/json" } });
   },
 } satisfies ExportedHandler<Env>;

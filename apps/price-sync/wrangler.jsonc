@@ -6,14 +6,16 @@
 	"observability": {
 		"enabled": true
 	},
-	// Cada 15 min procesa un lote de 15 rutas (ver BATCH_SIZE en
-	// src/index.ts, acotado por el límite de 50 subrequests/invocación
-	// del plan free de Workers) — con las 952 rutas del catálogo, un
-	// ciclo completo tarda ~16 horas y arranca de nuevo, así los precios
-	// se mantienen razonablemente frescos de forma continua. Nadie lo
-	// dispara a mano en el día a día — Cloudflare lo despierta solo, más
-	// un endpoint /run protegido por secret para probar a mano.
+	// Dos horarios independientes (ver el dispatcher en src/index.ts, que
+	// distingue cuál es cuál por el string exacto del cron) para que cada
+	// invocación se quede corta y liviana, en vez de una sola que haga
+	// vuelos y hoteles junta y arriesgue el límite de 50 subrequests del
+	// plan free de Workers:
+	//  - */15 * * * * (vuelos, Travelpayouts): 952 rutas, ciclo ~16h.
+	//  - 5-59/20 * * * * (hoteles, Xotelo): 40 destinos, ciclo ~1h.
+	// Nadie los dispara a mano en el día a día — Cloudflare los despierta
+	// solo, más un endpoint /run protegido por secret para probar.
 	"triggers": {
-		"crons": ["*/15 * * * *"]
+		"crons": ["*/15 * * * *", "5-59/20 * * * *"]
 	}
 }

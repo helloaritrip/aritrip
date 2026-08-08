@@ -5,12 +5,13 @@ import {
   generateAllPriceSnapshots,
   getRecommendations,
   applyLivePriceOverlay,
+  applyLiveHotelPriceOverlay,
   ORIGIN_HUBS,
   type OriginHub,
   type InterestTag,
 } from "@aritrips/data";
 import { getPartnerConfig, buildPartnerLinks } from "@/lib/partnerLinks";
-import { getLivePrices } from "@/lib/livePrices";
+import { getLivePrices, getLiveHotelPrices } from "@/lib/livePrices";
 
 // Fase 1 (MVP): catálogo 100% estático, generado en memoria. Los precios
 // de vuelo empezaron como estimados curados a mano puros (2026-08-05);
@@ -51,11 +52,11 @@ export async function POST(request: Request) {
   // getPartnerConfig ya cachean en memoria (1h y 5min respectivamente), así
   // que esto no le pega a Firestore en cada búsqueda.
   const { env } = await getCloudflareContext({ async: true });
-  const livePrices = await getLivePrices({
-    FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL,
-    FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY,
-  });
-  const priceSnapshots = applyLivePriceOverlay(curatedPriceSnapshots, livePrices);
+  const [livePrices, liveHotelPrices] = await Promise.all([
+    getLivePrices({ FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY }),
+    getLiveHotelPrices({ FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY }),
+  ]);
+  const priceSnapshots = applyLiveHotelPriceOverlay(applyLivePriceOverlay(curatedPriceSnapshots, livePrices), liveHotelPrices);
 
   const results = getRecommendations(
     {
