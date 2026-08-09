@@ -1,13 +1,34 @@
 ---
+import { env } from "cloudflare:workers";
 import Layout from "../layouts/Layout.astro";
 import { Button } from "@aritrips/ui";
-import { destinations, ORIGIN_HUBS, ORIGIN_LABELS } from "@aritrips/data";
+import { ORIGIN_HUBS, ORIGIN_LABELS, listDocuments } from "@aritrips/data";
 import { cityName, hubPageSlug } from "../lib/citySlug";
 
-// Cuenta real del catálogo, no un número fijo que se desactualiza — mismo
-// error que ya corregimos dos veces en apps/app.
-const destinationCount = destinations.length;
-const originCount = ORIGIN_HUBS.length;
+// SSR solo para poder leer los últimos posts del blog en cada visita — el
+// resto de la home sigue siendo estático (mismo patrón ya usado en /blog
+// y /p/[slug]).
+export const prerender = false;
+
+const APP_URL_FOR_IMAGES = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
+function imageProxyUrl(query: string, fallback: string): string {
+  return `${APP_URL_FOR_IMAGES}/api/image-proxy?q=${encodeURIComponent(query)}&fallback=${encodeURIComponent(fallback)}`;
+}
+
+type BlogDoc = { id: string; title?: unknown; description?: unknown; featuredImageQuery?: unknown; publishedAt?: unknown };
+let latestPosts: BlogDoc[] = [];
+const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
+if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+  try {
+    const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
+    const docs = await listDocuments("pages", credentials);
+    latestPosts = (docs.filter((d) => d.template === "blog" && d.status === "published") as BlogDoc[])
+      .sort((a, b) => String(b.publishedAt ?? "").localeCompare(String(a.publishedAt ?? "")))
+      .slice(0, 3);
+  } catch {
+    latestPosts = [];
+  }
+}
 
 // Links a las 24 páginas "Best trips from {city}" (generate-hub-pages.ts)
 // — sin esto quedan huérfanas: ni Google ni un usuario real las encuentra.
@@ -65,20 +86,33 @@ const steps = [
       }
     </section>
 
-    <section class="flex flex-col items-center gap-6 rounded-lg border border-rule bg-surface px-6 py-10 text-center">
-      <div class="grid grid-cols-2 gap-8 sm:grid-cols-2">
-        <div>
-          <p class="text-3xl font-semibold text-accent">{destinationCount}</p>
-          <p class="text-sm text-muted">destinations, and growing</p>
-        </div>
-        <div>
-          <p class="text-3xl font-semibold text-accent">{originCount}</p>
-          <p class="text-sm text-muted">cities you can fly from</p>
-        </div>
+    <section class="flex flex-col gap-6">
+      <div class="flex items-center justify-between">
+        <h2 class="text-2xl font-semibold text-ink">From the blog</h2>
+        <a href="/blog" class="text-sm font-medium text-accent hover:underline">See all posts →</a>
       </div>
-      <Button href={APP_URL} variant="secondary">
-        See where you can go
-      </Button>
+      {
+        latestPosts.length === 0 ? (
+          <p class="text-sm text-muted">New posts are on their way — check back soon.</p>
+        ) : (
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            {latestPosts.map((post) => (
+              <a href={`/p/${post.id}`} class="flex flex-col gap-3 overflow-hidden rounded-lg border border-rule bg-surface transition-shadow hover:shadow-md">
+                <img
+                  src={imageProxyUrl(String(post.featuredImageQuery || post.title || post.id), String(post.title ?? post.id))}
+                  alt={String(post.title ?? "")}
+                  class="h-40 w-full object-cover"
+                  loading="lazy"
+                />
+                <div class="flex flex-col gap-1 px-4 pb-4">
+                  <h3 class="text-base font-semibold text-ink">{String(post.title ?? post.id)}</h3>
+                  {post.description ? <p class="text-sm text-muted">{String(post.description)}</p> : null}
+                </div>
+              </a>
+            ))}
+          </div>
+        )
+      }
     </section>
 
     <section class="flex flex-col gap-6">
@@ -100,6 +134,7 @@ const steps = [
       <p class="text-lg font-semibold">AriTrips</p>
       <div class="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
         <a href={APP_URL} class="hover:text-highlight">Home</a>
+        <a href="/blog" class="hover:text-highlight">Blog</a>
         <a href={`${APP_URL}/privacy`} class="hover:text-highlight">Privacy</a>
         <a href={`${APP_URL}/terms`} class="hover:text-highlight">Terms</a>
       </div>

@@ -12,6 +12,7 @@ type PageMeta = {
   language: string;
   status: "draft" | "published";
   template: string;
+  featuredImageQuery: string;
 };
 
 const EMPTY_META: PageMeta = {
@@ -23,6 +24,7 @@ const EMPTY_META: PageMeta = {
   language: "en",
   status: "draft",
   template: "custom",
+  featuredImageQuery: "",
 };
 
 /**
@@ -65,6 +67,7 @@ export function PuckEditor() {
             language: doc.language ?? "en",
             status: doc.status === "published" ? "published" : "draft",
             template: doc.template ?? "custom",
+            featuredImageQuery: doc.featuredImageQuery ?? "",
           });
         } else {
           setInitialData({ content: [], root: { props: { title: s } } });
@@ -110,17 +113,38 @@ export function PuckEditor() {
           </select>
         </label>
         <label>
+          Type:{" "}
+          <select value={meta.template} onChange={(e) => setMeta((m) => ({ ...m, template: e.target.value }))}>
+            <option value="custom">Custom</option>
+            <option value="hub">Hub</option>
+            <option value="blog">Blog post</option>
+          </select>
+        </label>
+        <label>
           Description: <input value={meta.description} onChange={(e) => setMeta((m) => ({ ...m, description: e.target.value }))} />
         </label>
-        <label>
-          Country: <input value={meta.country} onChange={(e) => setMeta((m) => ({ ...m, country: e.target.value }))} />
-        </label>
-        <label>
-          City: <input value={meta.city} onChange={(e) => setMeta((m) => ({ ...m, city: e.target.value }))} />
-        </label>
-        <label>
-          Continent: <input value={meta.continent} onChange={(e) => setMeta((m) => ({ ...m, continent: e.target.value }))} />
-        </label>
+        {meta.template === "blog" ? (
+          <label>
+            Featured image query:{" "}
+            <input
+              value={meta.featuredImageQuery}
+              onChange={(e) => setMeta((m) => ({ ...m, featuredImageQuery: e.target.value }))}
+              placeholder="e.g. punta cana aerial beach"
+            />
+          </label>
+        ) : (
+          <>
+            <label>
+              Country: <input value={meta.country} onChange={(e) => setMeta((m) => ({ ...m, country: e.target.value }))} />
+            </label>
+            <label>
+              City: <input value={meta.city} onChange={(e) => setMeta((m) => ({ ...m, city: e.target.value }))} />
+            </label>
+            <label>
+              Continent: <input value={meta.continent} onChange={(e) => setMeta((m) => ({ ...m, continent: e.target.value }))} />
+            </label>
+          </>
+        )}
         <span>{saveMessage}</span>
       </div>
       <Puck config={config} data={initialData!} onPublish={handlePublish} />

@@ -1,0 +1,153 @@
+---
+import { env } from "cloudflare:workers";
+import Layout from "../../layouts/Layout.astro";
+import { listDocuments } from "@aritrips/data";
+
+// SSR (no prerender) — mismo motivo que /p/[slug]: el listado tiene que
+// reflejar entradas nuevas apenas se publican, sin esperar un redeploy.
+export const prerender = false;
+
+const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
+function imageProxyUrl(query: string, fallback: string): string {
+  return `${APP_URL}/api/image-proxy?q=${encodeURIComponent(query)}&fallback=${encodeURIComponent(fallback)}`;
+}
+
+type BlogDoc = {
+  id: string;
+  title?: unknown;
+  description?: unknown;
+  featuredImageQuery?: unknown;
+  publishedAt?: unknown;
+};
+
+const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
+let posts: BlogDoc[] = [];
+let loadError: string | null = null;
+
+if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+  try {
+    const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
+    const docs = await listDocuments("pages", credentials);
+    // Las entradas de blog son páginas normales con template="blog" — mismo
+    // sistema de siempre (Puck + Firestore), solo se filtran acá para el
+    // listado. Se renderizan en /p/{slug} igual que cualquier otra página.
+    posts = docs.filter((d) => d.template === "blog" && d.status === "published") as BlogDoc[];
+  } catch (err) {
+    loadError = err instanceof Error ? err.message : "Couldn't load blog posts right now.";
+  }
+} else {
+  loadError = "Blog isn't configured yet.";
+}
+
+posts.sort((a, b) => String(b.publishedAt ?? "").localeCompare(String(a.publishedAt ?? "")));
+
+const q = (Astro.url.searchParams.get("q") || "").trim();
+const qLower = q.toLowerCase();
+const filteredPosts = qLower
+  ? posts.filter((p) => String(p.title ?? "").toLowerCase().includes(qLower) || String(p.description ?? "").toLowerCase().includes(qLower))
+  : posts;
+
+function formatDate(iso: unknown): string {
+  if (typeof iso !== "string") return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+}
+---
+
+<Layout title="Travel Blog — AriTrips" description="Destination guides and travel inspiration from AriTrips — real cost data, not generic listicles.">
+  <div class="bg-brand-blue-mid px-6 py-16 text-center text-white">
+    <p class="text-sm text-white/70">
+      <a href="/" class="hover:text-highlight">Home</a> / Blog
+    </p>
+    <h1 class="mt-2 text-3xl font-semibold sm:text-4xl">Travel Blog</h1>
+  </div>
+
+  <div class="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-14 lg:grid-cols-[1fr_300px]">
+    <div class="flex min-w-0 flex-col gap-8">
+      {q && (
+        <p class="text-sm text-muted">
+          Showing results for &ldquo;{q}&rdquo; — <a href="/blog" class="text-accent hover:underline">clear</a>
+        </p>
+      )}
+
+      {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
+
+      {!loadError && filteredPosts.length === 0 && (
+        <div class="rounded-lg border border-dashed border-rule bg-surface/50 p-10 text-center text-sm text-muted">
+          {q ? `No posts found for "${q}".` : "New posts are on their way — check back soon."}
+        </div>
+      )}
+
+      {
+        filteredPosts.map((post) => (
+          <article class="flex flex-col gap-4 border-b border-rule pb-8 last:border-b-0 sm:flex-row">
+            <a href={`/p/${post.id}`} class="block shrink-0 sm:w-64">
+              <img
+                src={imageProxyUrl(String(post.featuredImageQuery || post.title || post.id), String(post.title ?? post.id))}
+                alt={String(post.title ?? "")}
+                class="h-44 w-full rounded-lg object-cover sm:h-40"
+                loading="lazy"
+              />
+            </a>
+            <div class="flex flex-col gap-2">
+              <span class="w-fit rounded-full bg-accent/10 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-accent">Blog</span>
+              <h2 class="text-xl font-semibold text-ink">
+                <a href={`/p/${post.id}`} class="hover:text-accent">
+                  {String(post.title ?? post.id)}
+                </a>
+              </h2>
+              {formatDate(post.publishedAt) && <p class="text-xs text-muted">{formatDate(post.publishedAt)}</p>}
+              {post.description ? <p class="text-sm text-muted">{String(post.description)}</p> : null}
+            </div>
+          </article>
+        ))
+      }
+    </div>
+
+    <aside class="flex flex-col gap-8">
+      <form method="get" action="/blog" class="flex gap-2">
+        <input
+          type="text"
+          name="q"
+          value={q}
+          placeholder="Search posts..."
+          class="w-full min-w-0 rounded-md border border-rule bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:outline focus:outline-2 focus:outline-accent"
+        />
+        <button type="submit" class="shrink-0 rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90">
+          Search
+        </button>
+      </form>
+
+      <div class="flex flex-col gap-3">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Latest entries</h2>
+        <ul class="flex flex-col gap-3">
+          {
+            posts.slice(0, 6).map((post) => (
+              <li>
+                <a href={`/p/${post.id}`} class="text-sm font-medium text-ink hover:text-accent">
+                  {String(post.title ?? post.id)}
+                </a>
+                {formatDate(post.publishedAt) && <p class="text-xs text-muted">{formatDate(post.publishedAt)}</p>}
+              </li>
+            ))
+          }
+          {posts.length === 0 && <li class="text-sm text-muted">No posts yet.</li>}
+        </ul>
+      </div>
+
+      {/* Sin código real de anuncio todavía — pendiente de aprobación de
+         Google AdSense, mismo criterio que el resto del sitio. */}
+      <div class="flex flex-col gap-4">
+        <div class="flex h-64 w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-rule text-center text-xs text-muted">
+          Ad space reserved
+          <br />300×250
+        </div>
+        <div class="flex h-64 w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-rule text-center text-xs text-muted">
+          Ad space reserved
+          <br />300×250
+        </div>
+      </div>
+    </aside>
+  </div>
+</Layout>

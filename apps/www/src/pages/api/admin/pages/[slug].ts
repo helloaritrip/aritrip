@@ -55,6 +55,7 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
     language?: string;
     status?: string;
     template?: string;
+    featuredImageQuery?: string;
     content?: unknown;
   };
   try {
@@ -87,6 +88,7 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
       language: body.language || "en",
       status,
       template: body.template || "custom",
+      featuredImageQuery: body.featuredImageQuery ?? "",
       updatedAt: now,
       publishedAt,
       contentJson: JSON.stringify(body.content ?? { content: [], root: { props: { title: body.title ?? slug } } }),
