@@ -1,3 +1,2 @@
 User-agent: *
-Disallow: /
-Allow: /api/image-proxy
+Allow: /

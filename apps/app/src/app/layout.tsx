@@ -16,6 +16,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "AriTrips",
   description: "Find the best trip you can take on your budget.",
+  // app.aritrips.com es la herramienta interactiva, no el dominio de
+  // contenido/SEO (ese es aritrips.com) — noindex es lo que realmente
+  // saca páginas del índice de Google. El robots.txt de este dominio
+  // solo bloqueaba el rastreo, lo cual en realidad "atrapa" páginas ya
+  // indexadas (Google no puede volver a visitarlas para sacarlas) en
+  // vez de sacarlas (auditoría SEO, 2026-08-09).
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
