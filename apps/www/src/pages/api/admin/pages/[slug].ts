@@ -65,6 +65,15 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
   }
 
   const status = body.status === "published" ? "published" : "draft";
+  const description = (body.description ?? "").trim();
+
+  // Sin esto, una página publicada sin descripción cae al fallback de
+  // p/[slug].astro (repite el título como meta description) sin que
+  // nadie lo note — auditoría SEO, 2026-08-09.
+  if (status === "published" && !description) {
+    return json({ error: "Add a description before publishing — it's used for the page's meta tag and social previews." }, 400);
+  }
+
   const now = new Date();
 
   // Preserva publishedAt original si ya estaba publicada — solo se
@@ -81,7 +90,7 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
     {
       slug,
       title: body.title ?? slug,
-      description: body.description ?? "",
+      description,
       country: body.country ?? "",
       city: body.city ?? "",
       continent: body.continent ?? "",

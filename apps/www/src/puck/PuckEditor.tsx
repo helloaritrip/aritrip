@@ -89,7 +89,12 @@ export function PuckEditor() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...meta, title, content: data }),
     });
-    setSaveMessage(res.ok ? `Saved — live at /p/${slug}` : "Failed to save.");
+    if (res.ok) {
+      setSaveMessage(`Saved — live at /p/${slug}`);
+      return;
+    }
+    const body = await res.json().catch(() => null);
+    setSaveMessage((body as { error?: string } | null)?.error ?? "Failed to save.");
   }
 
   return (

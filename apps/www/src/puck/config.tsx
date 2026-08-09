@@ -242,6 +242,8 @@ export const config: Config<Props> = {
             <img
               src={imageProxyUrl(destination.imageQuery, destination.name)}
               alt={destination.name}
+              width="448"
+              height="192"
               className="h-48 w-full object-cover"
             />
             <div className="flex flex-col gap-2 p-5">
@@ -462,6 +464,8 @@ export const config: Config<Props> = {
                   <img
                     src={imageProxyUrl(destination.imageQuery, destination.name)}
                     alt={destination.name}
+                    width="400"
+                    height="128"
                     className="h-32 w-full object-cover"
                   />
                   <div className="flex flex-col gap-1 p-4">
@@ -506,6 +510,8 @@ export const config: Config<Props> = {
           <img
             src={imageProxyUrl(imageQuery, heading)}
             alt={heading}
+            width="640"
+            height="320"
             className="h-64 w-full flex-1 rounded-lg object-cover sm:h-80"
           />
           <div className="flex flex-1 flex-col items-start gap-3 text-left">
