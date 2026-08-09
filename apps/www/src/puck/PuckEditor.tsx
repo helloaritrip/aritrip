@@ -122,6 +122,7 @@ export function PuckEditor() {
           <select value={meta.template} onChange={(e) => setMeta((m) => ({ ...m, template: e.target.value }))}>
             <option value="custom">Custom</option>
             <option value="hub">Hub</option>
+            <option value="destination">Destination</option>
             <option value="blog">Blog post</option>
           </select>
         </label>

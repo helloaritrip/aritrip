@@ -238,7 +238,10 @@ export const config: Config<Props> = {
         const destination = destinations.find((d) => d.id === destinationId);
         if (!destination) return <p className="text-sm text-muted">Destination not found.</p>;
         return (
-          <div className="mx-auto flex max-w-md flex-col overflow-hidden rounded-lg border border-rule bg-surface">
+          <a
+            href={`/p/${destination.id}`}
+            className="mx-auto flex max-w-md flex-col overflow-hidden rounded-lg border border-rule bg-surface transition-shadow hover:shadow-md"
+          >
             <img
               src={imageProxyUrl(destination.imageQuery, destination.name)}
               alt={destination.name}
@@ -255,7 +258,7 @@ export const config: Config<Props> = {
                 Value score: {destination.valueRating}/100
               </p>
             </div>
-          </div>
+          </a>
         );
       },
     },
@@ -460,7 +463,11 @@ export const config: Config<Props> = {
               .map((d) => destinations.find((dest) => dest.id === d.destinationId))
               .filter((d): d is NonNullable<typeof d> => Boolean(d))
               .map((destination) => (
-                <div key={destination.id} className="flex flex-col overflow-hidden rounded-lg border border-rule bg-surface text-left">
+                <a
+                  key={destination.id}
+                  href={`/p/${destination.id}`}
+                  className="flex flex-col overflow-hidden rounded-lg border border-rule bg-surface text-left transition-shadow hover:shadow-md"
+                >
                   <img
                     src={imageProxyUrl(destination.imageQuery, destination.name)}
                     alt={destination.name}
@@ -472,7 +479,7 @@ export const config: Config<Props> = {
                     <p className="text-xs uppercase tracking-wide text-muted">{destination.country}</p>
                     <p className="font-semibold text-ink">{destination.name}</p>
                   </div>
-                </div>
+                </a>
               ))}
           </div>
         </section>
