@@ -39,6 +39,27 @@ const cityLinks = ORIGIN_HUBS.map((hub) => ({
 
 const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
 
+const homeJsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "AriTrips",
+    url: "https://aritrips.com",
+    logo: "https://aritrips.com/favicon.svg",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "AriTrips",
+    url: "https://aritrips.com",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: "https://aritrips.com/blog?q={search_term_string}",
+      "query-input": "required name=search_term_string",
+    },
+  },
+];
+
 const steps = [
   {
     title: "Tell us your budget",
@@ -58,6 +79,7 @@ const steps = [
 <Layout
   title="AriTrips — Find the best trip you can take on your budget"
   description="Tell us your budget and we'll show you which destinations actually fit — real flight, hotel, and activity costs, not just a flight price."
+  jsonLd={homeJsonLd}
 >
   <main class="mx-auto flex max-w-5xl flex-col gap-24 px-6 py-20">
     <section class="flex flex-col items-center gap-6 text-center">
@@ -101,6 +123,8 @@ const steps = [
                 <img
                   src={imageProxyUrl(String(post.featuredImageQuery || post.title || post.id), String(post.title ?? post.id))}
                   alt={String(post.title ?? "")}
+                  width="400"
+                  height="225"
                   class="h-40 w-full object-cover"
                   loading="lazy"
                 />

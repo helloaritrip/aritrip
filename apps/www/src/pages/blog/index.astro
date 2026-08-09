@@ -86,6 +86,8 @@ function formatDate(iso: unknown): string {
               <img
                 src={imageProxyUrl(String(post.featuredImageQuery || post.title || post.id), String(post.title ?? post.id))}
                 alt={String(post.title ?? "")}
+                width="256"
+                height="160"
                 class="h-44 w-full rounded-lg object-cover sm:h-40"
                 loading="lazy"
               />

@@ -19,7 +19,10 @@ const SITE_URL = "https://aritrips.com";
 export const GET: APIRoute = async () => {
   const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
 
-  const urls = [{ loc: `${SITE_URL}/`, priority: "1.0" }];
+  const urls = [
+    { loc: `${SITE_URL}/`, priority: "1.0" },
+    { loc: `${SITE_URL}/blog`, priority: "0.7" },
+  ];
 
   if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
     try {
@@ -29,7 +32,9 @@ export const GET: APIRoute = async () => {
       });
       for (const page of pages) {
         if (page.status === "published") {
-          urls.push({ loc: `${SITE_URL}/p/${page.id}/`, priority: "0.8" });
+          // Sin barra final — coincide con la URL canónica que ahora
+          // fuerza middleware.ts (auditoría SEO, 2026-08-09).
+          urls.push({ loc: `${SITE_URL}/p/${page.id}`, priority: "0.8" });
         }
       }
     } catch {

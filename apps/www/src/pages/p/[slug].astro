@@ -48,8 +48,65 @@ try {
 
 const pageTitle = (data.root.props?.title as string | undefined) || (doc.title as string | undefined) || "AriTrips";
 const pageDescription = (doc.description as string | undefined) || pageTitle;
+
+const APP_URL_FOR_IMAGES = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
+function imageProxyUrl(query: string, fallback: string): string {
+  return `${APP_URL_FOR_IMAGES}/api/image-proxy?q=${encodeURIComponent(query)}&fallback=${encodeURIComponent(fallback)}`;
+}
+
+const isBlogPost = doc.template === "blog";
+
+// Imagen para OG/Twitter: la del post de blog, o el fondo del Hero si
+// la página tiene uno — mismas fuentes que ya usa la página, sin
+// duplicar proveedor de imágenes.
+const heroBlock = data.content.find((c) => c.type === "Hero");
+const heroImageQuery = (heroBlock?.props as { backgroundImageQuery?: string } | undefined)?.backgroundImageQuery;
+const featuredImageQuery = (doc.featuredImageQuery as string | undefined) || heroImageQuery;
+const pageImage = featuredImageQuery ? imageProxyUrl(featuredImageQuery, pageTitle) : undefined;
+
+// FAQPage — las páginas hub ya traen preguntas/respuestas reales en el
+// bloque FAQAccordion; esto las expone como datos estructurados sin
+// escribir contenido nuevo (auditoría SEO, 2026-08-09).
+const faqItems = data.content
+  .filter((c) => c.type === "FAQAccordion")
+  .flatMap((c) => (c.props as { items?: { question: string; answer: string }[] }).items ?? []);
+
+const jsonLd: Record<string, unknown>[] = [];
+
+if (isBlogPost) {
+  jsonLd.push({
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: pageTitle,
+    description: pageDescription,
+    ...(pageImage ? { image: pageImage } : {}),
+    ...(doc.publishedAt ? { datePublished: doc.publishedAt } : {}),
+    ...(doc.updatedAt ? { dateModified: doc.updatedAt } : {}),
+    author: { "@type": "Organization", name: "AriTrips" },
+    publisher: { "@type": "Organization", name: "AriTrips", logo: { "@type": "ImageObject", url: "https://aritrips.com/favicon.svg" } },
+  });
+}
+
+if (faqItems.length > 0) {
+  jsonLd.push({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqItems.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  });
+}
 ---
 
-<Layout title={pageTitle} description={pageDescription} showAdRails>
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  showAdRails
+  type={isBlogPost ? "article" : "website"}
+  image={pageImage}
+  jsonLd={jsonLd}
+>
   <Render config={config} data={data} />
 </Layout>
