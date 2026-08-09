@@ -1030,7 +1030,7 @@ export const destinations: Destination[] = [
   {
     id: "curacao",
     safetyIndex: { value: 92, source: "US State Dept advisory — Curazao, level 1", updatedAt: "2026-08-07" },
-    name: "Curazao",
+    name: "Curaçao",
     country: "Curaçao",
     region: "Caribe",
     airportCodes: ["CUR"],
