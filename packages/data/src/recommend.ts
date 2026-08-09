@@ -74,21 +74,27 @@ function travelTimeScore(durationMin: number, tripDays: number): number {
   return Math.max(0, base);
 }
 
-const VIBE_SCORE_BY_INTEREST: Record<InterestTag, keyof Destination | null> = {
-  beach: "beachScore",
-  adventure: "adventureScore",
-  culture: null, // sin vibe score curado todavia — ver backlog del catalogo
-  nightlife: "nightlifeScore",
-  family: "familyScore",
-  honeymoon: "coupleScore",
-  foodie: "foodScore",
-  nature: "natureScore",
+// "adventure" y "culture" fusionan lo que antes eran interests aparte
+// ("nature" y "foodie", 2026-08-09) — no es solo un cambio de UI, el
+// score también promedia ambas dimensiones curadas para que elegir
+// "Adventure" siga premiando destinos fuertes en naturaleza, y "Culture"
+// siga premiando destinos fuertes en comida (antes esa dimensión no
+// tenía vibe score propio y quedaba en 50 neutral).
+const VIBE_SCORE_BY_INTEREST: Record<InterestTag, (keyof Destination)[] | null> = {
+  beach: ["beachScore"],
+  adventure: ["adventureScore", "natureScore"],
+  culture: ["foodScore"], // sin cultureScore curado todavia — foodScore es la señal más cercana disponible tras fusionar Food -> Culture
+  nightlife: ["nightlifeScore"],
+  family: ["familyScore"],
+  honeymoon: ["coupleScore"],
 };
 
 function activitiesMatchScore(destination: Destination, interests: InterestTag[]): number {
   const values = interests.map((interest) => {
-    const field = VIBE_SCORE_BY_INTEREST[interest];
-    return field ? (destination[field] as number) : 50;
+    const fields = VIBE_SCORE_BY_INTEREST[interest];
+    if (!fields) return 50;
+    const fieldValues = fields.map((field) => destination[field] as number);
+    return fieldValues.reduce((a, b) => a + b, 0) / fieldValues.length;
   });
   return values.reduce((a, b) => a + b, 0) / values.length;
 }

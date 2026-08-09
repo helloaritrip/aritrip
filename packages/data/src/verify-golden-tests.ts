@@ -22,8 +22,8 @@ const scenarios: Scenario[] = [
     input: { originAirportCode: "DFW", budgetUSD: 2700, startDate: "2026-02-10", endDate: "2026-02-15", adults: 2, children: 0, interests: ["beach"] },
   },
   {
-    name: "2. JFK $5000, 7d, 2 adultos, honeymoon+foodie",
-    input: { originAirportCode: "JFK", budgetUSD: 5000, startDate: "2026-02-10", endDate: "2026-02-17", adults: 2, children: 0, interests: ["honeymoon", "foodie"] },
+    name: "2. JFK $5000, 7d, 2 adultos, honeymoon+culture",
+    input: { originAirportCode: "JFK", budgetUSD: 5000, startDate: "2026-02-10", endDate: "2026-02-17", adults: 2, children: 0, interests: ["honeymoon", "culture"] },
   },
   {
     name: "3. YYZ $2200, 3d, 1 adulto, adventure",

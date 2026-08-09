@@ -48,15 +48,12 @@ export type PassportCountry = "US" | "CA" | "MX";
 
 export type Level = "low" | "medium" | "high";
 
-export type InterestTag =
-  | "beach"
-  | "adventure"
-  | "culture"
-  | "nightlife"
-  | "family"
-  | "honeymoon"
-  | "foodie"
-  | "nature";
+// 8 -> 6 (2026-08-09, a pedido del usuario): "foodie" se fusionó en
+// "culture" y "nature" en "adventure" — muy solapadas para el usuario
+// final, y 6 chips entran en una sola línea del formulario. La comida
+// y la naturaleza siguen influyendo el score (ver VIBE_SCORE_BY_INTEREST
+// en recommend.ts), solo dejaron de ser una opción seleccionable aparte.
+export type InterestTag = "beach" | "adventure" | "culture" | "nightlife" | "family" | "honeymoon";
 
 export interface Season {
   name: string;

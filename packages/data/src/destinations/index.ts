@@ -59,7 +59,7 @@ export const destinations: Destination[] = [
     region: "Pacífico mexicano",
     airportCodes: ["PVR"],
     currency: "MXN",
-    tags: ["beach", "foodie", "family"],
+    tags: ["beach", "culture", "family"],
     idealTripLengthDays: { min: 4, max: 8 },
     seasons: [
       { name: "seca", months: [11, 12, 1, 2, 3, 4], avgTempC: { min: 21, max: 30 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
@@ -176,7 +176,7 @@ export const destinations: Destination[] = [
     region: "Caribe mexicano",
     airportCodes: ["CUN"],
     currency: "MXN",
-    tags: ["beach", "nature", "honeymoon"],
+    tags: ["beach", "adventure", "honeymoon"],
     idealTripLengthDays: { min: 4, max: 7 },
     seasons: [
       { name: "seca", months: [11, 12, 1, 2, 3, 4], avgTempC: { min: 22, max: 30 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
@@ -215,7 +215,7 @@ export const destinations: Destination[] = [
     region: "Centroamérica",
     airportCodes: ["LIR"],
     currency: "CRC",
-    tags: ["adventure", "nature", "family"],
+    tags: ["adventure", "family"],
     idealTripLengthDays: { min: 6, max: 10 },
     seasons: [
       { name: "seca", months: [12, 1, 2, 3, 4], avgTempC: { min: 22, max: 33 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
@@ -254,7 +254,7 @@ export const destinations: Destination[] = [
     region: "Caribe colombiano",
     airportCodes: ["CTG"],
     currency: "COP",
-    tags: ["culture", "beach", "nightlife", "foodie"],
+    tags: ["culture", "beach", "nightlife"],
     idealTripLengthDays: { min: 4, max: 7 },
     seasons: [
       { name: "seca", months: [12, 1, 2, 3], avgTempC: { min: 25, max: 33 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
@@ -293,7 +293,7 @@ export const destinations: Destination[] = [
     region: "Andes colombianos",
     airportCodes: ["MDE"],
     currency: "COP",
-    tags: ["culture", "foodie", "nightlife"],
+    tags: ["culture", "nightlife"],
     idealTripLengthDays: { min: 4, max: 8 },
     seasons: [
       { name: "todo el año (clima primaveral estable)", months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], avgTempC: { min: 15, max: 28 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
@@ -330,7 +330,7 @@ export const destinations: Destination[] = [
     region: "Andes peruanos",
     airportCodes: ["CUZ"],
     currency: "PEN",
-    tags: ["adventure", "culture", "nature"],
+    tags: ["adventure", "culture"],
     idealTripLengthDays: { min: 6, max: 10 },
     seasons: [
       { name: "seca", months: [5, 6, 7, 8, 9], avgTempC: { min: 4, max: 20 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
@@ -369,7 +369,7 @@ export const destinations: Destination[] = [
     region: "Cono Sur",
     airportCodes: ["EZE"],
     currency: "ARS",
-    tags: ["culture", "foodie", "nightlife"],
+    tags: ["culture", "nightlife"],
     idealTripLengthDays: { min: 5, max: 9 },
     seasons: [
       { name: "verano austral", months: [12, 1, 2], avgTempC: { min: 20, max: 30 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
@@ -408,7 +408,7 @@ export const destinations: Destination[] = [
     region: "Centro de México",
     airportCodes: ["MEX"],
     currency: "MXN",
-    tags: ["culture", "foodie"],
+    tags: ["culture"],
     idealTripLengthDays: { min: 3, max: 6 },
     seasons: [
       { name: "seca/templada", months: [11, 12, 1, 2, 3, 4], avgTempC: { min: 9, max: 24 }, rainfallLevel: "low", costTier: "medium", crowdLevel: "medium" },
@@ -491,7 +491,7 @@ export const destinations: Destination[] = [
     region: "Centroamérica",
     airportCodes: ["PTY"],
     currency: "USD",
-    tags: ["culture", "foodie", "nightlife", "adventure"],
+    tags: ["culture", "nightlife", "adventure"],
     idealTripLengthDays: { min: 3, max: 7 },
     seasons: [
       { name: "seca", months: [12, 1, 2, 3, 4], avgTempC: { min: 24, max: 33 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
@@ -529,7 +529,7 @@ export const destinations: Destination[] = [
     region: "Caribe centroamericano",
     airportCodes: ["RTB"],
     currency: "USD",
-    tags: ["adventure", "beach", "nature"],
+    tags: ["adventure", "beach"],
     idealTripLengthDays: { min: 3, max: 6 },
     seasons: [
       { name: "seca (mejor visibilidad de buceo)", months: [3, 4, 5, 6, 7, 8, 9], avgTempC: { min: 25, max: 31 }, rainfallLevel: "low", costTier: "high", crowdLevel: "medium" },
@@ -604,7 +604,7 @@ export const destinations: Destination[] = [
     region: "Sur de EE.UU.",
     airportCodes: ["MSY"],
     currency: "USD",
-    tags: ["culture", "foodie", "nightlife"],
+    tags: ["culture", "nightlife"],
     idealTripLengthDays: { min: 3, max: 6 },
     seasons: [
       { name: "invierno templado", months: [11, 12, 1, 2, 3], avgTempC: { min: 10, max: 20 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
@@ -643,7 +643,7 @@ export const destinations: Destination[] = [
     region: "Costa oeste de EE.UU.",
     airportCodes: ["SAN"],
     currency: "USD",
-    tags: ["beach", "family", "foodie"],
+    tags: ["beach", "family", "culture"],
     idealTripLengthDays: { min: 3, max: 7 },
     seasons: [
       { name: "templado todo el año", months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], avgTempC: { min: 14, max: 24 }, rainfallLevel: "low", costTier: "medium", crowdLevel: "medium" },
@@ -680,7 +680,7 @@ export const destinations: Destination[] = [
     region: "Montañas Rocosas canadienses",
     airportCodes: ["YYC"],
     currency: "CAD",
-    tags: ["adventure", "nature"],
+    tags: ["adventure"],
     idealTripLengthDays: { min: 3, max: 8 },
     seasons: [
       { name: "temporada de esquí", months: [12, 1, 2, 3], avgTempC: { min: -12, max: -1 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
@@ -719,7 +719,7 @@ export const destinations: Destination[] = [
     region: "Sur de México",
     airportCodes: ["OAX"],
     currency: "MXN",
-    tags: ["culture", "foodie", "nature"],
+    tags: ["culture", "adventure"],
     idealTripLengthDays: { min: 4, max: 8 },
     seasons: [
       { name: "seca", months: [11, 12, 1, 2, 3, 4], avgTempC: { min: 12, max: 27 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
@@ -841,7 +841,7 @@ export const destinations: Destination[] = [
     region: "Suroeste de EE.UU.",
     airportCodes: ["LAS"],
     currency: "USD",
-    tags: ["nightlife", "adventure", "foodie"],
+    tags: ["nightlife", "adventure", "culture"],
     idealTripLengthDays: { min: 2, max: 5 },
     seasons: [
       { name: "temporada alta", months: [11, 12, 1, 2, 3], avgTempC: { min: 5, max: 18 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
@@ -919,7 +919,7 @@ export const destinations: Destination[] = [
     region: "Hawái, EE.UU.",
     airportCodes: ["HNL"],
     currency: "USD",
-    tags: ["beach", "honeymoon", "family", "nature"],
+    tags: ["beach", "honeymoon", "family", "adventure"],
     idealTripLengthDays: { min: 5, max: 10 },
     seasons: [
       { name: "seca", months: [4, 5, 6, 7, 8, 9, 10], avgTempC: { min: 22, max: 31 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
@@ -957,7 +957,7 @@ export const destinations: Destination[] = [
     region: "Quebec, Canadá",
     airportCodes: ["YQB"],
     currency: "CAD",
-    tags: ["culture", "foodie"],
+    tags: ["culture"],
     idealTripLengthDays: { min: 3, max: 6 },
     seasons: [
       { name: "invierno/Carnaval", months: [12, 1, 2, 3], avgTempC: { min: -12, max: -2 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
@@ -996,7 +996,7 @@ export const destinations: Destination[] = [
     region: "Columbia Británica, Canadá",
     airportCodes: ["YVR"],
     currency: "CAD",
-    tags: ["adventure", "nature"],
+    tags: ["adventure"],
     idealTripLengthDays: { min: 3, max: 7 },
     seasons: [
       { name: "temporada de esquí", months: [12, 1, 2, 3], avgTempC: { min: -8, max: 2 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
@@ -1111,7 +1111,7 @@ export const destinations: Destination[] = [
     region: "Caribe centroamericano",
     airportCodes: ["BZE"],
     currency: "BZD",
-    tags: ["adventure", "beach", "nature"],
+    tags: ["adventure", "beach"],
     idealTripLengthDays: { min: 4, max: 8 },
     seasons: [
       { name: "seca", months: [12, 1, 2, 3, 4, 5], avgTempC: { min: 22, max: 30 }, rainfallLevel: "low", costTier: "high", crowdLevel: "medium" },
@@ -1149,7 +1149,7 @@ export const destinations: Destination[] = [
     region: "Colorado, EE.UU.",
     airportCodes: ["ASE"],
     currency: "USD",
-    tags: ["adventure", "nature", "honeymoon"],
+    tags: ["adventure", "honeymoon"],
     idealTripLengthDays: { min: 3, max: 7 },
     seasons: [
       { name: "temporada de esquí", months: [12, 1, 2, 3], avgTempC: { min: -10, max: 2 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
@@ -1275,7 +1275,7 @@ export const destinations: Destination[] = [
     region: "Islas Galápagos, Ecuador",
     airportCodes: ["GPS"],
     currency: "USD",
-    tags: ["nature", "adventure"],
+    tags: ["adventure"],
     idealTripLengthDays: { min: 5, max: 9 },
     seasons: [
       { name: "garúa (mejor buceo)", months: [6, 7, 8, 9, 10, 11], avgTempC: { min: 19, max: 25 }, rainfallLevel: "low", costTier: "high", crowdLevel: "medium" },
@@ -1352,7 +1352,7 @@ export const destinations: Destination[] = [
     region: "Caribe",
     airportCodes: ["UVF"],
     currency: "XCD",
-    tags: ["honeymoon", "nature", "beach"],
+    tags: ["honeymoon", "adventure", "beach"],
     idealTripLengthDays: { min: 4, max: 8 },
     seasons: [
       { name: "seca", months: [12, 1, 2, 3, 4], avgTempC: { min: 23, max: 29 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
@@ -1391,7 +1391,7 @@ export const destinations: Destination[] = [
     region: "Centroamérica",
     airportCodes: ["GUA"],
     currency: "GTQ",
-    tags: ["culture", "adventure", "nature"],
+    tags: ["culture", "adventure"],
     idealTripLengthDays: { min: 4, max: 7 },
     seasons: [
       { name: "seca", months: [11, 12, 1, 2, 3, 4], avgTempC: { min: 13, max: 26 }, rainfallLevel: "low", costTier: "high", crowdLevel: "medium" },
@@ -1429,7 +1429,7 @@ export const destinations: Destination[] = [
     region: "Andes colombianos",
     airportCodes: ["BOG"],
     currency: "COP",
-    tags: ["culture", "foodie", "adventure"],
+    tags: ["culture", "adventure"],
     idealTripLengthDays: { min: 4, max: 7 },
     seasons: [
       { name: "todo el año (clima frío de altura, estable)", months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], avgTempC: { min: 8, max: 19 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
@@ -1466,7 +1466,7 @@ export const destinations: Destination[] = [
     region: "Tennessee, EE.UU.",
     airportCodes: ["BNA"],
     currency: "USD",
-    tags: ["nightlife", "foodie", "culture"],
+    tags: ["nightlife", "culture"],
     idealTripLengthDays: { min: 3, max: 5 },
     seasons: [
       { name: "invierno templado", months: [11, 12, 1, 2, 3], avgTempC: { min: 2, max: 12 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
@@ -1505,7 +1505,7 @@ export const destinations: Destination[] = [
     region: "Jalisco, México",
     airportCodes: ["GDL"],
     currency: "MXN",
-    tags: ["culture", "foodie", "nightlife"],
+    tags: ["culture", "nightlife"],
     idealTripLengthDays: { min: 3, max: 6 },
     seasons: [
       { name: "seca/templada", months: [11, 12, 1, 2, 3, 4], avgTempC: { min: 13, max: 27 }, rainfallLevel: "low", costTier: "medium", crowdLevel: "medium" },
@@ -1544,7 +1544,7 @@ export const destinations: Destination[] = [
     region: "Misiones, Argentina",
     airportCodes: ["IGR"],
     currency: "ARS",
-    tags: ["nature", "adventure"],
+    tags: ["adventure"],
     idealTripLengthDays: { min: 3, max: 5 },
     seasons: [
       { name: "cálida", months: [11, 12, 1, 2, 3], avgTempC: { min: 20, max: 32 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },

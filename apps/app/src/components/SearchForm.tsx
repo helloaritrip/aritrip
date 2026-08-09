@@ -31,6 +31,9 @@ function getTodayISODate(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+// 6 opciones, no 8 (2026-08-09) — "Food" se fusionó en "Culture" y
+// "Nature" en "Adventure" (mucho solapamiento para el usuario final);
+// 6 chips entran en una sola línea del formulario en vez de partirse.
 const INTEREST_OPTIONS: { value: InterestTag; label: string }[] = [
   { value: "beach", label: "Beach" },
   { value: "adventure", label: "Adventure" },
@@ -38,8 +41,6 @@ const INTEREST_OPTIONS: { value: InterestTag; label: string }[] = [
   { value: "nightlife", label: "Nightlife" },
   { value: "family", label: "Family" },
   { value: "honeymoon", label: "Honeymoon" },
-  { value: "foodie", label: "Food" },
-  { value: "nature", label: "Nature" },
 ];
 
 type FormState = {
