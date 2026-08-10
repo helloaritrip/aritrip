@@ -1,0 +1,199 @@
+---
+import { env } from "cloudflare:workers";
+import type { Data } from "@measured/puck";
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { getAdminSession } from "../../lib/requireAdminSession";
+import { listDocuments } from "@aritrips/data";
+import type { Props } from "../../puck/config";
+
+export const prerender = false;
+
+const session = await getAdminSession(Astro.cookies, env);
+if (!session) {
+  return Astro.redirect(`/ari-admin/login?next=${encodeURIComponent(Astro.url.pathname)}`);
+}
+
+const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
+
+type PageDoc = { id: string; title?: unknown; status?: unknown; contentJson?: unknown };
+type ReviewDoc = { id: string; status?: unknown; reviewedAt?: unknown };
+
+type ImageRow = {
+  slug: string;
+  title: string;
+  pageStatus: string;
+  imageQuery: string;
+  heading: string;
+  reviewStatus: "approved" | "flagged" | "unreviewed";
+};
+
+let rows: ImageRow[] = [];
+let loadError: string | null = null;
+
+// Solo cubre las imágenes de fondo del bloque Hero en /p/{slug} (Puck) —
+// las de las cards de DiscoverSection/DestinationModal en apps/app vienen
+// de destination.imageQuery en packages/data, no de Firestore, así que
+// cambiarlas hoy requiere código + deploy en vez de este panel. Si la
+// lista de "flagged" acá termina siendo chica, tiene sentido extender
+// esto a esas también — por ahora se prioriza lo que se reportó.
+if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+  const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
+  try {
+    const [pages, reviews] = await Promise.all([
+      listDocuments("pages", credentials) as Promise<PageDoc[]>,
+      listDocuments("imageReviews", credentials) as Promise<ReviewDoc[]>,
+    ]);
+
+    const reviewBySlug = new Map(reviews.map((r) => [r.id, String(r.status ?? "unreviewed")]));
+
+    rows = pages
+      .map((p): ImageRow | null => {
+        if (typeof p.contentJson !== "string") return null;
+        let data: Data<Props>;
+        try {
+          data = JSON.parse(p.contentJson) as Data<Props>;
+        } catch {
+          return null;
+        }
+        const heroBlock = data.content.find((c) => c.type === "Hero");
+        const heroProps = heroBlock?.props as { backgroundImageQuery?: string; heading?: string } | undefined;
+        const imageQuery = heroProps?.backgroundImageQuery;
+        if (!imageQuery) return null;
+        const heading = heroProps?.heading || String(p.title ?? p.id);
+        const reviewStatus = (reviewBySlug.get(p.id) as ImageRow["reviewStatus"] | undefined) ?? "unreviewed";
+        return {
+          slug: p.id,
+          title: String(p.title ?? p.id),
+          pageStatus: String(p.status ?? "draft"),
+          imageQuery,
+          heading,
+          reviewStatus,
+        };
+      })
+      .filter((r): r is ImageRow => r !== null)
+      .sort((a, b) => {
+        // Sin revisar primero, después flagged, después approved — así lo
+        // que falta mirar queda arriba en vez de perderse en la lista.
+        const order = { unreviewed: 0, flagged: 1, approved: 2 };
+        return order[a.reviewStatus] - order[b.reviewStatus] || a.title.localeCompare(b.title);
+      });
+  } catch (err) {
+    loadError = err instanceof Error ? err.message : "Failed to load pages.";
+  }
+} else {
+  loadError = "Firestore isn't configured yet (missing secrets).";
+}
+
+const APP_URL_FOR_IMAGES = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
+function imageProxyUrl(query: string, fallback: string): string {
+  return `${APP_URL_FOR_IMAGES}/api/image-proxy?q=${encodeURIComponent(query)}&fallback=${encodeURIComponent(fallback)}`;
+}
+
+const unreviewedCount = rows.filter((r) => r.reviewStatus === "unreviewed").length;
+const flaggedCount = rows.filter((r) => r.reviewStatus === "flagged").length;
+---
+
+<AdminLayout title="Images — AriTrips Admin" session={session} active="images">
+  <div class="flex max-w-5xl flex-col gap-8">
+    <div>
+      <h1 class="text-2xl font-semibold text-ink">Images</h1>
+      <p class="text-sm text-muted">
+        La foto de portada que hoy se ve en cada página de destino (/p/{"{slug}"}). {rows.length} página{rows.length === 1 ? "" : "s"}
+        con Hero — {unreviewedCount} sin revisar, {flaggedCount} marcada{flaggedCount === 1 ? "" : "s"} para cambiar.
+      </p>
+    </div>
+
+    {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {
+        rows.map((r) => (
+          <div class="flex flex-col overflow-hidden rounded-lg border border-rule bg-surface" data-image-card data-slug={r.slug}>
+            <div class="relative aspect-[16/10] w-full overflow-hidden bg-rule/40">
+              <img
+                src={imageProxyUrl(r.imageQuery, r.heading)}
+                alt=""
+                loading="lazy"
+                class="h-full w-full object-cover"
+              />
+              <span
+                data-status-badge
+                class={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                  r.reviewStatus === "approved"
+                    ? "bg-accent text-accent-ink"
+                    : r.reviewStatus === "flagged"
+                      ? "bg-red-600 text-white"
+                      : "bg-black/60 text-white"
+                }`}
+              >
+                {r.reviewStatus === "approved" ? "Approved" : r.reviewStatus === "flagged" ? "Flagged" : "Unreviewed"}
+              </span>
+            </div>
+            <div class="flex flex-1 flex-col gap-2 p-3">
+              <div>
+                <p class="truncate text-sm font-medium text-ink" title={r.title}>{r.title}</p>
+                <p class="truncate text-xs text-muted" title={r.imageQuery}>{r.imageQuery}</p>
+              </div>
+              <div class="mt-auto flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  data-action="approved"
+                  class="flex-1 rounded-md border border-rule px-2 py-1.5 text-xs font-medium text-ink hover:border-accent hover:text-accent"
+                >
+                  ✓ Approve
+                </button>
+                <button
+                  type="button"
+                  data-action="flagged"
+                  class="flex-1 rounded-md border border-rule px-2 py-1.5 text-xs font-medium text-ink hover:border-red-600 hover:text-red-600"
+                >
+                  🚩 Flag
+                </button>
+                <a
+                  href={`/ari-admin/edit?slug=${encodeURIComponent(r.slug)}`}
+                  class="rounded-md border border-rule px-2 py-1.5 text-xs font-medium text-ink hover:border-accent hover:text-accent"
+                >
+                  Edit →
+                </a>
+              </div>
+            </div>
+          </div>
+        ))
+      }
+      {rows.length === 0 && !loadError && <p class="text-sm text-muted">No pages with a Hero image found.</p>}
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  const STATUS_LABEL: Record<string, string> = { approved: "Approved", flagged: "Flagged", unreviewed: "Unreviewed" };
+  const STATUS_CLASS: Record<string, string> = {
+    approved: "bg-accent text-accent-ink",
+    flagged: "bg-red-600 text-white",
+    unreviewed: "bg-black/60 text-white",
+  };
+
+  document.querySelectorAll<HTMLElement>("[data-image-card]").forEach((card) => {
+    const slug = card.dataset.slug!;
+    const badge = card.querySelector<HTMLElement>("[data-status-badge]");
+    card.querySelectorAll<HTMLButtonElement>("[data-action]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const status = btn.dataset.action!;
+        btn.disabled = true;
+        try {
+          const res = await fetch("/api/admin/image-review", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ slug, status }),
+          });
+          if (res.ok && badge) {
+            badge.textContent = STATUS_LABEL[status] ?? status;
+            badge.className = `absolute right-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_CLASS[status] ?? ""}`;
+          }
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+  });
+</script>
