@@ -35,6 +35,7 @@ import {
   setDocument,
   livePriceDocId,
   HOTEL_KEYS,
+  timingSafeEqual,
   type FirestoreCredentials,
 } from "@aritrips/data";
 
@@ -295,7 +296,8 @@ export default {
   // ?mode=hotels para probar el lote de hoteles; por default corre vuelos.
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    if (url.searchParams.get("key") !== env.PRICE_SYNC_TRIGGER_KEY) {
+    // timingSafeEqual en vez de !== — auditoría de seguridad, 2026-08-10.
+    if (!timingSafeEqual(url.searchParams.get("key") ?? "", env.PRICE_SYNC_TRIGGER_KEY)) {
       return new Response("Not found", { status: 404 });
     }
     const summary = url.searchParams.get("mode") === "hotels" ? await runHotelBatch(env) : await runFlightBatch(env);

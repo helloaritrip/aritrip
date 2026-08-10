@@ -34,8 +34,10 @@ function fromBase64url(str: string): Uint8Array {
 }
 
 // Comparación en tiempo constante — evita que una diferencia de timing en
-// el string compare filtre información del hash/firma real.
-function timingSafeEqual(a: string, b: string): boolean {
+// el string compare filtre información del hash/firma real. Exportada
+// (2026-08-10) para que apps/price-sync la reuse en vez de comparar su
+// PRICE_SYNC_TRIGGER_KEY con !==, mismo problema en otro endpoint.
+export function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let diff = 0;
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);

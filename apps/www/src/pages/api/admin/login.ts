@@ -42,7 +42,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: true,
-    sameSite: "lax",
+    // Strict, no Lax (auditoría de seguridad, 2026-08-10) — no existe
+    // ningún flujo legítimo que entre al panel desde un link externo,
+    // así que no hay costo real y cierra el margen que Lax deja abierto.
+    sameSite: "strict",
     path: "/",
     maxAge: 60 * 60 * 24 * 7, // 7 días, igual que la vida de la sesión firmada
   });

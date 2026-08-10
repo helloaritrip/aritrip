@@ -22,6 +22,12 @@ import { getLivePrices, getLiveHotelPrices } from "@/lib/livePrices";
 // el contrato completo.
 const curatedPriceSnapshots = generateAllPriceSnapshots(destinations);
 
+// Debe quedar igual al union real en packages/data/src/types.ts — hoy un
+// valor no reconocido caía silenciosamente a un puntaje neutral de 50,
+// que no rompía nada mas era por casualidad del diseño, no por
+// validación real (auditoría de seguridad, 2026-08-10).
+const VALID_INTERESTS: InterestTag[] = ["beach", "adventure", "culture", "nightlife", "family", "honeymoon"];
+
 export async function POST(request: Request) {
   let body: Record<string, unknown>;
   try {
@@ -44,7 +50,7 @@ export async function POST(request: Request) {
   if (new Date(endDate) <= new Date(startDate)) {
     return NextResponse.json({ error: "endDate must be after startDate" }, { status: 400 });
   }
-  if (!Array.isArray(interests) || interests.length === 0) {
+  if (!Array.isArray(interests) || interests.length === 0 || !interests.every((i) => VALID_INTERESTS.includes(i as InterestTag))) {
     return NextResponse.json({ error: "Pick at least one interest" }, { status: 400 });
   }
 

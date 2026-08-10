@@ -33,7 +33,11 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
     // listado. Se renderizan en /p/{slug} igual que cualquier otra página.
     posts = docs.filter((d) => d.template === "blog" && d.status === "published") as BlogDoc[];
   } catch (err) {
-    loadError = err instanceof Error ? err.message : "Couldn't load blog posts right now.";
+    // El detalle real solo va al log del servidor — mostrárselo a
+    // cualquier visitante público filtra detalles internos de Firestore
+    // (auditoría de seguridad, 2026-08-10).
+    console.error("[blog] Failed to load posts", err);
+    loadError = "Couldn't load blog posts right now.";
   }
 } else {
   loadError = "Blog isn't configured yet.";

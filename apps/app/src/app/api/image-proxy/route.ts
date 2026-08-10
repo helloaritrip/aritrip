@@ -57,10 +57,17 @@ async function searchWikimediaImageUrl(query: string): Promise<string | null> {
   return firstPage?.imageinfo?.[0]?.thumburl ?? firstPage?.imageinfo?.[0]?.url ?? null;
 }
 
+// Límite de largo — sin esto un pedido con query gigante es una forma
+// barata de generar trabajo real (búsqueda + descarga contra Wikimedia)
+// por cada byte extra que no aporta nada a la búsqueda en sí
+// (auditoría de seguridad, 2026-08-10). Las queries reales del catálogo
+// tienen 20-60 caracteres.
+const MAX_QUERY_LENGTH = 120;
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q");
-  const fallbackQuery = searchParams.get("fallback");
+  const query = searchParams.get("q")?.slice(0, MAX_QUERY_LENGTH) ?? null;
+  const fallbackQuery = searchParams.get("fallback")?.slice(0, MAX_QUERY_LENGTH) ?? null;
   if (!query) {
     return fallbackResponse();
   }
