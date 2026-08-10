@@ -16,7 +16,7 @@ export {
 } from "./originGeo";
 export { getDiscoverPicks, getDiscoverDetail } from "./discover";
 export type { DiscoverSlot, DiscoverPick, DiscoverDetail } from "./discover";
-export { writeFirestoreDocument, setDocument, getDocument, listDocuments, deleteDocument } from "./firestore";
+export { writeFirestoreDocument, setDocument, getDocument, listDocuments, queryDocuments, countDocuments, deleteDocument } from "./firestore";
 export type { FirestoreCredentials } from "./firestore";
 export { hashPassword, verifyPassword, signSession, verifySession, timingSafeEqual } from "./adminAuth";
 export type { AdminSession } from "./adminAuth";

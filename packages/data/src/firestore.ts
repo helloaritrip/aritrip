@@ -194,6 +194,65 @@ export async function listDocuments(
   }));
 }
 
+/**
+ * Página ordenada de una colección — a diferencia de `listDocuments`
+ * (que solo hace un GET simple, sin orden garantizado, tope fijo de
+ * 300), esto usa el endpoint `:runQuery` de Firestore para pedir
+ * explícitamente "ordenado por X, del más nuevo al más viejo, página N
+ * de tamaño M". Necesario para que la sección "Actividad reciente" del
+ * panel de admin siempre muestre lo más reciente de verdad, sin
+ * importar cuántos miles de eventos se acumulen (bug real encontrado
+ * 2026-08-10: sin esto, una vez pasados los primeros 300 documentos,
+ * Firestore puede devolver cualquier subconjunto, no necesariamente el
+ * más reciente).
+ */
+export async function queryDocuments(
+  collection: string,
+  credentials: FirestoreCredentials,
+  options: { orderByField: string; direction?: "ASCENDING" | "DESCENDING"; limit: number; offset?: number }
+): Promise<(Record<string, unknown> & { id: string })[]> {
+  const body = {
+    structuredQuery: {
+      from: [{ collectionId: collection }],
+      orderBy: [{ field: { fieldPath: options.orderByField }, direction: options.direction ?? "DESCENDING" }],
+      limit: options.limit,
+      offset: options.offset ?? 0,
+    },
+  };
+  const res = await authedFetch(`${DOCS_BASE}:runQuery`, credentials, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`Firestore query failed: ${res.status} ${await res.text()}`);
+  }
+  const results = (await res.json()) as { document?: { name: string; fields?: Record<string, unknown> } }[];
+  return results
+    .filter((r): r is { document: { name: string; fields?: Record<string, unknown> } } => Boolean(r.document))
+    .map((r) => ({ id: r.document.name.split("/").pop() ?? "", ...fromFirestoreFields(r.document.fields) }));
+}
+
+/** Cuenta los documentos de una colección sin traerlos — usa la agregación nativa de Firestore, no cuenta del lado del cliente. */
+export async function countDocuments(collection: string, credentials: FirestoreCredentials): Promise<number> {
+  const body = {
+    structuredAggregationQuery: {
+      structuredQuery: { from: [{ collectionId: collection }] },
+      aggregations: [{ alias: "count", count: {} }],
+    },
+  };
+  const res = await authedFetch(`${DOCS_BASE}:runAggregationQuery`, credentials, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`Firestore count failed: ${res.status} ${await res.text()}`);
+  }
+  const results = (await res.json()) as { result?: { aggregateFields?: { count?: { integerValue?: string } } } }[];
+  return Number(results[0]?.result?.aggregateFields?.count?.integerValue ?? 0);
+}
+
 /** Borra un documento por ID. No falla si ya no existe. */
 export async function deleteDocument(collection: string, docId: string, credentials: FirestoreCredentials): Promise<void> {
   const res = await authedFetch(`${DOCS_BASE}/${collection}/${encodeURIComponent(docId)}`, credentials, {
