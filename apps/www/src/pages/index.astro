@@ -76,31 +76,19 @@ const steps = [
 // Demo estático a propósito (2026-08-10) — el objetivo es que el visitante
 // entienda qué hace Ari en 3 segundos mirando la Home, no una búsqueda en
 // vivo. Números ilustrativos, coherentes con el resto del catálogo curado.
-// La query de Cancún es la misma que usa el catálogo real (packages/data);
-// Nueva York no es un destino curado en el catálogo (solo hub de origen),
-// así que su query es una elegida a mano solo para esta demo.
-const demoTrips = [
-  {
-    budgetLabel: "$700 budget",
-    flag: "🇲🇽",
-    destination: "Cancún",
-    total: 642,
-    flight: 280,
-    hotel: 210,
-    activities: 152,
-    imageQuery: "cancun turquoise beach aerial",
-  },
-  {
-    budgetLabel: "$900 budget",
-    flag: "🇺🇸",
-    destination: "New York",
-    total: 850,
-    flight: 320,
-    hotel: 380,
-    activities: 150,
-    imageQuery: "new york skyline manhattan aerial",
-  },
-];
+// Un solo ejemplo, no dos (2026-08-10, a pedido del usuario tras ver la
+// versión de 3 columnas muy apretada) — Cancún, con la misma query que usa
+// el catálogo real (packages/data), en una card más ancha con más aire.
+const demoTrip = {
+  budgetLabel: "$700 budget",
+  flag: "🇲🇽",
+  destination: "Cancún",
+  total: 642,
+  flight: 280,
+  hotel: 210,
+  activities: 152,
+  imageQuery: "cancun turquoise beach aerial",
+};
 ---
 
 <Layout
@@ -129,39 +117,39 @@ const demoTrips = [
          primera columna, mismo ancho que las 2 cards de ejemplo. -->
     <section class="flex flex-col items-center gap-6">
       <h2 class="text-xl font-semibold text-ink">✈️ What can Ari find for you?</h2>
+      <!-- Un solo ejemplo en vez de dos (2026-08-10, según wireframe del
+           usuario) — Ari ocupa 1 columna, la card del destino ocupa 2, con
+           más aire para la foto y el desglose de precio en vez de quedar
+           apretados los tres en el mismo ancho. -->
       <div class="grid w-full max-w-3xl grid-cols-1 gap-6 sm:grid-cols-3">
         <img
           src="/ari/mascot.png"
           alt="Ari, the AriTrips suitcase mascot"
           width="180"
           height="270"
-          class="mx-auto h-full max-h-56 w-auto object-contain"
+          class="mx-auto h-full max-h-64 w-auto object-contain"
         />
-        {
-          demoTrips.map((trip) => (
-            <div class="flex items-center gap-4 rounded-lg border border-rule bg-surface p-4">
-              <img
-                src={imageProxyUrl(trip.imageQuery, trip.destination)}
-                alt={trip.destination}
-                width="112"
-                height="112"
-                class="h-24 w-24 shrink-0 rounded-md object-cover sm:h-28 sm:w-28"
-                loading="lazy"
-              />
-              <div class="flex flex-col gap-1">
-                <p class="text-xs font-medium uppercase tracking-wide text-muted">{trip.budgetLabel}</p>
-                <p class="text-lg font-semibold text-ink">
-                  {trip.flag} {trip.destination} — ${trip.total}
-                </p>
-                <div class="flex flex-col gap-0.5 text-sm text-muted">
-                  <p>✈️ Flight ${trip.flight}</p>
-                  <p>🏨 Hotel ${trip.hotel}</p>
-                  <p>🎟️ Activities ${trip.activities}</p>
-                </div>
-              </div>
+        <div class="flex items-center gap-5 rounded-lg border border-rule bg-surface p-5 sm:col-span-2">
+          <img
+            src={imageProxyUrl(demoTrip.imageQuery, demoTrip.destination)}
+            alt={demoTrip.destination}
+            width="160"
+            height="160"
+            class="h-32 w-32 shrink-0 rounded-md object-cover sm:h-40 sm:w-40"
+            loading="lazy"
+          />
+          <div class="flex flex-col gap-1.5">
+            <p class="text-xs font-medium uppercase tracking-wide text-muted">{demoTrip.budgetLabel}</p>
+            <p class="text-xl font-semibold text-ink">
+              {demoTrip.flag} {demoTrip.destination} — ${demoTrip.total}
+            </p>
+            <div class="flex flex-col gap-1 text-sm text-muted">
+              <p>✈️ Flight ${demoTrip.flight}</p>
+              <p>🏨 Hotel ${demoTrip.hotel}</p>
+              <p>🎟️ Activities ${demoTrip.activities}</p>
             </div>
-          ))
-        }
+          </div>
+        </div>
       </div>
       <p class="text-xs text-muted">
         Estimates · No booking fees · Compare real travel options · Book directly with trusted providers
