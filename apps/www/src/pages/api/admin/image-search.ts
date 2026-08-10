@@ -22,7 +22,7 @@ async function searchWikimedia(query: string): Promise<SearchResult[]> {
   searchUrl.searchParams.set("generator", "search");
   searchUrl.searchParams.set("gsrsearch", `${query} filetype:bitmap`);
   searchUrl.searchParams.set("gsrnamespace", "6");
-  searchUrl.searchParams.set("gsrlimit", "6");
+  searchUrl.searchParams.set("gsrlimit", "15");
   searchUrl.searchParams.set("prop", "imageinfo");
   searchUrl.searchParams.set("iiprop", "url");
   searchUrl.searchParams.set("iiurlwidth", "800");
@@ -54,7 +54,7 @@ type PexelsSearchResponse = {
 async function searchPexels(query: string, apiKey: string): Promise<SearchResult[]> {
   const searchUrl = new URL("https://api.pexels.com/v1/search");
   searchUrl.searchParams.set("query", query);
-  searchUrl.searchParams.set("per_page", "6");
+  searchUrl.searchParams.set("per_page", "15");
   searchUrl.searchParams.set("orientation", "landscape");
 
   try {
@@ -90,10 +90,14 @@ export const GET: APIRoute = async ({ request, cookies }) => {
 
   const pexelsApiKey = (env as { PEXELS_API_KEY?: string }).PEXELS_API_KEY;
 
-  const [pexelsResults, wikimediaResults] = await Promise.all([
+  const [pexels, wikimedia] = await Promise.all([
     pexelsApiKey ? searchPexels(query, pexelsApiKey) : Promise.resolve([]),
     searchWikimedia(query),
   ]);
 
-  return json({ results: [...pexelsResults, ...wikimediaResults] }, 200);
+  // Separados por fuente (no mezclados en una sola lista) para que el
+  // panel pueda armar dos tiras desplazables independientes con botones
+  // de flecha — a pedido del usuario (2026-08-10), quiere poder recorrer
+  // todas las opciones de cada fuente por separado, no un grid fijo de 6.
+  return json({ pexels, wikimedia }, 200);
 };
