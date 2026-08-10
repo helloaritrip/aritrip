@@ -28,7 +28,7 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
   if (!FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) return json({ error: "Not configured." }, 503);
   const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
 
-  let body: { imageUrl?: string; label?: string };
+  let body: { imageUrl?: string };
   try {
     body = await request.json();
   } catch {
@@ -65,9 +65,16 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
   const heroBlock = data.content.find((c) => c.type === "Hero");
   if (!heroBlock) return json({ error: "This page has no Hero block." }, 400);
 
-  const heroProps = heroBlock.props as { backgroundImageUrl?: string; backgroundImageQuery?: string };
+  // Ojo: NO se toca backgroundImageQuery acá — antes se sobreescribía con
+  // la etiqueta de la foto elegida (ej. "Photo by John Doe" o un nombre de
+  // archivo de Wikimedia), un texto pésimo para buscar. Combinado con el
+  // bug de abajo (el panel volvía a buscar en vivo en cada carga en vez de
+  // usar la URL fijada), esto hacía que la foto "aprobada" pareciera
+  // cambiar sola en cada refresh — bug real reportado por el usuario
+  // (2026-08-10). El query original queda intacto como respaldo por si
+  // alguna vez se despinnea la foto.
+  const heroProps = heroBlock.props as { backgroundImageUrl?: string };
   heroProps.backgroundImageUrl = imageUrl;
-  if (body.label) heroProps.backgroundImageQuery = body.label;
 
   const now = new Date();
   const publishedAt =

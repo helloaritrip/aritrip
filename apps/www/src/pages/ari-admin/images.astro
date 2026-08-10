@@ -31,6 +31,7 @@ type ImageRow = {
   title: string;
   pageStatus: string;
   imageQuery: string;
+  imageUrl?: string;
   heading: string;
   reviewStatus: "approved" | "flagged" | "unreviewed";
 };
@@ -64,7 +65,9 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
           return null;
         }
         const heroBlock = data.content.find((c) => c.type === "Hero");
-        const heroProps = heroBlock?.props as { backgroundImageQuery?: string; heading?: string } | undefined;
+        const heroProps = heroBlock?.props as
+          | { backgroundImageQuery?: string; backgroundImageUrl?: string; heading?: string }
+          | undefined;
         const imageQuery = heroProps?.backgroundImageQuery;
         if (!imageQuery) return null;
         const heading = heroProps?.heading || String(p.title ?? p.id);
@@ -74,6 +77,7 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
           title: String(p.title ?? p.id),
           pageStatus: String(p.status ?? "draft"),
           imageQuery,
+          imageUrl: heroProps?.backgroundImageUrl || undefined,
           heading,
           reviewStatus,
         };
@@ -126,7 +130,7 @@ const flaggedCount = rows.filter((r) => r.reviewStatus === "flagged").length;
             <div class="relative aspect-[16/10] w-full overflow-hidden bg-rule/40">
               <img
                 data-hero-img
-                src={imageProxyUrl(r.imageQuery, r.heading)}
+                src={r.imageUrl || imageProxyUrl(r.imageQuery, r.heading)}
                 alt=""
                 loading="lazy"
                 class="h-full w-full object-cover"
@@ -286,7 +290,7 @@ const flaggedCount = rows.filter((r) => r.reviewStatus === "flagged").length;
         const saveRes = await fetch(`/api/admin/pages/${encodeURIComponent(slug)}/hero-image`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageUrl: picked.thumbUrl, label: picked.title }),
+          body: JSON.stringify({ imageUrl: picked.thumbUrl }),
         });
         if (saveRes.ok) {
           if (heroImg) heroImg.src = picked.thumbUrl;
