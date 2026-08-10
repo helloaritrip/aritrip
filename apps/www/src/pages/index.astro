@@ -2,9 +2,9 @@
 import { env } from "cloudflare:workers";
 import Layout from "../layouts/Layout.astro";
 import { Button } from "@aritrips/ui";
-import { ORIGIN_HUBS, ORIGIN_LABELS, listDocuments } from "@aritrips/data";
+import { ORIGIN_HUBS, ORIGIN_LABELS, listDocuments, getDocument } from "@aritrips/data";
 import { cityName, hubPageSlug } from "../lib/citySlug";
-import { getHomeLayoutConfig } from "../lib/homeLayoutConfig";
+import { getHomeLayoutConfig, HOME_SECTION_IDS, DEFAULT_SECTION_ORDER, type HomeSectionId } from "../lib/homeLayoutConfig";
 
 // SSR solo para poder leer los últimos posts del blog en cada visita — el
 // resto de la home sigue siendo estático (mismo patrón ya usado en /blog
@@ -98,6 +98,22 @@ const demoTrip = {
   activities: 152,
   imageQuery: "cancun turquoise beach aerial",
 };
+
+// Bug real reportado por el usuario (2026-08-10): esta card seguía
+// mostrando la foto vieja (búsqueda en vivo por texto) en vez de la que ya
+// se había aprobado a mano para Cancún desde /ari-admin/images — nunca se
+// conectó con destinationImages, a diferencia de las cards de apps/app
+// (ResultCard/DiscoverSection), que sí la usan. Mismo patrón acá: si hay
+// foto fijada, gana sobre la búsqueda por query.
+let demoImageUrl: string | undefined;
+if (credentials) {
+  try {
+    const doc = await getDocument("destinationImages", "cancun", credentials);
+    if (doc && typeof doc.imageUrl === "string") demoImageUrl = doc.imageUrl;
+  } catch {
+    demoImageUrl = undefined;
+  }
+}
 ---
 
 <Layout
@@ -122,115 +138,121 @@ const demoTrip = {
       </Button>
     </section>
 
-    <!-- 3. Example trip / product demo — los tamaños/espacios son editables
-         a mano desde /ari-admin/home-layout (2026-08-10), no clases fijas
-         de Tailwind — varias rondas de ajuste por captura de pantalla no
-         convergían rápido, así que esto quedó como valores en Firestore
-         aplicados acá como inline style, con vista previa en vivo en el
-         editor. Mismos ids que usa ese editor para la vista previa. -->
-    <section class="flex flex-col items-center gap-4">
-      <h2 class="text-xl font-semibold text-ink">✈️ What can Ari find for you?</h2>
-      <div class="flex flex-col items-center sm:flex-row" style={`gap: ${homeLayout.rowGap}px`}>
-        <img
-          src="/ari/mascot.png"
-          alt="Ari, the AriTrips suitcase mascot"
-          width="180"
-          height="270"
-          style={`height: ${homeLayout.mascotHeight}px`}
-          class="w-auto object-contain"
-        />
-        <div
-          class="flex overflow-hidden rounded-lg border border-rule bg-surface"
-          style={`padding-left: ${homeLayout.cardPadLeft}px`}
-        >
-          <img
-            src={imageProxyUrl(demoTrip.imageQuery, demoTrip.destination)}
-            alt={demoTrip.destination}
-            width={homeLayout.photoWidth}
-            height={homeLayout.photoHeight}
-            style={`width: ${homeLayout.photoWidth}px; height: ${homeLayout.photoHeight}px`}
-            class="shrink-0 object-cover"
-            loading="lazy"
-          />
-          <div class="flex flex-col justify-center gap-1.5" style={`padding: ${homeLayout.cardTextPad}px`}>
-            <p class="text-xs font-medium uppercase tracking-wide text-muted">{demoTrip.budgetLabel}</p>
-            <p class="text-xl font-semibold text-ink">
-              {demoTrip.flag} {demoTrip.destination} — ${demoTrip.total}
-            </p>
-            <div class="flex flex-col gap-1 text-sm text-muted">
-              <p>✈️ Flight ${demoTrip.flight}</p>
-              <p>🏨 Hotel ${demoTrip.hotel}</p>
-              <p>🎟️ Activities ${demoTrip.activities}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      <p class="text-xs text-muted">
-        Estimates · No booking fees · Compare real travel options · Book directly with trusted providers
-      </p>
-    </section>
-
-    <!-- 4. How Ari works -->
-    <section class="flex flex-col gap-6">
-      <h2 class="text-center text-2xl font-semibold text-ink">How Ari works</h2>
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-        {
-          steps.map((step) => (
-            <div class="flex flex-col items-center gap-2 rounded-lg border border-rule bg-surface p-6 text-center">
-              <img src={step.icon} alt="" width="72" height="72" class="h-16 w-16" />
-              <h3 class="text-lg font-semibold text-ink">{step.title}</h3>
-              <p class="text-sm text-muted">{step.body}</p>
-            </div>
-          ))
-        }
-      </div>
-    </section>
-
-    <!-- 5. Blog -->
-    <section class="flex flex-col gap-6">
-      <div class="flex items-center justify-between">
-        <h2 class="text-2xl font-semibold text-ink">From the blog</h2>
-        <a href="/blog" class="text-sm font-medium text-accent hover:underline">See all posts →</a>
-      </div>
-      {
-        latestPosts.length === 0 ? (
-          <p class="text-sm text-muted">New posts are on their way — check back soon.</p>
-        ) : (
-          <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            {latestPosts.map((post) => (
-              <a href={`/p/${post.id}`} class="flex flex-col gap-3 overflow-hidden rounded-lg border border-rule bg-surface transition-shadow hover:shadow-md">
+    <!-- 3-6. Estas 4 secciones se pueden reordenar a mano desde
+         /ari-admin/home-layout (2026-08-10, a pedido del usuario: "un
+         editor... que pueda mover de posición las secciones") — orden real
+         en homeLayout.sectionOrder, con Hero+CTA fijo primero y footer fijo
+         al final (ver homeLayoutConfig.ts para por qué). -->
+    {
+      homeLayout.sectionOrder.map((id: HomeSectionId) => {
+        if (id === "demo") {
+          return (
+            <section class="flex flex-col items-center gap-4">
+              <h2 class="text-xl font-semibold text-ink">✈️ What can Ari find for you?</h2>
+              <div class="demo-row">
                 <img
-                  src={imageProxyUrl(String(post.featuredImageQuery || post.title || post.id), String(post.title ?? post.id))}
-                  alt={String(post.title ?? "")}
-                  width="400"
-                  height="225"
-                  class="h-40 w-full object-cover"
-                  loading="lazy"
+                  src="/ari/mascot.png"
+                  alt="Ari, the AriTrips suitcase mascot"
+                  width="180"
+                  height="270"
+                  class="demo-mascot w-auto object-contain"
                 />
-                <div class="flex flex-col gap-1 px-4 pb-4">
-                  <h3 class="text-base font-semibold text-ink">{String(post.title ?? post.id)}</h3>
-                  {post.description ? <p class="text-sm text-muted">{String(post.description)}</p> : null}
+                <div class="demo-card flex overflow-hidden rounded-lg border border-rule bg-surface">
+                  <img
+                    src={demoImageUrl || imageProxyUrl(demoTrip.imageQuery, demoTrip.destination)}
+                    alt={demoTrip.destination}
+                    width={homeLayout.photoWidth}
+                    height={homeLayout.photoHeight}
+                    class="demo-photo shrink-0 object-cover"
+                    loading="lazy"
+                  />
+                  <div class="demo-text flex flex-col justify-center gap-1.5">
+                    <p class="text-xs font-medium uppercase tracking-wide text-muted">{demoTrip.budgetLabel}</p>
+                    <p class="text-xl font-semibold text-ink">
+                      {demoTrip.flag} {demoTrip.destination} — ${demoTrip.total}
+                    </p>
+                    <div class="flex flex-col gap-1 text-sm text-muted">
+                      <p>✈️ Flight ${demoTrip.flight}</p>
+                      <p>🏨 Hotel ${demoTrip.hotel}</p>
+                      <p>🎟️ Activities ${demoTrip.activities}</p>
+                    </div>
+                  </div>
                 </div>
-              </a>
-            ))}
-          </div>
-        )
-      }
-    </section>
-
-    <!-- 6. Popular destinations / trip ideas -->
-    <section class="flex flex-col gap-6">
-      <h2 class="text-center text-2xl font-semibold text-ink">Trip ideas by city</h2>
-      <div class="flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm">
-        {
-          cityLinks.map((link) => (
-            <a href={link.href} class="text-muted hover:text-accent">
-              Best trips from {link.city}
-            </a>
-          ))
+              </div>
+              <p class="text-xs text-muted">
+                Estimates · No booking fees · Compare real travel options · Book directly with trusted providers
+              </p>
+            </section>
+          );
         }
-      </div>
-    </section>
+        if (id === "how-it-works") {
+          return (
+            <section class="flex flex-col gap-6">
+              <h2 class="text-center text-2xl font-semibold text-ink">How Ari works</h2>
+              <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                {steps.map((step) => (
+                  <div class="flex flex-col items-center gap-2 rounded-lg border border-rule bg-surface p-6 text-center">
+                    <img src={step.icon} alt="" width="72" height="72" class="h-16 w-16" />
+                    <h3 class="text-lg font-semibold text-ink">{step.title}</h3>
+                    <p class="text-sm text-muted">{step.body}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          );
+        }
+        if (id === "blog") {
+          return (
+            <section class="flex flex-col gap-6">
+              <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-semibold text-ink">From the blog</h2>
+                <a href="/blog" class="text-sm font-medium text-accent hover:underline">
+                  See all posts →
+                </a>
+              </div>
+              {latestPosts.length === 0 ? (
+                <p class="text-sm text-muted">New posts are on their way — check back soon.</p>
+              ) : (
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                  {latestPosts.map((post) => (
+                    <a
+                      href={`/p/${post.id}`}
+                      class="flex flex-col gap-3 overflow-hidden rounded-lg border border-rule bg-surface transition-shadow hover:shadow-md"
+                    >
+                      <img
+                        src={imageProxyUrl(String(post.featuredImageQuery || post.title || post.id), String(post.title ?? post.id))}
+                        alt={String(post.title ?? "")}
+                        width="400"
+                        height="225"
+                        class="h-40 w-full object-cover"
+                        loading="lazy"
+                      />
+                      <div class="flex flex-col gap-1 px-4 pb-4">
+                        <h3 class="text-base font-semibold text-ink">{String(post.title ?? post.id)}</h3>
+                        {post.description ? <p class="text-sm text-muted">{String(post.description)}</p> : null}
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        }
+        // id === "trip-ideas"
+        return (
+          <section class="flex flex-col gap-6">
+            <h2 class="text-center text-2xl font-semibold text-ink">Trip ideas by city</h2>
+            <div class="flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm">
+              {cityLinks.map((link) => (
+                <a href={link.href} class="text-muted hover:text-accent">
+                  Best trips from {link.city}
+                </a>
+              ))}
+            </div>
+          </section>
+        );
+      })
+    }
     <!-- 7. Footer is outside <main>, below -->
   </main>
 
@@ -250,3 +272,65 @@ const demoTrip = {
     </div>
   </footer>
 </Layout>
+
+<style define:vars={{
+  mascotH: `${homeLayout.mascotHeight}px`,
+  rowGap: `${homeLayout.rowGap}px`,
+  cardPadLeft: `${homeLayout.cardPadLeft}px`,
+  photoW: `${homeLayout.photoWidth}px`,
+  photoH: `${homeLayout.photoHeight}px`,
+  textPad: `${homeLayout.cardTextPad}px`,
+}}>
+  /* Mobile primero: valores fijos y compactos, sin importar lo que se haya
+     ajustado en el editor para desktop (2026-08-10, bug real reportado por
+     el usuario: en mobile los valores grandes de desktop, aplicados como
+     inline style sin diferenciar breakpoint, desbordaban la pantalla y
+     rompían el layout). A partir de 640px se usan los valores reales del
+     editor, vía las custom properties de arriba. */
+  .demo-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    width: 100%;
+  }
+  .demo-mascot {
+    height: 160px;
+  }
+  .demo-card {
+    flex-direction: column;
+    width: 100%;
+    max-width: 320px;
+  }
+  .demo-photo {
+    width: 100%;
+    height: 180px;
+  }
+  .demo-text {
+    padding: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .demo-row {
+      flex-direction: row;
+      gap: var(--rowGap);
+      width: auto;
+    }
+    .demo-mascot {
+      height: var(--mascotH);
+    }
+    .demo-card {
+      flex-direction: row;
+      width: auto;
+      max-width: none;
+      padding-left: var(--cardPadLeft);
+    }
+    .demo-photo {
+      width: var(--photoW);
+      height: var(--photoH);
+    }
+    .demo-text {
+      padding: var(--textPad);
+    }
+  }
+</style>

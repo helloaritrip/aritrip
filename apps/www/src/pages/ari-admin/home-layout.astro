@@ -2,7 +2,13 @@
 import { env } from "cloudflare:workers";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../lib/requireAdminSession";
-import { getHomeLayoutConfig, HOME_LAYOUT_DEFAULTS, type HomeLayoutConfig } from "../../lib/homeLayoutConfig";
+import {
+  getHomeLayoutConfig,
+  DEMO_SIZE_DEFAULTS,
+  DEFAULT_SECTION_ORDER,
+  type DemoSectionSizes,
+  type HomeSectionId,
+} from "../../lib/homeLayoutConfig";
 
 export const prerender = false;
 
@@ -41,7 +47,7 @@ const demoTrip = {
   imageQuery: "cancun turquoise beach aerial",
 };
 
-const CONTROLS: { key: keyof HomeLayoutConfig; label: string; min: number; max: number }[] = [
+const CONTROLS: { key: keyof DemoSectionSizes; label: string; min: number; max: number }[] = [
   { key: "mascotHeight", label: "Ari height", min: 80, max: 500 },
   { key: "rowGap", label: "Gap between Ari and card", min: 0, max: 200 },
   { key: "cardPadLeft", label: "Blank space before photo (inside card)", min: 0, max: 400 },
@@ -49,21 +55,67 @@ const CONTROLS: { key: keyof HomeLayoutConfig; label: string; min: number; max: 
   { key: "photoHeight", label: "Photo height", min: 80, max: 500 },
   { key: "cardTextPad", label: "Text padding", min: 0, max: 100 },
 ];
+
+const SECTION_LABELS: Record<HomeSectionId, string> = {
+  demo: "✈️ What can Ari find for you?",
+  "how-it-works": "How Ari works",
+  blog: "From the blog",
+  "trip-ideas": "Trip ideas by city",
+};
 ---
 
 <AdminLayout title="Home Layout — AriTrips Admin" session={session} active="pages">
-  <div class="flex max-w-5xl flex-col gap-6">
+  <div class="flex max-w-5xl flex-col gap-8">
     <div>
       <a href="/ari-admin/pages" class="text-sm text-muted hover:text-accent">← Pages</a>
-      <h1 class="text-2xl font-semibold text-ink">Home layout — "What can Ari find for you?"</h1>
+      <h1 class="text-2xl font-semibold text-ink">Home layout</h1>
       <p class="text-sm text-muted">
-        Movés los controles, mirás el resultado acá mismo en vivo, y guardás — se aplica directo en la Home real, sin
-        deploy.
+        Reordená las secciones y ajustá los tamaños a mano — guardás y se aplica directo en la Home real, sin
+        deploy. Hero+CTA siempre queda primero y el footer siempre último.
       </p>
+    </div>
+
+    <!-- Orden de secciones — a pedido del usuario (2026-08-10): "un
+         editor... que pueda mover de posición las secciones". Botones
+         arriba/abajo en vez de drag-and-drop real: mucho más simple de
+         hacer bien y accesible por teclado, mismo resultado final. -->
+    <div class="flex flex-col gap-3">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Section order</h2>
+      <ol id="section-order-list" class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+        {
+          config.sectionOrder.map((id, i) => (
+            <li data-section-id={id} class="flex items-center justify-between gap-3 p-3">
+              <span class="text-sm text-ink">
+                <span class="mr-2 font-mono text-xs text-muted" data-position>
+                  {i + 1}
+                </span>
+                {SECTION_LABELS[id]}
+              </span>
+              <span class="flex gap-1">
+                <button
+                  type="button"
+                  data-move="up"
+                  class="rounded-md border border-rule px-2 py-1 text-xs text-ink hover:border-accent hover:text-accent disabled:opacity-30"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  data-move="down"
+                  class="rounded-md border border-rule px-2 py-1 text-xs text-ink hover:border-accent hover:text-accent disabled:opacity-30"
+                >
+                  ↓
+                </button>
+              </span>
+            </li>
+          ))
+        }
+      </ol>
     </div>
 
     <div class="grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]">
       <div class="flex flex-col gap-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">"What can Ari find for you?" sizes</h2>
         {
           CONTROLS.map((c) => (
             <label class="flex flex-col gap-1 text-sm">
@@ -104,7 +156,10 @@ const CONTROLS: { key: keyof HomeLayoutConfig; label: string; min: number; max: 
       <!-- Vista previa — misma estructura y clases que la sección real de
            index.astro, con los valores numéricos como inline style en vez
            de clases arbitrarias de Tailwind, para que los controles de al
-           lado la actualicen en vivo sin recargar. -->
+           lado la actualicen en vivo sin recargar. Solo previsualiza la
+           card de ejemplo (el editor de tamaños es solo para esa pieza) —
+           el orden de secciones no tiene una vista previa propia, se ve
+           reordenado en la Home real después de guardar. -->
       <div class="flex flex-col items-center gap-4 rounded-lg border border-dashed border-rule bg-bg p-8">
         <h2 class="text-xl font-semibold text-ink">✈️ What can Ari find for you?</h2>
         <div
@@ -147,12 +202,13 @@ const CONTROLS: { key: keyof HomeLayoutConfig; label: string; min: number; max: 
         <p class="text-xs text-muted">
           Estimates · No booking fees · Compare real travel options · Book directly with trusted providers
         </p>
+        <p class="text-xs text-muted italic">Nota: esta vista previa es solo del tamaño/espaciado, en desktop. En mobile la Home usa un layout fijo compacto aparte.</p>
       </div>
     </div>
   </div>
 </AdminLayout>
 
-<script define:vars={{ defaults: HOME_LAYOUT_DEFAULTS }}>
+<script define:vars={{ defaults: DEMO_SIZE_DEFAULTS, defaultOrder: DEFAULT_SECTION_ORDER }}>
   const PROP_MAP = {
     mascotHeight: { el: () => document.getElementById("preview-mascot"), style: "height" },
     rowGap: { el: () => document.getElementById("preview-row"), style: "gap" },
@@ -177,18 +233,54 @@ const CONTROLS: { key: keyof HomeLayoutConfig; label: string; min: number; max: 
     input.addEventListener("input", () => applyLive(input.dataset.control, input.value));
   });
 
+  // Lista de orden — botones arriba/abajo mueven el <li> en el DOM y
+  // renumeran las posiciones; el orden final se lee directo del DOM al
+  // guardar, no de un array en memoria aparte, para que no puedan desincronizarse.
+  const orderList = document.getElementById("section-order-list");
+
+  function renumber() {
+    const items = [...orderList.children];
+    items.forEach((li, i) => {
+      const posEl = li.querySelector("[data-position]");
+      if (posEl) posEl.textContent = String(i + 1);
+      li.querySelector('[data-move="up"]').disabled = i === 0;
+      li.querySelector('[data-move="down"]').disabled = i === items.length - 1;
+    });
+  }
+
+  orderList?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-move]");
+    if (!btn) return;
+    const li = btn.closest("li");
+    if (btn.dataset.move === "up" && li.previousElementSibling) {
+      li.parentElement.insertBefore(li, li.previousElementSibling);
+    } else if (btn.dataset.move === "down" && li.nextElementSibling) {
+      li.parentElement.insertBefore(li.nextElementSibling, li);
+    }
+    renumber();
+  });
+
+  renumber();
+
   document.querySelector("[data-reset]")?.addEventListener("click", () => {
     inputs.forEach((input) => {
       const key = input.dataset.control;
       input.value = defaults[key];
       applyLive(key, defaults[key]);
     });
+    defaultOrder.forEach((id) => {
+      const li = orderList.querySelector(`[data-section-id="${id}"]`);
+      if (li) orderList.appendChild(li);
+    });
+    renumber();
   });
 
   document.querySelector("[data-save]")?.addEventListener("click", async (e) => {
     const btn = e.currentTarget;
     const statusEl = document.querySelector("[data-status]");
-    const payload = {};
+    const payload = {
+      sectionOrder: [...orderList.children].map((li) => li.dataset.sectionId),
+    };
     inputs.forEach((input) => {
       payload[input.dataset.control] = Number(input.value);
     });

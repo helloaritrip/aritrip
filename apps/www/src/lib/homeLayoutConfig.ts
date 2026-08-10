@@ -10,7 +10,7 @@ import { getDocument, type FirestoreCredentials } from "@aritrips/data";
  * /ari-admin/home-layout, con vista previa en vivo — el mismo objeto de
  * config alimenta tanto el editor como la Home real.
  */
-export interface HomeLayoutConfig {
+export interface DemoSectionSizes {
   mascotHeight: number;
   rowGap: number;
   cardPadLeft: number;
@@ -19,7 +19,7 @@ export interface HomeLayoutConfig {
   cardTextPad: number;
 }
 
-export const HOME_LAYOUT_DEFAULTS: HomeLayoutConfig = {
+export const DEMO_SIZE_DEFAULTS: DemoSectionSizes = {
   mascotHeight: 256,
   rowGap: 24,
   cardPadLeft: 128,
@@ -31,7 +31,7 @@ export const HOME_LAYOUT_DEFAULTS: HomeLayoutConfig = {
 // Límites de seguridad — sin esto, un valor mal tipeado en el editor
 // (ej. 9999) podría romper el layout de la Home para todo el mundo hasta
 // el próximo ajuste.
-const BOUNDS: Record<keyof HomeLayoutConfig, [number, number]> = {
+const BOUNDS: Record<keyof DemoSectionSizes, [number, number]> = {
   mascotHeight: [80, 500],
   rowGap: [0, 200],
   cardPadLeft: [0, 400],
@@ -40,24 +40,61 @@ const BOUNDS: Record<keyof HomeLayoutConfig, [number, number]> = {
   cardTextPad: [0, 100],
 };
 
-export function clampHomeLayoutValue(key: keyof HomeLayoutConfig, value: number): number {
+export function clampHomeLayoutValue(key: keyof DemoSectionSizes, value: number): number {
   const [min, max] = BOUNDS[key];
-  if (Number.isNaN(value)) return HOME_LAYOUT_DEFAULTS[key];
+  if (Number.isNaN(value)) return DEMO_SIZE_DEFAULTS[key];
   return Math.min(max, Math.max(min, Math.round(value)));
 }
 
+/**
+ * Las 4 secciones de la Home que se pueden reordenar entre sí (2026-08-10,
+ * a pedido del usuario: "quiero un editor... que pueda mover de posición
+ * las secciones"). Hero+CTA queda siempre primero y el footer siempre
+ * último a propósito — no tiene sentido que el visitante entre a una
+ * página sin encabezado, y son las únicas dos piezas que no compiten por
+ * orden entre sí en el pedido original.
+ */
+export const HOME_SECTION_IDS = ["demo", "how-it-works", "blog", "trip-ideas"] as const;
+export type HomeSectionId = (typeof HOME_SECTION_IDS)[number];
+export const DEFAULT_SECTION_ORDER: HomeSectionId[] = ["demo", "how-it-works", "blog", "trip-ideas"];
+
+export interface HomeLayoutConfig extends DemoSectionSizes {
+  sectionOrder: HomeSectionId[];
+}
+
+function normalizeSectionOrder(raw: unknown): HomeSectionId[] {
+  if (!Array.isArray(raw)) return DEFAULT_SECTION_ORDER;
+  const valid = raw.filter((id): id is HomeSectionId => (HOME_SECTION_IDS as readonly string[]).includes(id));
+  // Si falta algún id (dato viejo/corrupto) o sobran duplicados, se
+  // completa con el resto en el orden default en vez de fallar — nunca
+  // debe desaparecer una sección de la Home por un valor guardado mal.
+  const deduped = Array.from(new Set(valid));
+  const missing = DEFAULT_SECTION_ORDER.filter((id) => !deduped.includes(id));
+  return [...deduped, ...missing];
+}
+
 export async function getHomeLayoutConfig(credentials: FirestoreCredentials | null): Promise<HomeLayoutConfig> {
-  if (!credentials) return HOME_LAYOUT_DEFAULTS;
+  const fallback: HomeLayoutConfig = { ...DEMO_SIZE_DEFAULTS, sectionOrder: DEFAULT_SECTION_ORDER };
+  if (!credentials) return fallback;
   try {
     const doc = await getDocument("siteConfig", "home", credentials);
-    if (!doc) return HOME_LAYOUT_DEFAULTS;
-    const config = { ...HOME_LAYOUT_DEFAULTS };
-    for (const key of Object.keys(HOME_LAYOUT_DEFAULTS) as (keyof HomeLayoutConfig)[]) {
+    if (!doc) return fallback;
+    const config: HomeLayoutConfig = { ...fallback };
+    for (const key of Object.keys(DEMO_SIZE_DEFAULTS) as (keyof DemoSectionSizes)[]) {
       const raw = doc[key];
       if (typeof raw === "number") config[key] = clampHomeLayoutValue(key, raw);
     }
+    if (typeof doc.sectionOrder === "string") {
+      // Firestore (vía toFirestoreFields) solo guarda planos — un array se
+      // manda como JSON serializado a mano, no como lista nativa.
+      try {
+        config.sectionOrder = normalizeSectionOrder(JSON.parse(doc.sectionOrder));
+      } catch {
+        config.sectionOrder = DEFAULT_SECTION_ORDER;
+      }
+    }
     return config;
   } catch {
-    return HOME_LAYOUT_DEFAULTS;
+    return fallback;
   }
 }
