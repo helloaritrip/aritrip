@@ -130,6 +130,10 @@ function DiscoverCard({
       </div>
       <div className="flex flex-col gap-1 p-4">
         <p className="text-sm text-muted">From ${pick.estimatedFromUSD.toLocaleString()}</p>
+        {/* Esta tarjeta no tenía ningún disclaimer — "From $1,541" solo
+            se lee como precio concreto, exactamente el riesgo de confianza
+            que marcó el head de producto (2026-08-10). */}
+        <p className="text-xs text-muted">Estimate — confirm at booking</p>
       </div>
     </div>
   );

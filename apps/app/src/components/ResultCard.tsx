@@ -125,8 +125,14 @@ export function ResultCard({
           <div>
             <p className="text-xs uppercase tracking-wide text-muted">From</p>
             <p className="text-2xl font-semibold text-accent">${result.totalEstimatedCostUSD.toLocaleString()}</p>
+            {/* El head de producto marcó esto como riesgo de confianza real
+                (2026-08-10): "From $1,541" solo, sin más, se lee como un
+                precio concreto — si en el partner aparece bien distinto,
+                eso rompe confianza. Antes decía "Estimated" en letra chica
+                lejos del número; ahora va pegado al precio mismo. */}
+            <p className="text-xs text-muted">Estimate — confirm at booking</p>
           </div>
-          <p className="text-xs text-muted">Estimated · #{result.rank} match</p>
+          <p className="text-xs text-muted">#{result.rank} match</p>
         </div>
 
         {topReason && (

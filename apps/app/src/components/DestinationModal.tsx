@@ -137,8 +137,9 @@ export function DestinationModal({
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted">From</p>
                   <p className="text-2xl font-semibold text-accent">${detail.totalEstimatedCostUSD.toLocaleString()}</p>
+                  {/* Mismo criterio que ResultCard.tsx — pegado al precio, no separado (2026-08-10). */}
+                  <p className="text-xs text-muted">Estimate — confirm at booking</p>
                 </div>
-                <p className="text-xs text-muted">Estimated</p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
