@@ -113,14 +113,15 @@ const demoTrip = {
       </Button>
     </section>
 
-    <!-- 3. Example trip / product demo — layout pixel-a-pixel del mockup
-         del usuario (2026-08-10): fila compacta centrada (no estirada a
-         todo el ancho como antes), Ari suelta a la izquierda sin card, y
-         la foto del destino pegada al borde izquierdo de la card de texto
-         (sin padding entre foto y borde), no separada con gap. -->
+    <!-- 3. Example trip / product demo — layout del mockup del usuario
+         (2026-08-10): la fila NO se abraza a su propio contenido (ancho
+         automático, quedaba apiñada) — tiene un ancho explícito (~80% del
+         ancho real de "How Ari works" de abajo, que hereda max-w-5xl de
+         <main>) y justify-between para separar a Ari de la card, en vez de
+         un gap chico entre las dos piezas. -->
     <section class="flex flex-col items-center gap-4">
       <h2 class="text-xl font-semibold text-ink">✈️ What can Ari find for you?</h2>
-      <div class="flex flex-col items-center gap-6 sm:flex-row">
+      <div class="flex w-full max-w-[820px] flex-col items-center gap-8 sm:flex-row sm:justify-between">
         <img
           src="/ari/mascot.png"
           alt="Ari, the AriTrips suitcase mascot"
