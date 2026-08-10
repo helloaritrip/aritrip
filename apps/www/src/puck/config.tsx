@@ -149,8 +149,13 @@ export const config: Config<Props> = {
             {bg && (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element -- viene del proxy de imágenes propio */}
+                {/* El fallback tiene que ser un string DISTINTO de bg — el proxy
+                    solo reintenta cuando fallback !== query (ver image-proxy/route.ts).
+                    Pasar bg dos veces (bug real, 2026-08-10) hacía que cualquier
+                    destino cuya query de 4-5 palabras no matcheara en Wikimedia
+                    (la mayoría) cayera directo al SVG "Image unavailable". */}
                 <img
-                  src={imageProxyUrl(bg, bg)}
+                  src={imageProxyUrl(bg, heading || bg)}
                   alt=""
                   width="1200"
                   height="800"
