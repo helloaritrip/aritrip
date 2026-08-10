@@ -37,6 +37,14 @@ type HeroProps = {
   ctaLabel: string;
   ctaHref: string;
   backgroundImageQuery?: string;
+  // URL fija a un archivo puntual de Wikimedia Commons, elegida a mano
+  // desde /ari-admin/images (2026-08-10) — cuando está presente, salta
+  // la búsqueda por texto de backgroundImageQuery por completo. Sin esto,
+  // "aprobar" una foto en el panel no significaba nada: la búsqueda podía
+  // devolver un archivo distinto la próxima vez que Wikimedia reindexara,
+  // y encima no había forma de fijar CUÁL de varios resultados posibles
+  // se quería en vez de dejarlo al azar del ranking de búsqueda.
+  backgroundImageUrl?: string;
 };
 
 type HeadingProps = {
@@ -129,6 +137,7 @@ export const config: Config<Props> = {
         ctaLabel: { type: "text" },
         ctaHref: { type: "text" },
         backgroundImageQuery: { type: "text" },
+        backgroundImageUrl: { type: "text" },
       },
       defaultProps: {
         heading: "Find the best trip you can take on your budget.",
@@ -136,26 +145,25 @@ export const config: Config<Props> = {
         ctaLabel: "Start planning",
         ctaHref: "/",
         backgroundImageQuery: "",
+        backgroundImageUrl: "",
       },
-      render: ({ heading, subheading, ctaLabel, ctaHref, backgroundImageQuery }) => {
+      render: ({ heading, subheading, ctaLabel, ctaHref, backgroundImageQuery, backgroundImageUrl }) => {
         const bg = backgroundImageQuery || undefined;
-        const hasImage = Boolean(bg);
+        // Una foto fijada a mano gana siempre — ver el comentario en
+        // HeroProps.backgroundImageUrl.
+        const imgSrc = backgroundImageUrl || (bg ? imageProxyUrl(bg, heading || bg) : undefined);
+        const hasImage = Boolean(imgSrc);
         return (
           <section
             className={`relative flex flex-col items-center gap-6 overflow-hidden px-6 text-center ${
               hasImage ? "py-28 sm:py-40" : "py-20"
             }`}
           >
-            {bg && (
+            {imgSrc && (
               <>
-                {/* eslint-disable-next-line @next/next/no-img-element -- viene del proxy de imágenes propio */}
-                {/* El fallback tiene que ser un string DISTINTO de bg — el proxy
-                    solo reintenta cuando fallback !== query (ver image-proxy/route.ts).
-                    Pasar bg dos veces (bug real, 2026-08-10) hacía que cualquier
-                    destino cuya query de 4-5 palabras no matcheara en Wikimedia
-                    (la mayoría) cayera directo al SVG "Image unavailable". */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- viene del proxy de imágenes propio, o de una URL fijada a mano */}
                 <img
-                  src={imageProxyUrl(bg, heading || bg)}
+                  src={imgSrc}
                   alt=""
                   width="1200"
                   height="800"

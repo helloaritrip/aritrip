@@ -125,6 +125,7 @@ const flaggedCount = rows.filter((r) => r.reviewStatus === "flagged").length;
           >
             <div class="relative aspect-[16/10] w-full overflow-hidden bg-rule/40">
               <img
+                data-hero-img
                 src={imageProxyUrl(r.imageQuery, r.heading)}
                 alt=""
                 loading="lazy"
@@ -170,6 +171,33 @@ const flaggedCount = rows.filter((r) => r.reviewStatus === "flagged").length;
                   Edit →
                 </a>
               </div>
+              <button
+                type="button"
+                data-toggle-search
+                class="rounded-md border border-dashed border-rule px-2 py-1.5 text-xs font-medium text-muted hover:border-accent hover:text-accent"
+              >
+                🔍 Find a better photo
+              </button>
+              <div data-search-panel class="hidden flex-col gap-2 border-t border-rule pt-2">
+                <div class="flex gap-2">
+                  <input
+                    type="text"
+                    data-search-input
+                    value={r.imageQuery}
+                    placeholder="e.g. Cancún hotel zone aerial"
+                    class="flex-1 rounded-md border border-rule bg-surface px-2 py-1.5 text-xs text-ink placeholder:text-muted focus:outline focus:outline-2 focus:outline-accent"
+                  />
+                  <button
+                    type="button"
+                    data-search-submit
+                    class="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink hover:opacity-90"
+                  >
+                    Search
+                  </button>
+                </div>
+                <p data-search-status class="text-xs text-muted"></p>
+                <div data-search-results class="grid grid-cols-3 gap-1.5"></div>
+              </div>
             </div>
           </div>
         ))
@@ -202,9 +230,22 @@ const flaggedCount = rows.filter((r) => r.reviewStatus === "flagged").length;
     if (summaryFlagged) summaryFlagged.textContent = String(flagged);
   }
 
+  type SearchResult = { title: string; thumbUrl: string };
+
   cards.forEach((card) => {
     const slug = card.dataset.slug!;
     const badge = card.querySelector<HTMLElement>("[data-status-badge]");
+    const heroImg = card.querySelector<HTMLImageElement>("[data-hero-img]");
+
+    function markStatus(status: string) {
+      card.dataset.status = status;
+      if (badge) {
+        badge.textContent = STATUS_LABEL[status] ?? status;
+        badge.className = `absolute right-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_CLASS[status] ?? ""}`;
+      }
+      updateSummary();
+    }
+
     card.querySelectorAll<HTMLButtonElement>("[data-action]").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const status = btn.dataset.action!;
@@ -215,16 +256,84 @@ const flaggedCount = rows.filter((r) => r.reviewStatus === "flagged").length;
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ slug, status }),
           });
-          if (res.ok && badge) {
-            card.dataset.status = status;
-            badge.textContent = STATUS_LABEL[status] ?? status;
-            badge.className = `absolute right-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_CLASS[status] ?? ""}`;
-            updateSummary();
-          }
+          if (res.ok) markStatus(status);
         } finally {
           btn.disabled = false;
         }
       });
+    });
+
+    // Panel de búsqueda — colapsado por default, se abre al pedido para
+    // no pegarle a Wikimedia por cada una de las ~68 cards en cada carga
+    // de la página (solo busca cuando el admin realmente lo pide).
+    const toggleBtn = card.querySelector<HTMLButtonElement>("[data-toggle-search]");
+    const panel = card.querySelector<HTMLElement>("[data-search-panel]");
+    const input = card.querySelector<HTMLInputElement>("[data-search-input]");
+    const searchBtn = card.querySelector<HTMLButtonElement>("[data-search-submit]");
+    const statusEl = card.querySelector<HTMLElement>("[data-search-status]");
+    const resultsEl = card.querySelector<HTMLElement>("[data-search-results]");
+
+    toggleBtn?.addEventListener("click", () => {
+      panel?.classList.toggle("hidden");
+      panel?.classList.toggle("flex");
+    });
+
+    async function runSearch() {
+      const q = input?.value.trim();
+      if (!q || !resultsEl || !statusEl) return;
+      statusEl.textContent = "Searching…";
+      resultsEl.innerHTML = "";
+      try {
+        const res = await fetch(`/api/admin/image-search?q=${encodeURIComponent(q)}`);
+        const data = (await res.json()) as { results?: SearchResult[] };
+        const results = data.results ?? [];
+        statusEl.textContent = results.length === 0 ? "No results — try a simpler query." : `${results.length} result(s) — click one to use it.`;
+        resultsEl.innerHTML = results
+          .map(
+            (r, i) =>
+              `<button type="button" data-pick-index="${i}" class="aspect-[4/3] overflow-hidden rounded border border-rule hover:border-accent">
+                <img src="${r.thumbUrl}" alt="${r.title.replace(/"/g, "&quot;")}" class="h-full w-full object-cover" />
+              </button>`
+          )
+          .join("");
+        resultsEl.querySelectorAll<HTMLButtonElement>("[data-pick-index]").forEach((pickBtn) => {
+          pickBtn.addEventListener("click", async () => {
+            const idx = Number(pickBtn.dataset.pickIndex);
+            const picked = results[idx];
+            if (!picked) return;
+            pickBtn.disabled = true;
+            statusEl.textContent = "Saving…";
+            try {
+              const saveRes = await fetch(`/api/admin/pages/${encodeURIComponent(slug)}/hero-image`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ imageUrl: picked.thumbUrl, label: picked.title }),
+              });
+              if (saveRes.ok) {
+                if (heroImg) heroImg.src = picked.thumbUrl;
+                markStatus("approved");
+                statusEl.textContent = "Saved.";
+                panel?.classList.add("hidden");
+                panel?.classList.remove("flex");
+              } else {
+                statusEl.textContent = "Couldn't save — try again.";
+              }
+            } finally {
+              pickBtn.disabled = false;
+            }
+          });
+        });
+      } catch {
+        statusEl.textContent = "Search failed — try again.";
+      }
+    }
+
+    searchBtn?.addEventListener("click", runSearch);
+    input?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        runSearch();
+      }
     });
   });
 </script>

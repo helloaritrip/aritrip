@@ -1,0 +1,90 @@
+import type { APIRoute } from "astro";
+import { env } from "cloudflare:workers";
+import type { Data } from "@measured/puck";
+import { getDocument, setDocument } from "@aritrips/data";
+import { getAdminSession } from "../../../../../lib/requireAdminSession";
+import type { Props } from "../../../../../puck/config";
+
+export const prerender = false;
+
+function json(body: unknown, status: number): Response {
+  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+}
+
+// Endpoint quirúrgico: solo toca el backgroundImageUrl del bloque Hero,
+// preservando todos los demás campos de la página tal cual estaban
+// (título, descripción, status...) — a propósito, en vez de reusar el PUT
+// de pages/[slug].ts, que espera el payload completo de "Publicar" del
+// editor Puck y hubiera sido fácil de usar mal desde este flujo más chico
+// (2026-08-10, mecanismo de reemplazo de fotos en /ari-admin/images).
+export const POST: APIRoute = async ({ params, request, cookies }) => {
+  const session = await getAdminSession(cookies, env);
+  if (!session) return json({ error: "Not logged in." }, 401);
+
+  const slug = params.slug;
+  if (!slug) return json({ error: "Missing slug." }, 400);
+
+  const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
+  if (!FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) return json({ error: "Not configured." }, 503);
+  const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
+
+  let body: { imageUrl?: string; label?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "Invalid request." }, 400);
+  }
+
+  const imageUrl = body.imageUrl;
+  if (!imageUrl || !imageUrl.startsWith("https://upload.wikimedia.org/")) {
+    return json({ error: "imageUrl must be a upload.wikimedia.org URL." }, 400);
+  }
+
+  const doc = await getDocument("pages", slug, credentials);
+  if (!doc || typeof doc.contentJson !== "string") return json({ error: "Page not found." }, 404);
+
+  let data: Data<Props>;
+  try {
+    data = JSON.parse(doc.contentJson) as Data<Props>;
+  } catch {
+    return json({ error: "Page content is corrupted." }, 500);
+  }
+
+  const heroBlock = data.content.find((c) => c.type === "Hero");
+  if (!heroBlock) return json({ error: "This page has no Hero block." }, 400);
+
+  const heroProps = heroBlock.props as { backgroundImageUrl?: string; backgroundImageQuery?: string };
+  heroProps.backgroundImageUrl = imageUrl;
+  if (body.label) heroProps.backgroundImageQuery = body.label;
+
+  const now = new Date();
+  const publishedAt =
+    doc.status === "published" ? new Date(typeof doc.publishedAt === "string" ? doc.publishedAt : now.toISOString()) : undefined;
+
+  await setDocument(
+    "pages",
+    slug,
+    {
+      slug,
+      title: String(doc.title ?? slug),
+      description: String(doc.description ?? ""),
+      country: String(doc.country ?? ""),
+      city: String(doc.city ?? ""),
+      continent: String(doc.continent ?? ""),
+      language: String(doc.language ?? "en"),
+      status: String(doc.status ?? "draft"),
+      template: String(doc.template ?? "custom"),
+      featuredImageQuery: String(doc.featuredImageQuery ?? ""),
+      updatedAt: now,
+      publishedAt,
+      contentJson: JSON.stringify(data),
+    },
+    credentials
+  );
+
+  // Elegir una foto a mano es la revisión — se marca aprobada sola, sin
+  // que haga falta un segundo clic en el grid de /ari-admin/images.
+  await setDocument("imageReviews", slug, { slug, status: "approved", reviewedBy: session.email, reviewedAt: now }, credentials);
+
+  return json({ ok: true }, 200);
+};
