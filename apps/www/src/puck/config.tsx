@@ -152,6 +152,8 @@ export const config: Config<Props> = {
                 <img
                   src={imageProxyUrl(bg, bg)}
                   alt=""
+                  width="1200"
+                  height="800"
                   className="absolute inset-0 h-full w-full object-cover"
                 />
                 {/* Degradado oscuro de abajo hacia arriba — más fuerte donde va el texto,

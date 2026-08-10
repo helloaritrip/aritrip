@@ -12,6 +12,15 @@
  * Wikimedia). Por eso ahora hay un segundo intento con `fallback` (el
  * nombre propio del destino, ej. "Cancún") antes de rendirse — mismo
  * proveedor, sin sumar una fuente nueva.
+ *
+ * Caché real en el borde de Cloudflare (2026-08-10, a partir de datos
+ * reales de Web Analytics) — el `Cache-Control` que ya se mandaba solo
+ * ayudaba al navegador de quien ya había cargado esa imagen antes; nadie
+ * más se beneficiaba, así que cada visitante nuevo pagaba el viaje
+ * completo a Wikimedia (búsqueda + descarga) para queries que el catálogo
+ * repite todo el tiempo (~40 destinos, un puñado de queries fijas). Eso
+ * explicaba tanto los outliers de LCP (hasta ~3s) como parte del CLS —
+ * ver Cache API de Cloudflare Workers.
  */
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
@@ -68,13 +77,30 @@ async function searchWikimediaImageUrl(query: string): Promise<string | null> {
 const MAX_QUERY_LENGTH = 120;
 
 export async function GET(request: Request) {
+  // Cache real, compartida entre TODOS los visitantes — se chequea antes
+  // que nada, incluso antes del rate limit, porque un hit de caché es
+  // prácticamente gratis y no necesita protegerse como sí necesita el
+  // camino que sí le pega a Wikimedia. La URL completa (incluye ?q=&
+  // fallback=) es la clave — misma query, mismo resultado siempre.
+  const cache = (globalThis as unknown as { caches?: { default: Cache } }).caches?.default;
+  if (cache) {
+    try {
+      const cached = await cache.match(request);
+      if (cached) return cached;
+    } catch {
+      // Sin acceso a la Cache API en este entorno (ej. local dev) — seguir sin caché.
+    }
+  }
+
   // Rate limit propio (Workers Rate Limiting API, no depende del plan de
   // Cloudflare) — sin esto, cada pedido dispara 1-2 llamadas reales a
   // Wikimedia sin ningún tope de cuántas veces por minuto (auditoría de
   // seguridad, 2026-08-10).
+  let ctx: { waitUntil: (p: Promise<unknown>) => void } | null = null;
   try {
-    const { env } = await getCloudflareContext({ async: true });
-    const limiter = (env as { IMAGE_PROXY_LIMITER?: { limit: (opts: { key: string }) => Promise<{ success: boolean }> } })
+    const cf = await getCloudflareContext({ async: true });
+    ctx = cf.ctx;
+    const limiter = (cf.env as { IMAGE_PROXY_LIMITER?: { limit: (opts: { key: string }) => Promise<{ success: boolean }> } })
       .IMAGE_PROXY_LIMITER;
     if (limiter) {
       const clientIp = request.headers.get("cf-connecting-ip") ?? "unknown";
@@ -106,7 +132,7 @@ export async function GET(request: Request) {
     });
     if (!imageRes.ok || !imageRes.body) return fallbackResponse();
 
-    return new Response(imageRes.body, {
+    const response = new Response(imageRes.body, {
       headers: {
         "Content-Type": imageRes.headers.get("content-type") ?? "image/jpeg",
         // Cache agresivo en el edge (Cloudflare) y en el navegador — la
@@ -114,6 +140,15 @@ export async function GET(request: Request) {
         "Cache-Control": "public, max-age=604800, immutable",
       },
     });
+
+    // Solo se cachean imágenes reales, nunca el SVG de fallback — así una
+    // query que hoy no encuentra nada en Wikimedia se puede reintentar
+    // más adelante en vez de quedar "atascada" en el fallback por una semana.
+    if (cache && ctx) {
+      ctx.waitUntil(cache.put(request, response.clone()));
+    }
+
+    return response;
   } catch {
     return fallbackResponse();
   }
