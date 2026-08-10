@@ -1,0 +1,210 @@
+---
+import { env } from "cloudflare:workers";
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { getAdminSession } from "../../lib/requireAdminSession";
+import { getHomeLayoutConfig, HOME_LAYOUT_DEFAULTS, type HomeLayoutConfig } from "../../lib/homeLayoutConfig";
+
+export const prerender = false;
+
+// Sin esto, volver acá con "atrás" del navegador podría mostrar valores
+// viejos de bfcache en vez de lo último guardado — mismo bug ya arreglado
+// en /ari-admin/images (2026-08-10).
+Astro.response.headers.set("Cache-Control", "no-store");
+
+const session = await getAdminSession(Astro.cookies, env);
+if (!session) {
+  return Astro.redirect(`/ari-admin/login?next=${encodeURIComponent(Astro.url.pathname)}`);
+}
+
+const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
+const credentials =
+  FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY
+    ? { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") }
+    : null;
+const config = await getHomeLayoutConfig(credentials);
+
+const APP_URL_FOR_IMAGES = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
+function imageProxyUrl(query: string, fallback: string): string {
+  return `${APP_URL_FOR_IMAGES}/api/image-proxy?q=${encodeURIComponent(query)}&fallback=${encodeURIComponent(fallback)}`;
+}
+
+// Mismos datos exactos que la Home real (index.astro) — la vista previa
+// tiene que mostrar lo mismo que se va a publicar, no un mockup aparte.
+const demoTrip = {
+  budgetLabel: "$700 budget",
+  flag: "🇲🇽",
+  destination: "Cancún",
+  total: 642,
+  flight: 280,
+  hotel: 210,
+  activities: 152,
+  imageQuery: "cancun turquoise beach aerial",
+};
+
+const CONTROLS: { key: keyof HomeLayoutConfig; label: string; min: number; max: number }[] = [
+  { key: "mascotHeight", label: "Ari height", min: 80, max: 500 },
+  { key: "rowGap", label: "Gap between Ari and card", min: 0, max: 200 },
+  { key: "cardPadLeft", label: "Blank space before photo (inside card)", min: 0, max: 400 },
+  { key: "photoWidth", label: "Photo width", min: 80, max: 500 },
+  { key: "photoHeight", label: "Photo height", min: 80, max: 500 },
+  { key: "cardTextPad", label: "Text padding", min: 0, max: 100 },
+];
+---
+
+<AdminLayout title="Home Layout — AriTrips Admin" session={session} active="pages">
+  <div class="flex max-w-5xl flex-col gap-6">
+    <div>
+      <a href="/ari-admin/pages" class="text-sm text-muted hover:text-accent">← Pages</a>
+      <h1 class="text-2xl font-semibold text-ink">Home layout — "What can Ari find for you?"</h1>
+      <p class="text-sm text-muted">
+        Movés los controles, mirás el resultado acá mismo en vivo, y guardás — se aplica directo en la Home real, sin
+        deploy.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]">
+      <div class="flex flex-col gap-4">
+        {
+          CONTROLS.map((c) => (
+            <label class="flex flex-col gap-1 text-sm">
+              <span class="flex items-center justify-between text-ink">
+                <span>{c.label}</span>
+                <span class="font-mono text-xs text-muted">
+                  <span data-value-for={c.key}>{config[c.key]}</span>px
+                </span>
+              </span>
+              <input
+                type="range"
+                data-control={c.key}
+                min={c.min}
+                max={c.max}
+                value={config[c.key]}
+                class="accent-accent"
+              />
+            </label>
+          ))
+        }
+        <button
+          type="button"
+          data-reset
+          class="mt-2 self-start rounded-md border border-rule px-3 py-1.5 text-xs font-medium text-muted hover:border-accent hover:text-accent"
+        >
+          Reset to defaults
+        </button>
+        <button
+          type="button"
+          data-save
+          class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90"
+        >
+          Save
+        </button>
+        <p data-status class="text-xs text-muted" />
+      </div>
+
+      <!-- Vista previa — misma estructura y clases que la sección real de
+           index.astro, con los valores numéricos como inline style en vez
+           de clases arbitrarias de Tailwind, para que los controles de al
+           lado la actualicen en vivo sin recargar. -->
+      <div class="flex flex-col items-center gap-4 rounded-lg border border-dashed border-rule bg-bg p-8">
+        <h2 class="text-xl font-semibold text-ink">✈️ What can Ari find for you?</h2>
+        <div
+          id="preview-row"
+          class="flex flex-col items-center sm:flex-row"
+          style={`gap: ${config.rowGap}px`}
+        >
+          <img
+            id="preview-mascot"
+            src="/ari/mascot.png"
+            alt="Ari, the AriTrips suitcase mascot"
+            style={`height: ${config.mascotHeight}px`}
+            class="w-auto object-contain"
+          />
+          <div
+            id="preview-card"
+            class="flex overflow-hidden rounded-lg border border-rule bg-surface"
+            style={`padding-left: ${config.cardPadLeft}px`}
+          >
+            <img
+              id="preview-photo"
+              src={imageProxyUrl(demoTrip.imageQuery, demoTrip.destination)}
+              alt={demoTrip.destination}
+              style={`width: ${config.photoWidth}px; height: ${config.photoHeight}px`}
+              class="shrink-0 object-cover"
+            />
+            <div id="preview-text" class="flex flex-col justify-center gap-1.5" style={`padding: ${config.cardTextPad}px`}>
+              <p class="text-xs font-medium uppercase tracking-wide text-muted">{demoTrip.budgetLabel}</p>
+              <p class="text-xl font-semibold text-ink">
+                {demoTrip.flag} {demoTrip.destination} — ${demoTrip.total}
+              </p>
+              <div class="flex flex-col gap-1 text-sm text-muted">
+                <p>✈️ Flight ${demoTrip.flight}</p>
+                <p>🏨 Hotel ${demoTrip.hotel}</p>
+                <p>🎟️ Activities ${demoTrip.activities}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="text-xs text-muted">
+          Estimates · No booking fees · Compare real travel options · Book directly with trusted providers
+        </p>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script define:vars={{ defaults: HOME_LAYOUT_DEFAULTS }}>
+  const PROP_MAP = {
+    mascotHeight: { el: () => document.getElementById("preview-mascot"), style: "height" },
+    rowGap: { el: () => document.getElementById("preview-row"), style: "gap" },
+    cardPadLeft: { el: () => document.getElementById("preview-card"), style: "paddingLeft" },
+    photoWidth: { el: () => document.getElementById("preview-photo"), style: "width" },
+    photoHeight: { el: () => document.getElementById("preview-photo"), style: "height" },
+    cardTextPad: { el: () => document.getElementById("preview-text"), style: "padding" },
+  };
+
+  const inputs = document.querySelectorAll("input[data-control]");
+
+  function applyLive(key, value) {
+    const mapping = PROP_MAP[key];
+    if (!mapping) return;
+    const el = mapping.el();
+    if (el) el.style[mapping.style] = `${value}px`;
+    const label = document.querySelector(`[data-value-for="${key}"]`);
+    if (label) label.textContent = String(value);
+  }
+
+  inputs.forEach((input) => {
+    input.addEventListener("input", () => applyLive(input.dataset.control, input.value));
+  });
+
+  document.querySelector("[data-reset]")?.addEventListener("click", () => {
+    inputs.forEach((input) => {
+      const key = input.dataset.control;
+      input.value = defaults[key];
+      applyLive(key, defaults[key]);
+    });
+  });
+
+  document.querySelector("[data-save]")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const statusEl = document.querySelector("[data-status]");
+    const payload = {};
+    inputs.forEach((input) => {
+      payload[input.dataset.control] = Number(input.value);
+    });
+    btn.disabled = true;
+    if (statusEl) statusEl.textContent = "Saving…";
+    try {
+      const res = await fetch("/api/admin/home-layout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (statusEl) statusEl.textContent = res.ok ? "Saved — live on the Home page now." : "Couldn't save — try again.";
+    } catch {
+      if (statusEl) statusEl.textContent = "Couldn't save — try again.";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>

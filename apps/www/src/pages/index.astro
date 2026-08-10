@@ -4,6 +4,7 @@ import Layout from "../layouts/Layout.astro";
 import { Button } from "@aritrips/ui";
 import { ORIGIN_HUBS, ORIGIN_LABELS, listDocuments } from "@aritrips/data";
 import { cityName, hubPageSlug } from "../lib/citySlug";
+import { getHomeLayoutConfig } from "../lib/homeLayoutConfig";
 
 // SSR solo para poder leer los últimos posts del blog en cada visita — el
 // resto de la home sigue siendo estático (mismo patrón ya usado en /blog
@@ -18,9 +19,12 @@ function imageProxyUrl(query: string, fallback: string): string {
 type BlogDoc = { id: string; title?: unknown; description?: unknown; featuredImageQuery?: unknown; publishedAt?: unknown };
 let latestPosts: BlogDoc[] = [];
 const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
-if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+const credentials =
+  FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY
+    ? { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") }
+    : null;
+if (credentials) {
   try {
-    const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
     const docs = await listDocuments("pages", credentials);
     latestPosts = (docs.filter((d) => d.template === "blog" && d.status === "published") as BlogDoc[])
       .sort((a, b) => String(b.publishedAt ?? "").localeCompare(String(a.publishedAt ?? "")))
@@ -29,6 +33,11 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
     latestPosts = [];
   }
 }
+
+// Editable a mano desde /ari-admin/home-layout (2026-08-10) — ver
+// lib/homeLayoutConfig.ts para por qué esto existe (varias rondas de
+// ida y vuelta por captura de pantalla que no convergían rápido).
+const homeLayout = await getHomeLayoutConfig(credentials);
 
 // Links a las 24 páginas "Best trips from {city}" (generate-hub-pages.ts)
 // — sin esto quedan huérfanas: ni Google ni un usuario real las encuentra.
@@ -113,32 +122,37 @@ const demoTrip = {
       </Button>
     </section>
 
-    <!-- 3. Example trip / product demo — el intento anterior (justify-between
-         en un contenedor ancho) solo agrandaba el GAP entre Ari y la card,
-         no la card en sí (2026-08-10, feedback del usuario con captura
-         marcada en rojo). El ancho real que faltaba es DENTRO de la card,
-         como espacio en blanco antes de la foto — se logra con padding-left
-         en el contenedor de la card, no separando más las dos piezas. -->
+    <!-- 3. Example trip / product demo — los tamaños/espacios son editables
+         a mano desde /ari-admin/home-layout (2026-08-10), no clases fijas
+         de Tailwind — varias rondas de ajuste por captura de pantalla no
+         convergían rápido, así que esto quedó como valores en Firestore
+         aplicados acá como inline style, con vista previa en vivo en el
+         editor. Mismos ids que usa ese editor para la vista previa. -->
     <section class="flex flex-col items-center gap-4">
       <h2 class="text-xl font-semibold text-ink">✈️ What can Ari find for you?</h2>
-      <div class="flex flex-col items-center gap-6 sm:flex-row">
+      <div class="flex flex-col items-center sm:flex-row" style={`gap: ${homeLayout.rowGap}px`}>
         <img
           src="/ari/mascot.png"
           alt="Ari, the AriTrips suitcase mascot"
           width="180"
           height="270"
-          class="h-56 w-auto object-contain sm:h-64"
+          style={`height: ${homeLayout.mascotHeight}px`}
+          class="w-auto object-contain"
         />
-        <div class="flex overflow-hidden rounded-lg border border-rule bg-surface pl-24 sm:pl-32">
+        <div
+          class="flex overflow-hidden rounded-lg border border-rule bg-surface"
+          style={`padding-left: ${homeLayout.cardPadLeft}px`}
+        >
           <img
             src={imageProxyUrl(demoTrip.imageQuery, demoTrip.destination)}
             alt={demoTrip.destination}
-            width="190"
-            height="256"
-            class="h-56 w-44 shrink-0 object-cover sm:h-64 sm:w-52"
+            width={homeLayout.photoWidth}
+            height={homeLayout.photoHeight}
+            style={`width: ${homeLayout.photoWidth}px; height: ${homeLayout.photoHeight}px`}
+            class="shrink-0 object-cover"
             loading="lazy"
           />
-          <div class="flex flex-col justify-center gap-1.5 p-5">
+          <div class="flex flex-col justify-center gap-1.5" style={`padding: ${homeLayout.cardTextPad}px`}>
             <p class="text-xs font-medium uppercase tracking-wide text-muted">{demoTrip.budgetLabel}</p>
             <p class="text-xl font-semibold text-ink">
               {demoTrip.flag} {demoTrip.destination} — ${demoTrip.total}
