@@ -60,19 +60,22 @@ const homeJsonLd = [
   },
 ];
 
+// Ari es un activo de marca, no solo un logo (2026-08-10, a pedido del
+// usuario) — este bloque pasa de "Step 1/2/3" genérico a hablar de Ari
+// directamente, con su propio emoji por paso en vez de una etiqueta
+// uppercase de SaaS.
 const steps = [
-  {
-    title: "Tell us your budget",
-    body: "Origin, total budget, dates, travelers, and what you're into. Takes under a minute.",
-  },
-  {
-    title: "See what actually fits",
-    body: "Real flight, hotel, and activity costs — not just a flight price. Ranked by how well each destination fits you, not by who pays the highest commission.",
-  },
-  {
-    title: "Book directly",
-    body: "Every result links straight to real flight, hotel, and activity searches. No new account, no middleman booking flow.",
-  },
+  { emoji: "🐱", title: "1. Give Ari your budget", body: "Tell Ari how much you want to spend." },
+  { emoji: "✈️", title: "2. Ari finds your trip", body: "Flights + hotels + activities that fit." },
+  { emoji: "🎒", title: "3. Book what you like", body: "Ari sends you directly to the provider." },
+];
+
+// Demo estático a propósito (2026-08-10) — el objetivo es que el visitante
+// entienda qué hace Ari en 3 segundos mirando la Home, no una búsqueda en
+// vivo. Números ilustrativos, coherentes con el resto del catálogo curado.
+const demoTrips = [
+  { budgetLabel: "$700 budget", flag: "🇲🇽", destination: "Mexico City", total: 642, flight: 280, hotel: 210, activities: 152 },
+  { budgetLabel: "$850 budget", flag: "🇨🇴", destination: "Medellín", total: 798, flight: 310, hotel: 288, activities: 200 },
 ];
 ---
 
@@ -82,32 +85,83 @@ const steps = [
   jsonLd={homeJsonLd}
 >
   <main class="mx-auto flex max-w-5xl flex-col gap-24 px-6 py-20">
+    <!-- 1. Hero, 2. Budget CTA — un mismo bloque visual a propósito (nadie
+         quiere un salto grande entre el subtítulo y el botón), pero el CTA
+         y la franja de confianza quedan en su propio <div> para que sigan
+         siendo dos piezas distinguibles, tal como pidió el usuario. -->
     <section class="flex flex-col items-center gap-6 text-center">
       <p class="text-sm font-medium uppercase tracking-wide text-accent">AriTrips</p>
       <h1 class="max-w-2xl text-4xl font-semibold text-balance text-ink sm:text-5xl">
         Find the best trip you can take on your budget.
       </h1>
       <p class="max-w-xl text-lg text-muted">
-        Not the cheapest flight. Not a random destination. The trip that actually fits what you have
-        to spend — flight, hotel, and activities included.
+        Tell us how much you want to spend. Ari finds destinations where your flight, hotel and
+        activities actually fit.
       </p>
-      <Button href={APP_URL} className="px-6 py-3 text-base">
-        Start planning →
-      </Button>
+      <div class="flex flex-col items-center gap-3">
+        <Button href={APP_URL} className="px-6 py-3 text-base">
+          Find my trip →
+        </Button>
+        <p class="text-sm text-muted">
+          No booking fees · Compare real travel options · Book directly with trusted providers
+        </p>
+      </div>
     </section>
 
-    <section class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-      {
-        steps.map((step, i) => (
-          <div class="flex flex-col gap-2 rounded-lg border border-rule bg-surface p-6">
-            <p class="text-xs font-medium uppercase tracking-wide text-muted">Step {i + 1}</p>
-            <h2 class="text-lg font-semibold text-ink">{step.title}</h2>
-            <p class="text-sm text-muted">{step.body}</p>
-          </div>
-        ))
-      }
+    <!-- 3. Example trip / product demo -->
+    <section class="flex flex-col items-center gap-6">
+      <h2 class="text-xl font-semibold text-ink">✈️ What can Ari find for you?</h2>
+      <div class="grid w-full max-w-2xl grid-cols-1 gap-6 sm:grid-cols-2">
+        {
+          demoTrips.map((trip) => (
+            <div class="flex flex-col gap-3 rounded-lg border border-rule bg-surface p-6">
+              <p class="text-xs font-medium uppercase tracking-wide text-muted">{trip.budgetLabel}</p>
+              <p class="text-lg font-semibold text-ink">
+                {trip.flag} {trip.destination} — ${trip.total}
+              </p>
+              <div class="flex flex-col gap-1 text-sm text-muted">
+                <p>✈️ Flight ${trip.flight}</p>
+                <p>🏨 Hotel ${trip.hotel}</p>
+                <p>🎟️ Activities ${trip.activities}</p>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+      <p class="text-xs text-muted">Estimates — confirm at booking.</p>
     </section>
 
+    <!-- 4. How Ari works -->
+    <section class="flex flex-col gap-6">
+      <h2 class="text-center text-2xl font-semibold text-ink">How Ari works</h2>
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        {
+          steps.map((step) => (
+            <div class="flex flex-col items-center gap-2 rounded-lg border border-rule bg-surface p-6 text-center">
+              <span class="text-3xl" aria-hidden="true">{step.emoji}</span>
+              <h3 class="text-lg font-semibold text-ink">{step.title}</h3>
+              <p class="text-sm text-muted">{step.body}</p>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <!-- 5. Popular destinations / trip ideas -->
+    <section class="flex flex-col gap-6">
+      <h2 class="text-center text-2xl font-semibold text-ink">Trip ideas by city</h2>
+      <div class="flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm">
+        {
+          cityLinks.map((link) => (
+            <a href={link.href} class="text-muted hover:text-accent">
+              Best trips from {link.city}
+            </a>
+          ))
+        }
+      </div>
+    </section>
+
+    <!-- 6. Blog -->
     <section class="flex flex-col gap-6">
       <div class="flex items-center justify-between">
         <h2 class="text-2xl font-semibold text-ink">From the blog</h2>
@@ -138,19 +192,7 @@ const steps = [
         )
       }
     </section>
-
-    <section class="flex flex-col gap-6">
-      <h2 class="text-center text-2xl font-semibold text-ink">Trip ideas by city</h2>
-      <div class="flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm">
-        {
-          cityLinks.map((link) => (
-            <a href={link.href} class="text-muted hover:text-accent">
-              Best trips from {link.city}
-            </a>
-          ))
-        }
-      </div>
-    </section>
+    <!-- 7. Footer is outside <main>, below -->
   </main>
 
   <footer class="bg-[#004bc4] text-white">
