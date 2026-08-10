@@ -73,9 +73,30 @@ const steps = [
 // Demo estático a propósito (2026-08-10) — el objetivo es que el visitante
 // entienda qué hace Ari en 3 segundos mirando la Home, no una búsqueda en
 // vivo. Números ilustrativos, coherentes con el resto del catálogo curado.
+// La query de Cancún es la misma que usa el catálogo real (packages/data);
+// Nueva York no es un destino curado en el catálogo (solo hub de origen),
+// así que su query es una elegida a mano solo para esta demo.
 const demoTrips = [
-  { budgetLabel: "$700 budget", flag: "🇲🇽", destination: "Mexico City", total: 642, flight: 280, hotel: 210, activities: 152 },
-  { budgetLabel: "$850 budget", flag: "🇨🇴", destination: "Medellín", total: 798, flight: 310, hotel: 288, activities: 200 },
+  {
+    budgetLabel: "$700 budget",
+    flag: "🇲🇽",
+    destination: "Cancún",
+    total: 642,
+    flight: 280,
+    hotel: 210,
+    activities: 152,
+    imageQuery: "cancun turquoise beach aerial",
+  },
+  {
+    budgetLabel: "$900 budget",
+    flag: "🇺🇸",
+    destination: "New York",
+    total: 850,
+    flight: 320,
+    hotel: 380,
+    activities: 150,
+    imageQuery: "new york skyline manhattan aerial",
+  },
 ];
 ---
 
@@ -102,9 +123,6 @@ const demoTrips = [
         <Button href={APP_URL} className="px-6 py-3 text-base">
           Find my trip →
         </Button>
-        <p class="text-sm text-muted">
-          No booking fees · Compare real travel options · Book directly with trusted providers
-        </p>
       </div>
     </section>
 
@@ -114,21 +132,33 @@ const demoTrips = [
       <div class="grid w-full max-w-2xl grid-cols-1 gap-6 sm:grid-cols-2">
         {
           demoTrips.map((trip) => (
-            <div class="flex flex-col gap-3 rounded-lg border border-rule bg-surface p-6">
-              <p class="text-xs font-medium uppercase tracking-wide text-muted">{trip.budgetLabel}</p>
-              <p class="text-lg font-semibold text-ink">
-                {trip.flag} {trip.destination} — ${trip.total}
-              </p>
-              <div class="flex flex-col gap-1 text-sm text-muted">
-                <p>✈️ Flight ${trip.flight}</p>
-                <p>🏨 Hotel ${trip.hotel}</p>
-                <p>🎟️ Activities ${trip.activities}</p>
+            <div class="flex items-center gap-4 rounded-lg border border-rule bg-surface p-4">
+              <img
+                src={imageProxyUrl(trip.imageQuery, trip.destination)}
+                alt={trip.destination}
+                width="112"
+                height="112"
+                class="h-24 w-24 shrink-0 rounded-md object-cover sm:h-28 sm:w-28"
+                loading="lazy"
+              />
+              <div class="flex flex-col gap-1">
+                <p class="text-xs font-medium uppercase tracking-wide text-muted">{trip.budgetLabel}</p>
+                <p class="text-lg font-semibold text-ink">
+                  {trip.flag} {trip.destination} — ${trip.total}
+                </p>
+                <div class="flex flex-col gap-0.5 text-sm text-muted">
+                  <p>✈️ Flight ${trip.flight}</p>
+                  <p>🏨 Hotel ${trip.hotel}</p>
+                  <p>🎟️ Activities ${trip.activities}</p>
+                </div>
               </div>
             </div>
           ))
         }
       </div>
-      <p class="text-xs text-muted">Estimates — confirm at booking.</p>
+      <p class="text-xs text-muted">
+        Estimates · No booking fees · Compare real travel options · Book directly with trusted providers
+      </p>
     </section>
 
     <!-- 4. How Ari works -->
@@ -147,21 +177,7 @@ const demoTrips = [
       </div>
     </section>
 
-    <!-- 5. Popular destinations / trip ideas -->
-    <section class="flex flex-col gap-6">
-      <h2 class="text-center text-2xl font-semibold text-ink">Trip ideas by city</h2>
-      <div class="flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm">
-        {
-          cityLinks.map((link) => (
-            <a href={link.href} class="text-muted hover:text-accent">
-              Best trips from {link.city}
-            </a>
-          ))
-        }
-      </div>
-    </section>
-
-    <!-- 6. Blog -->
+    <!-- 5. Blog -->
     <section class="flex flex-col gap-6">
       <div class="flex items-center justify-between">
         <h2 class="text-2xl font-semibold text-ink">From the blog</h2>
@@ -191,6 +207,20 @@ const demoTrips = [
           </div>
         )
       }
+    </section>
+
+    <!-- 6. Popular destinations / trip ideas -->
+    <section class="flex flex-col gap-6">
+      <h2 class="text-center text-2xl font-semibold text-ink">Trip ideas by city</h2>
+      <div class="flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm">
+        {
+          cityLinks.map((link) => (
+            <a href={link.href} class="text-muted hover:text-accent">
+              Best trips from {link.city}
+            </a>
+          ))
+        }
+      </div>
     </section>
     <!-- 7. Footer is outside <main>, below -->
   </main>
