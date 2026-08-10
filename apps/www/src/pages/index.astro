@@ -113,32 +113,31 @@ const demoTrip = {
       </Button>
     </section>
 
-    <!-- 3. Example trip / product demo — la mascota completa la fila como
-         primera columna, mismo ancho que las 2 cards de ejemplo. -->
-    <section class="flex flex-col items-center gap-6">
+    <!-- 3. Example trip / product demo — layout pixel-a-pixel del mockup
+         del usuario (2026-08-10): fila compacta centrada (no estirada a
+         todo el ancho como antes), Ari suelta a la izquierda sin card, y
+         la foto del destino pegada al borde izquierdo de la card de texto
+         (sin padding entre foto y borde), no separada con gap. -->
+    <section class="flex flex-col items-center gap-4">
       <h2 class="text-xl font-semibold text-ink">✈️ What can Ari find for you?</h2>
-      <!-- Un solo ejemplo en vez de dos (2026-08-10, según wireframe del
-           usuario) — Ari ocupa 1 columna, la card del destino ocupa 2, con
-           más aire para la foto y el desglose de precio en vez de quedar
-           apretados los tres en el mismo ancho. -->
-      <div class="grid w-full max-w-3xl grid-cols-1 gap-6 sm:grid-cols-3">
+      <div class="flex flex-col items-center gap-6 sm:flex-row">
         <img
           src="/ari/mascot.png"
           alt="Ari, the AriTrips suitcase mascot"
           width="180"
           height="270"
-          class="mx-auto h-full max-h-64 w-auto object-contain"
+          class="h-56 w-auto object-contain sm:h-64"
         />
-        <div class="flex items-center gap-5 rounded-lg border border-rule bg-surface p-5 sm:col-span-2">
+        <div class="flex overflow-hidden rounded-lg border border-rule bg-surface">
           <img
             src={imageProxyUrl(demoTrip.imageQuery, demoTrip.destination)}
             alt={demoTrip.destination}
-            width="160"
-            height="160"
-            class="h-32 w-32 shrink-0 rounded-md object-cover sm:h-40 sm:w-40"
+            width="190"
+            height="256"
+            class="h-56 w-44 shrink-0 object-cover sm:h-64 sm:w-52"
             loading="lazy"
           />
-          <div class="flex flex-col gap-1.5">
+          <div class="flex flex-col justify-center gap-1.5 p-5">
             <p class="text-xs font-medium uppercase tracking-wide text-muted">{demoTrip.budgetLabel}</p>
             <p class="text-xl font-semibold text-ink">
               {demoTrip.flag} {demoTrip.destination} — ${demoTrip.total}
