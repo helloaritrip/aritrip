@@ -84,7 +84,15 @@ function formatDateRange(startDate: string, endDate: string): string {
   return `${startLabel} – ${endLabel}`;
 }
 
-export function ResultCard({ result, tripContext }: { result: RecommendationResult; tripContext: TripContext }) {
+export function ResultCard({
+  result,
+  tripContext,
+  searchId,
+}: {
+  result: RecommendationResult;
+  tripContext: TripContext;
+  searchId: string | null;
+}) {
   const links = result.links;
   const originLabel = ORIGIN_LABELS[tripContext.originAirportCode as OriginHub] ?? tripContext.originAirportCode;
   const [topReason, ...otherReasons] = result.reasons;
@@ -194,7 +202,15 @@ export function ResultCard({ result, tripContext }: { result: RecommendationResu
               href={links[category]}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              onClick={() => trackEvent({ name: "recommendation_clicked", destinationId: result.destinationId, category })}
+              onClick={() =>
+                trackEvent({
+                  name: "recommendation_clicked",
+                  searchId: searchId ?? undefined,
+                  destinationId: result.destinationId,
+                  rank: result.rank,
+                  category,
+                })
+              }
               className="rounded-full border border-rule px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-accent hover:text-accent"
             >
               {CTA_LABELS[category]}

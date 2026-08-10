@@ -3,6 +3,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { writeFirestoreDocument } from "@/lib/firestore";
 
 const VALID_CATEGORIES = ["flight", "hotel", "activity", "insurance", "esim"];
+const SUB_SCORE_KEYS = ["budgetFit", "activitiesMatch", "seasonFit", "weatherComfort", "travelTime", "valueRating", "safety"] as const;
 
 // Auditoría de seguridad (2026-08-10): antes esto validaba solo `name` y
 // escribía el resto del body tal cual a Firestore ({ ...body }) — mass
@@ -19,31 +20,83 @@ function isFiniteNumberInRange(v: unknown, min: number, max: number): v is numbe
   return typeof v === "number" && Number.isFinite(v) && v >= min && v <= max;
 }
 
+type SubScores = Record<(typeof SUB_SCORE_KEYS)[number], number>;
+
+function isValidSubScores(v: unknown): v is SubScores {
+  if (typeof v !== "object" || v === null) return false;
+  const obj = v as Record<string, unknown>;
+  return SUB_SCORE_KEYS.every((key) => isFiniteNumberInRange(obj[key], 0, 100));
+}
+
 type ValidatedEvent =
-  | { name: "search_performed"; originAirportCode: string; budgetUSD: number }
-  | { name: "recommendation_shown"; destinationId: string; rank: number; finalScore: number }
-  | { name: "recommendation_clicked"; destinationId: string; category: string };
+  | { name: "search_performed"; searchId: string; originAirportCode: string; budgetUSD: number }
+  | {
+      name: "recommendation_shown";
+      searchId: string;
+      destinationId: string;
+      rank: number;
+      finalScore: number;
+      subScores: SubScores;
+    }
+  | { name: "recommendation_clicked"; searchId?: string; destinationId: string; rank?: number; category: string };
 
 function validateEvent(body: Record<string, unknown>): ValidatedEvent | null {
   switch (body.name) {
     case "search_performed":
-      if (isShortString(body.originAirportCode, 8) && isFiniteNumberInRange(body.budgetUSD, 0, 1_000_000)) {
-        return { name: "search_performed", originAirportCode: body.originAirportCode, budgetUSD: body.budgetUSD };
+      if (isShortString(body.searchId, 64) && isShortString(body.originAirportCode, 8) && isFiniteNumberInRange(body.budgetUSD, 0, 1_000_000)) {
+        return { name: "search_performed", searchId: body.searchId, originAirportCode: body.originAirportCode, budgetUSD: body.budgetUSD };
       }
       return null;
     case "recommendation_shown":
-      if (isShortString(body.destinationId, 64) && isFiniteNumberInRange(body.rank, 0, 1000) && isFiniteNumberInRange(body.finalScore, 0, 100)) {
-        return { name: "recommendation_shown", destinationId: body.destinationId, rank: body.rank, finalScore: body.finalScore };
+      if (
+        isShortString(body.searchId, 64) &&
+        isShortString(body.destinationId, 64) &&
+        isFiniteNumberInRange(body.rank, 0, 1000) &&
+        isFiniteNumberInRange(body.finalScore, 0, 100) &&
+        isValidSubScores(body.subScores)
+      ) {
+        return {
+          name: "recommendation_shown",
+          searchId: body.searchId,
+          destinationId: body.destinationId,
+          rank: body.rank,
+          finalScore: body.finalScore,
+          subScores: body.subScores,
+        };
       }
       return null;
-    case "recommendation_clicked":
-      if (isShortString(body.destinationId, 64) && typeof body.category === "string" && VALID_CATEGORIES.includes(body.category)) {
-        return { name: "recommendation_clicked", destinationId: body.destinationId, category: body.category };
+    case "recommendation_clicked": {
+      if (!isShortString(body.destinationId, 64) || typeof body.category !== "string" || !VALID_CATEGORIES.includes(body.category)) {
+        return null;
       }
-      return null;
+      // searchId/rank son opcionales acá (ver trackEvent.ts) — el modal
+      // de Discover dispara este mismo evento sin venir de una búsqueda
+      // de Ari Core. Si vienen, tienen que ser válidos; si no vienen, se
+      // omiten en vez de forzar un valor falso.
+      if (body.searchId !== undefined && !isShortString(body.searchId, 64)) return null;
+      if (body.rank !== undefined && !isFiniteNumberInRange(body.rank, 0, 1000)) return null;
+      return {
+        name: "recommendation_clicked",
+        searchId: body.searchId as string | undefined,
+        destinationId: body.destinationId,
+        rank: body.rank as number | undefined,
+        category: body.category,
+      };
+    }
     default:
       return null;
   }
+}
+
+// Firestore (ver toFirestoreFields en packages/data/src/firestore.ts) solo
+// guarda campos planos — string/number/boolean/Date, nada anidado. subScores
+// llega como objeto, así que se aplana a 7 campos sueltos antes de escribir
+// (no se toca el cliente compartido de Firestore por esto).
+function toFirestoreDoc(event: ValidatedEvent): Record<string, unknown> {
+  if (event.name !== "recommendation_shown") return { ...event };
+  const { subScores, ...rest } = event;
+  const flatSubScores = Object.fromEntries(SUB_SCORE_KEYS.map((key) => [`subScore_${key}`, subScores[key]]));
+  return { ...rest, ...flatSubScores };
 }
 
 export async function POST(request: Request) {
@@ -74,7 +127,7 @@ export async function POST(request: Request) {
   try {
     await writeFirestoreDocument(
       "events",
-      { ...event, createdAt: new Date() },
+      { ...toFirestoreDoc(event), createdAt: new Date() },
       { clientEmail, privateKey: privateKey.replace(/\\n/g, "\n") }
     );
     return NextResponse.json({ tracked: true });

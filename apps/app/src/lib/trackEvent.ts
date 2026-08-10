@@ -6,15 +6,50 @@
  * firebase-admin). Fire-and-forget: nunca bloquea ni rompe la UI si
  * falla — un evento de analytics perdido no es un error visible para
  * el usuario.
+ *
+ * searchId (2026-08-10, roadmap de datos post-auditoría) — un UUID
+ * generado una vez por búsqueda y repetido en los 3 eventos. Sin esto
+ * no hay forma de saber si un click pertenece a la búsqueda que le
+ * mostró esa recomendación: son eventos sueltos, no una sesión. Con
+ * searchId + el subScores/rank ya agregados abajo, "qué eligió el
+ * usuario frente a lo que Ari puntuó" pasa a ser una consulta real, no
+ * una aproximación agregada.
  */
+export type SubScoresPayload = {
+  budgetFit: number;
+  activitiesMatch: number;
+  seasonFit: number;
+  weatherComfort: number;
+  travelTime: number;
+  valueRating: number;
+  safety: number;
+};
+
 export type TrackedEvent =
-  | { name: "search_performed"; originAirportCode: string; budgetUSD: number }
-  | { name: "recommendation_shown"; destinationId: string; rank: number; finalScore: number }
+  | { name: "search_performed"; searchId: string; originAirportCode: string; budgetUSD: number }
   | {
-      name: "recommendation_clicked";
+      name: "recommendation_shown";
+      searchId: string;
       destinationId: string;
+      rank: number;
+      finalScore: number;
+      subScores: SubScoresPayload;
+    }
+  | {
+      // searchId/rank son opcionales: este mismo evento también lo dispara
+      // el modal de Discover (DestinationModal), que no viene de una
+      // búsqueda de Ari Core con puntaje/rank real — mejor omitirlos ahí
+      // que fabricar un valor falso solo para que el tipo cierre.
+      name: "recommendation_clicked";
+      searchId?: string;
+      destinationId: string;
+      rank?: number;
       category: "flight" | "hotel" | "activity" | "insurance" | "esim";
     };
+
+export function newSearchId(): string {
+  return crypto.randomUUID();
+}
 
 export function trackEvent(event: TrackedEvent) {
   if (process.env.NODE_ENV !== "production") {

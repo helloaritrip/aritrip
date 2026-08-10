@@ -5,7 +5,7 @@ import { TextInput, Combobox, Chip, Button } from "@aritrips/ui";
 import { destinations, ORIGIN_HUBS, DEFAULT_ORIGIN_HUB, type OriginHub, type InterestTag } from "@aritrips/data";
 import { ResultCard, type RecommendationResult, type TripContext } from "./ResultCard";
 import { ORIGIN_OPTIONS } from "@/lib/originLabels";
-import { trackEvent } from "@/lib/trackEvent";
+import { trackEvent, newSearchId } from "@/lib/trackEvent";
 
 // Google Flights limita a 9 pasajeros por búsqueda; KAYAK permite hasta 9
 // adultos + 7 niños — referencia real de la industria, no un número
@@ -71,6 +71,7 @@ export function SearchForm() {
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [results, setResults] = useState<RecommendationResult[]>([]);
   const [tripContext, setTripContext] = useState<TripContext | null>(null);
+  const [searchId, setSearchId] = useState<string | null>(null);
   const todayISODate = getTodayISODate();
 
   // Origen por defecto: ya no siempre Dallas. Prioridad: 1) ?origin=XXX en
@@ -142,7 +143,9 @@ export function SearchForm() {
     }
 
     setStatus("loading");
-    trackEvent({ name: "search_performed", originAirportCode: form.originAirportCode, budgetUSD });
+    const currentSearchId = newSearchId();
+    setSearchId(currentSearchId);
+    trackEvent({ name: "search_performed", searchId: currentSearchId, originAirportCode: form.originAirportCode, budgetUSD });
     try {
       const res = await fetch("/api/recommendations", {
         method: "POST",
@@ -165,7 +168,14 @@ export function SearchForm() {
       setResults(data.recommendations);
       setTripContext({ originAirportCode: form.originAirportCode, startDate: form.startDate, endDate: form.endDate, adults });
       for (const r of data.recommendations) {
-        trackEvent({ name: "recommendation_shown", destinationId: r.destinationId, rank: r.rank, finalScore: r.finalScore });
+        trackEvent({
+          name: "recommendation_shown",
+          searchId: currentSearchId,
+          destinationId: r.destinationId,
+          rank: r.rank,
+          finalScore: r.finalScore,
+          subScores: r.subScores,
+        });
       }
       setStatus("done");
     } catch (err) {
@@ -269,7 +279,7 @@ export function SearchForm() {
       {status === "done" && results.length > 0 && tripContext && (
         <div className="flex flex-col gap-3">
           {results.map((r) => (
-            <ResultCard key={r.destinationId} result={r} tripContext={tripContext} />
+            <ResultCard key={r.destinationId} result={r} tripContext={tripContext} searchId={searchId} />
           ))}
         </div>
       )}
