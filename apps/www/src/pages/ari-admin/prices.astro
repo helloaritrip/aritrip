@@ -100,9 +100,10 @@ const pageData = {
         id="city-search"
         type="text"
         autocomplete="off"
-        placeholder="Type a city — e.g. Cancún, Bogotá, Aspen..."
-        class="w-full rounded-md border border-rule bg-surface px-3 py-2 text-ink placeholder:text-muted focus:outline focus:outline-2 focus:outline-accent"
+        placeholder="Type a city, or click to see all 40..."
+        class="w-full rounded-md border border-rule bg-surface px-3 py-2 pr-8 text-ink placeholder:text-muted focus:outline focus:outline-2 focus:outline-accent"
       />
+      <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden="true">▾</span>
       <div
         id="city-dropdown"
         class="absolute left-0 right-0 top-full z-10 mt-1 hidden max-h-72 overflow-y-auto rounded-md border border-rule bg-surface shadow-lg"
@@ -185,8 +186,11 @@ const pageData = {
       dropdown.innerHTML = "";
       return;
     }
+    // Sin tope — antes cortaba en 8 resultados, así que escribiendo poco
+    // o nada no se podía ver el resto del catálogo. El contenedor ya
+    // scrollea (max-h-72 overflow-y-auto), así que mostrar las 40 no
+    // rompe el layout.
     dropdown.innerHTML = matches
-      .slice(0, 8)
       .map(
         (c) => `
         <button type="button" data-city-id="${c.id}" class="city-option flex w-full flex-col gap-0.5 px-3 py-2 text-left hover:bg-bg">
@@ -211,15 +215,18 @@ const pageData = {
       .toLowerCase();
   }
 
-  searchInput.addEventListener("input", () => {
+  // Devuelve las ciudades que coinciden con lo tipeado, o el catálogo
+  // completo (ya ordenado alfabéticamente) si el campo está vacío — así
+  // el mismo input funciona como buscador predictivo Y como dropdown
+  // para ver las 40 ciudades de una, a pedido del usuario (2026-08-10).
+  function matchesForCurrentValue(): City[] {
     const q = normalize(searchInput.value.trim());
-    if (!q) {
-      renderDropdown([]);
-      return;
-    }
-    const matches = data.cities.filter((c) => normalize(c.name).includes(q) || normalize(c.country).includes(q));
-    renderDropdown(matches);
-  });
+    if (!q) return data.cities;
+    return data.cities.filter((c) => normalize(c.name).includes(q) || normalize(c.country).includes(q));
+  }
+
+  searchInput.addEventListener("input", () => renderDropdown(matchesForCurrentValue()));
+  searchInput.addEventListener("focus", () => renderDropdown(matchesForCurrentValue()));
 
   document.addEventListener("click", (e) => {
     if (!(e.target instanceof Node)) return;
