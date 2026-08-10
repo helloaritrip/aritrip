@@ -115,7 +115,14 @@ async function fetchCheapestFare(pair: RoutePair, token: string): Promise<Travel
   url.searchParams.set("origin", pair.originAirportCode);
   url.searchParams.set("destination", pair.destinationAirportCode);
   url.searchParams.set("departure_at", period);
-  url.searchParams.set("return_at", period);
+  // Sin return_at (2026-08-10, hallazgo en vivo con logs reales) — forzar
+  // la vuelta al MISMO mes exacto que la ida hacía que casi cualquier ruta
+  // sin muchísimo volumen de búsquedas reales cacheadas devolviera
+  // data:[] (confirmado viendo la respuesta cruda en producción: 15/15
+  // rutas de un lote volvieron vacías, success:true). Un viaje real de
+  // 1-2 semanas suele cruzar de fin de mes a principio del siguiente;
+  // one_way=false ya le indica a la API que junte ida+vuelta sin
+  // necesidad de forzarle un mes de regreso.
   url.searchParams.set("one_way", "false");
   url.searchParams.set("currency", "usd");
   url.searchParams.set("market", "us");
@@ -129,11 +136,24 @@ async function fetchCheapestFare(pair: RoutePair, token: string): Promise<Travel
     return null;
   }
 
-  const body = (await res.json()) as {
+  const bodyText = await res.text();
+  let body: {
     success: boolean;
     data?: Array<{ price: number; duration: number; duration_to?: number; transfers: number; airline: string }>;
   };
-  if (!body.success || !body.data || body.data.length === 0) return null;
+  try {
+    body = JSON.parse(bodyText);
+  } catch {
+    console.warn(`[price-sync] flight ${pair.destinationId} from ${pair.originAirportCode}: invalid JSON — ${bodyText.slice(0, 200)}`);
+    return null;
+  }
+  if (!body.success || !body.data || body.data.length === 0) {
+    // Diagnóstico temporal (2026-08-10) — para saber si el hueco de
+    // rutas sin tarifa es de parámetros de la consulta o de datos reales
+    // que Travelpayouts no tiene cacheados para esta ruta/período.
+    console.warn(`[price-sync] flight ${pair.destinationId} from ${pair.originAirportCode}: no fare — ${bodyText.slice(0, 200)}`);
+    return null;
+  }
 
   const fare = body.data[0];
   if (typeof fare.price !== "number" || fare.price <= 0) return null;
@@ -172,6 +192,11 @@ async function runFlightBatch(env: Env): Promise<{ processed: number; written: n
       if (!fare) {
         skipped += 1;
       } else {
+        // searchPeriod (2026-08-10, extensión del dato observado a pedido
+        // del usuario) — de qué mes es esta tarifa, para poder analizar
+        // más adelante si nuestro ancla "medio plazo" (ver
+        // priceEstimation.ts) sigue siendo razonable, sin necesitar una
+        // colección de historial aparte todavía.
         await setDocument(
           "livePrices",
           livePriceDocId(pair.destinationId, pair.originAirportCode),
@@ -182,6 +207,7 @@ async function runFlightBatch(env: Env): Promise<{ processed: number; written: n
             avgFlightDurationMinutes: Math.round(fare.durationOneWay),
             transfers: fare.transfers,
             airline: fare.airline,
+            searchPeriod: nextMonthPeriod(),
             capturedAt: new Date().toISOString(),
           },
           credentials

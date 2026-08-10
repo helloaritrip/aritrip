@@ -6,6 +6,7 @@
  */
 import type { Destination, InterestTag, OriginHub, PriceSnapshot, Recommendation } from "./types";
 import { SCORING_WEIGHTS_V1 } from "./scoringWeights";
+import { estimateFlightPrice, daysUntil, type PriceEstimate } from "./priceEstimation";
 
 export interface RecommendationInput {
   originAirportCode: OriginHub;
@@ -27,6 +28,10 @@ export interface ScoredDestination {
   destination: Destination;
   totalEstimatedCostUSD: number;
   costBreakdown: CostBreakdown;
+  // Rango + confianza del precio de vuelo, ya multiplicado por la
+  // cantidad de viajeros (mismo total que costBreakdown.flightUSD) —
+  // motor de estimación de precios, 2026-08-10. Ver priceEstimation.ts.
+  flightPriceRange: { minUSD: number; maxUSD: number; confidence: number };
   finalScore: number;
   subScores: Recommendation["subScores"];
   reasons: string[];
@@ -172,12 +177,30 @@ export function getRecommendations(
     );
     if (!snapshot) continue;
 
+    // Motor de estimación de precios (2026-08-10) — el snapshot ya trae
+    // un precio curado/recalibrado con datos en vivo, pero ese número
+    // asume implícitamente una reserva con ~60-89 días de anticipación
+    // (ver priceEstimation.ts). Ajustarlo según cuán cerca está la
+    // fecha real que pidió el usuario es lo que evita mostrar $220
+    // cuando reservar mañana mismo cuesta $1.300 de verdad.
+    const daysToDeparture = daysUntil(input.startDate);
+    const flightEstimate: PriceEstimate = estimateFlightPrice(
+      snapshot.avgFlightCostUSD,
+      daysToDeparture,
+      snapshot.source === "provider_api"
+    );
+
     const costBreakdown: CostBreakdown = {
-      flightUSD: snapshot.avgFlightCostUSD * totalTravelers,
+      flightUSD: flightEstimate.estimatedPriceUSD * totalTravelers,
       hotelUSD: snapshot.avgHotelCostPerNightUSD.mid * tripDays * rooms,
       activitiesUSD: snapshot.avgActivityCostPerDayUSD * totalTravelers * tripDays,
     };
     const totalEstimatedCostUSD = costBreakdown.flightUSD + costBreakdown.hotelUSD + costBreakdown.activitiesUSD;
+    const flightPriceRange = {
+      minUSD: flightEstimate.minPriceUSD * totalTravelers,
+      maxUSD: flightEstimate.maxPriceUSD * totalTravelers,
+      confidence: flightEstimate.confidence,
+    };
 
     const ratio = totalEstimatedCostUSD / input.budgetUSD;
     if (ratio > 1.05) continue;
@@ -209,6 +232,7 @@ export function getRecommendations(
       destination,
       totalEstimatedCostUSD,
       costBreakdown,
+      flightPriceRange,
       finalScore: Math.round(finalScore * 10) / 10,
       subScores,
       reasons: buildReasons(destination, subScores, ratio, input.interests),

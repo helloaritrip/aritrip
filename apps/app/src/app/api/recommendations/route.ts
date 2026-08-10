@@ -101,6 +101,11 @@ export async function POST(request: Request) {
           hotelUSD: Math.round(r.costBreakdown.hotelUSD),
           activitiesUSD: Math.round(r.costBreakdown.activitiesUSD),
         },
+        flightPriceRange: {
+          minUSD: Math.round(r.flightPriceRange.minUSD),
+          maxUSD: Math.round(r.flightPriceRange.maxUSD),
+          confidence: r.flightPriceRange.confidence,
+        },
         finalScore: r.finalScore,
         subScores: r.subScores,
         reasons: r.reasons,

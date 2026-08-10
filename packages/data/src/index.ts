@@ -5,6 +5,8 @@ export { destinationCoordinates } from "./destinations/coordinates";
 export { generatePriceSnapshotsForDestination, generateAllPriceSnapshots } from "./priceSnapshots";
 export { getRecommendations } from "./recommend";
 export type { RecommendationInput, ScoredDestination, CostBreakdown } from "./recommend";
+export { estimateFlightPrice, advancePurchaseFactor, computeConfidence, classifyPrice, daysUntil, ADVANCE_PURCHASE_FACTORS } from "./priceEstimation";
+export type { PriceEstimate, PriceClassification, AdvancePurchaseBucket } from "./priceEstimation";
 export { SCORING_WEIGHTS_V1 } from "./scoringWeights";
 export {
   ORIGIN_HUB_COORDS,
