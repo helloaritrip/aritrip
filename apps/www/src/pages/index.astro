@@ -109,38 +109,34 @@ const demoTrips = [
   jsonLd={homeJsonLd}
 >
   <main class="mx-auto flex max-w-5xl flex-col gap-24 px-6 py-20">
-    <!-- 1. Hero, 2. Budget CTA — mismo bloque visual a propósito (nadie
-         quiere un salto grande entre el subtítulo y el botón), pero el CTA
-         queda en su propio <div> para seguir siendo una pieza distinguible,
-         tal como pidió el usuario. Ari (recorte real de la hoja de marca)
-         acompaña el texto, invertido en mobile (mascota arriba, texto abajo). -->
-    <section class="flex flex-col-reverse items-center gap-8 sm:flex-row sm:justify-between sm:text-left">
-      <div class="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-        <p class="text-sm font-medium uppercase tracking-wide text-accent">AriTrips</p>
-        <h1 class="max-w-lg text-4xl font-semibold text-balance text-ink sm:text-5xl">
-          Find the best trip you can take on your budget.
-        </h1>
-        <p class="max-w-md text-lg text-muted">
-          Tell us how much you want to spend. Ari finds destinations where your flight, hotel and
-          activities actually fit.
-        </p>
-        <Button href={APP_URL} className="px-6 py-3 text-base">
-          Find my trip →
-        </Button>
-      </div>
-      <img
-        src="/ari/hero-mascot.png"
-        alt="Ari, the AriTrips suitcase mascot"
-        width="260"
-        height="273"
-        class="w-48 shrink-0 sm:w-64"
-      />
+    <!-- 1. Hero, 2. Budget CTA — centrado, sin la mascota (movida a la fila
+         de ejemplos de abajo, 2026-08-10 a pedido del usuario). -->
+    <section class="flex flex-col items-center gap-6 text-center">
+      <p class="text-sm font-medium uppercase tracking-wide text-accent">AriTrips</p>
+      <h1 class="max-w-2xl text-4xl font-semibold text-balance text-ink sm:text-5xl">
+        Find the best trip you can take on your budget.
+      </h1>
+      <p class="max-w-xl text-lg text-muted">
+        Tell us how much you want to spend. Ari finds destinations where your flight, hotel and
+        activities actually fit.
+      </p>
+      <Button href={APP_URL} className="px-6 py-3 text-base">
+        Find my trip →
+      </Button>
     </section>
 
-    <!-- 3. Example trip / product demo -->
+    <!-- 3. Example trip / product demo — la mascota completa la fila como
+         primera columna, mismo ancho que las 2 cards de ejemplo. -->
     <section class="flex flex-col items-center gap-6">
       <h2 class="text-xl font-semibold text-ink">✈️ What can Ari find for you?</h2>
-      <div class="grid w-full max-w-2xl grid-cols-1 gap-6 sm:grid-cols-2">
+      <div class="grid w-full max-w-3xl grid-cols-1 gap-6 sm:grid-cols-3">
+        <img
+          src="/ari/mascot.png"
+          alt="Ari, the AriTrips suitcase mascot"
+          width="180"
+          height="270"
+          class="mx-auto h-full max-h-56 w-auto object-contain"
+        />
         {
           demoTrips.map((trip) => (
             <div class="flex items-center gap-4 rounded-lg border border-rule bg-surface p-4">
