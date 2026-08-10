@@ -1,26 +1,37 @@
 /**
- * Proxy de imágenes — busca en Wikimedia Commons (sin API key, a diferencia
- * de Unsplash que requiere cuenta de desarrollador que todavía no existe)
- * y sirve la imagen con cache agresivo. Nunca almacenamos fotos propias —
- * ver el principio de imágenes en la memoria del proyecto / System Architecture.
+ * Proxy de imágenes — dos fuentes en cascada, ambas sin costo:
+ *
+ * 1. Pexels (si hay PEXELS_API_KEY configurada) — fotografía de viaje/
+ *    lifestyle curada, mucho más pareja en calidad que Wikimedia para este
+ *    catálogo (2026-08-10, a pedido del usuario tras comparar contra un
+ *    sitio de la competencia — Wikimedia devolvía de todo, desde fotos
+ *    aéreas turísticas hasta archivo histórico sin relación con lo que se
+ *    quería mostrar).
+ * 2. Wikimedia Commons — sin API key (a diferencia de Unsplash, que
+ *    requiere cuenta de desarrollador), queda como respaldo para cuando
+ *    Pexels no tiene resultado o la key todavía no está configurada — así
+ *    el proxy sigue funcionando igual que antes sin bloquear nada.
+ *
+ * Nunca almacenamos fotos propias — ver el principio de imágenes en la
+ * memoria del proyecto / System Architecture.
  *
  * `q` (imageQuery curado, ej. "cancun turquoise beach aerial") es específico
- * a propósito para traer una foto temática, pero la búsqueda de Wikimedia no
- * maneja bien frases de 4-5 conceptos combinados — para el 90% de los
- * destinos del catálogo esa query no encontraba nada y caía siempre al SVG
- * de fallback (bug real encontrado 2026-08-06, no una falta de cobertura de
- * Wikimedia). Por eso ahora hay un segundo intento con `fallback` (el
- * nombre propio del destino, ej. "Cancún") antes de rendirse — mismo
- * proveedor, sin sumar una fuente nueva.
+ * a propósito para traer una foto temática, pero ninguna de las dos
+ * búsquedas maneja bien frases de 4-5 conceptos combinados — para el 90%
+ * de los destinos del catálogo esa query no encontraba nada y caía siempre
+ * al SVG de fallback (bug real encontrado 2026-08-06 en Wikimedia, no una
+ * falta de cobertura). Por eso hay un segundo intento con `fallback` (el
+ * nombre propio del destino, ej. "Cancún") antes de rendirse, en cada
+ * fuente por separado.
  *
  * Caché real en el borde de Cloudflare (2026-08-10, a partir de datos
  * reales de Web Analytics) — el `Cache-Control` que ya se mandaba solo
  * ayudaba al navegador de quien ya había cargado esa imagen antes; nadie
  * más se beneficiaba, así que cada visitante nuevo pagaba el viaje
- * completo a Wikimedia (búsqueda + descarga) para queries que el catálogo
- * repite todo el tiempo (~40 destinos, un puñado de queries fijas). Eso
- * explicaba tanto los outliers de LCP (hasta ~3s) como parte del CLS —
- * ver Cache API de Cloudflare Workers.
+ * completo a la fuente de imágenes (búsqueda + descarga) para queries que
+ * el catálogo repite todo el tiempo (~40 destinos, un puñado de queries
+ * fijas). Eso explicaba tanto los outliers de LCP (hasta ~3s) como parte
+ * del CLS — ver Cache API de Cloudflare Workers.
  */
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
@@ -69,6 +80,44 @@ async function searchWikimediaImageUrl(query: string): Promise<string | null> {
   return firstPage?.imageinfo?.[0]?.thumburl ?? firstPage?.imageinfo?.[0]?.url ?? null;
 }
 
+type PexelsSearchResponse = {
+  photos?: { src?: { large2x?: string; large?: string } }[];
+};
+
+async function searchPexelsImageUrl(query: string, apiKey: string): Promise<string | null> {
+  const searchUrl = new URL("https://api.pexels.com/v1/search");
+  searchUrl.searchParams.set("query", query);
+  searchUrl.searchParams.set("per_page", "1");
+  searchUrl.searchParams.set("orientation", "landscape");
+
+  const searchRes = await fetch(searchUrl, { headers: { Authorization: apiKey } });
+  if (!searchRes.ok) return null;
+
+  const searchData = (await searchRes.json()) as PexelsSearchResponse;
+  const photo = searchData.photos?.[0];
+  return photo?.src?.large2x ?? photo?.src?.large ?? null;
+}
+
+// Pexels primero (mejor calidad pareja), Wikimedia como respaldo — cada
+// fuente reintenta con `fallback` antes de pasar a la siguiente, así una
+// query rara (nicho geográfico, evento histórico) todavía tiene 4 chances
+// antes de caer al SVG placeholder.
+async function resolveImageUrl(query: string, fallbackQuery: string | null, pexelsApiKey: string | null): Promise<string | null> {
+  if (pexelsApiKey) {
+    let url = await searchPexelsImageUrl(query, pexelsApiKey);
+    if (!url && fallbackQuery && fallbackQuery !== query) {
+      url = await searchPexelsImageUrl(fallbackQuery, pexelsApiKey);
+    }
+    if (url) return url;
+  }
+
+  let url = await searchWikimediaImageUrl(query);
+  if (!url && fallbackQuery && fallbackQuery !== query) {
+    url = await searchWikimediaImageUrl(fallbackQuery);
+  }
+  return url;
+}
+
 // Límite de largo — sin esto un pedido con query gigante es una forma
 // barata de generar trabajo real (búsqueda + descarga contra Wikimedia)
 // por cada byte extra que no aporta nada a la búsqueda en sí
@@ -97,14 +146,18 @@ export async function GET(request: Request) {
   // Wikimedia sin ningún tope de cuántas veces por minuto (auditoría de
   // seguridad, 2026-08-10).
   let ctx: { waitUntil: (p: Promise<unknown>) => void } | null = null;
+  let pexelsApiKey: string | null = null;
   try {
     const cf = await getCloudflareContext({ async: true });
     ctx = cf.ctx;
-    const limiter = (cf.env as { IMAGE_PROXY_LIMITER?: { limit: (opts: { key: string }) => Promise<{ success: boolean }> } })
-      .IMAGE_PROXY_LIMITER;
-    if (limiter) {
+    const env = cf.env as {
+      IMAGE_PROXY_LIMITER?: { limit: (opts: { key: string }) => Promise<{ success: boolean }> };
+      PEXELS_API_KEY?: string;
+    };
+    pexelsApiKey = env.PEXELS_API_KEY ?? null;
+    if (env.IMAGE_PROXY_LIMITER) {
       const clientIp = request.headers.get("cf-connecting-ip") ?? "unknown";
-      const { success } = await limiter.limit({ key: clientIp });
+      const { success } = await env.IMAGE_PROXY_LIMITER.limit({ key: clientIp });
       if (!success) return fallbackResponse(429);
     }
   } catch {
@@ -121,10 +174,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    let imageUrl = await searchWikimediaImageUrl(query);
-    if (!imageUrl && fallbackQuery && fallbackQuery !== query) {
-      imageUrl = await searchWikimediaImageUrl(fallbackQuery);
-    }
+    const imageUrl = await resolveImageUrl(query, fallbackQuery, pexelsApiKey);
     if (!imageUrl) return fallbackResponse();
 
     const imageRes = await fetch(imageUrl, {
