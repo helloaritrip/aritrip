@@ -35,9 +35,21 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
     return json({ error: "Invalid request." }, 400);
   }
 
+  // Dominios permitidos para fijar como foto de portada — las dos fuentes
+  // que devuelve /api/admin/image-search (2026-08-10: el usuario quiere
+  // las dos disponibles, no que una reemplace a la otra). Sin esta lista
+  // blanca, este endpoint sería un proxy abierto para fijar cualquier URL
+  // externa como imagen de una página.
+  const ALLOWED_IMAGE_HOSTS = ["upload.wikimedia.org", "images.pexels.com"];
   const imageUrl = body.imageUrl;
-  if (!imageUrl || !imageUrl.startsWith("https://upload.wikimedia.org/")) {
-    return json({ error: "imageUrl must be a upload.wikimedia.org URL." }, 400);
+  let imageHost: string | null = null;
+  try {
+    imageHost = imageUrl ? new URL(imageUrl).hostname : null;
+  } catch {
+    imageHost = null;
+  }
+  if (!imageUrl || !imageHost || !ALLOWED_IMAGE_HOSTS.includes(imageHost)) {
+    return json({ error: `imageUrl must be from one of: ${ALLOWED_IMAGE_HOSTS.join(", ")}` }, 400);
   }
 
   const doc = await getDocument("pages", slug, credentials);

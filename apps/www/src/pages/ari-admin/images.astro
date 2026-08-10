@@ -230,7 +230,8 @@ const flaggedCount = rows.filter((r) => r.reviewStatus === "flagged").length;
     if (summaryFlagged) summaryFlagged.textContent = String(flagged);
   }
 
-  type SearchResult = { title: string; thumbUrl: string };
+  type SearchResult = { title: string; thumbUrl: string; source: "pexels" | "wikimedia" };
+  const SOURCE_LABEL: Record<string, string> = { pexels: "Pexels", wikimedia: "Wikimedia" };
 
   cards.forEach((card) => {
     const slug = card.dataset.slug!;
@@ -291,8 +292,9 @@ const flaggedCount = rows.filter((r) => r.reviewStatus === "flagged").length;
         resultsEl.innerHTML = results
           .map(
             (r, i) =>
-              `<button type="button" data-pick-index="${i}" class="aspect-[4/3] overflow-hidden rounded border border-rule hover:border-accent">
+              `<button type="button" data-pick-index="${i}" class="relative aspect-[4/3] overflow-hidden rounded border border-rule hover:border-accent">
                 <img src="${r.thumbUrl}" alt="${r.title.replace(/"/g, "&quot;")}" class="h-full w-full object-cover" />
+                <span class="absolute bottom-0.5 right-0.5 rounded bg-black/70 px-1 text-[9px] font-medium text-white">${SOURCE_LABEL[r.source] ?? r.source}</span>
               </button>`
           )
           .join("");
