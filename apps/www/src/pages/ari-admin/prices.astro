@@ -61,6 +61,7 @@ const pageData = {
     avgFlightCostUSD: d.avgFlightCostUSD as number,
     avgFlightDurationMinutes: d.avgFlightDurationMinutes as number,
     airline: (d.airline as string) ?? "",
+    transfers: typeof d.transfers === "number" ? d.transfers : null,
     capturedAt: d.capturedAt as string,
   })),
   liveHotels: liveHotelDocs.map((d) => ({
@@ -143,6 +144,7 @@ const pageData = {
     avgFlightCostUSD: number;
     avgFlightDurationMinutes: number;
     airline: string;
+    transfers: number | null;
     capturedAt: string;
   };
   type LiveHotel = { destinationId: string; avgHotelCostPerNightUSD: number; capturedAt: string };
@@ -270,7 +272,9 @@ const pageData = {
         <div class="flex items-center justify-between gap-3 p-4">
           <div>
             <p class="text-sm font-medium text-ink">${f.originLabel}</p>
-            <p class="text-xs text-muted">${f.airline ? f.airline + " · " : ""}${Math.round(f.avgFlightDurationMinutes)} min</p>
+            <p class="text-xs text-muted">${f.airline ? f.airline + " · " : ""}${Math.round(f.avgFlightDurationMinutes)} min${
+              f.transfers === null ? "" : f.transfers === 0 ? " · Nonstop" : ` · ${f.transfers} stop${f.transfers > 1 ? "s" : ""}`
+            }</p>
           </div>
           <div class="text-right">
             <p class="text-sm font-semibold text-accent">$${f.avgFlightCostUSD}</p>

@@ -20,6 +20,8 @@ export interface LiveFlightPrice {
   avgFlightCostUSD: number;
   avgFlightDurationMinutes: number;
   capturedAt: string; // ISO date
+  transfers?: number;
+  airline?: string;
 }
 
 export function livePriceDocId(destinationId: string, originAirportCode: string): string {
@@ -53,6 +55,8 @@ export function applyLivePriceOverlay(snapshots: PriceSnapshot[], livePrices: Li
       avgFlightDurationMinutes: live.avgFlightDurationMinutes || snap.avgFlightDurationMinutes,
       source: "provider_api",
       capturedAt: live.capturedAt,
+      transfers: live.transfers,
+      airline: live.airline,
     };
   });
 }

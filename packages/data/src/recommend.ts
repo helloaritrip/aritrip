@@ -32,6 +32,11 @@ export interface ScoredDestination {
   // cantidad de viajeros (mismo total que costBreakdown.flightUSD) —
   // motor de estimación de precios, 2026-08-10. Ver priceEstimation.ts.
   flightPriceRange: { minUSD: number; maxUSD: number; confidence: number };
+  // Solo presentes cuando hay un precio en vivo real para esta ruta
+  // (undefined con el estimado curado) — Travelpayouts ya incluye vuelos
+  // con escala, no solo directos, 2026-08-10 a pedido del usuario.
+  flightTransfers?: number;
+  flightAirline?: string;
   finalScore: number;
   subScores: Recommendation["subScores"];
   reasons: string[];
@@ -233,6 +238,8 @@ export function getRecommendations(
       totalEstimatedCostUSD,
       costBreakdown,
       flightPriceRange,
+      flightTransfers: snapshot.transfers,
+      flightAirline: snapshot.airline,
       finalScore: Math.round(finalScore * 10) / 10,
       subScores,
       reasons: buildReasons(destination, subScores, ratio, input.interests),

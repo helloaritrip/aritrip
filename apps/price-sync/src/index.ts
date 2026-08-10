@@ -82,11 +82,31 @@ interface RoutePair {
   destinationAirportCode: string;
 }
 
+// Destinos sin vuelo internacional directo a su propio aeropuerto — se
+// llega siempre con un tramo doméstico de conexión. Pedirle a
+// Travelpayouts origen→destino directo nunca va a devolver nada — no es
+// que falten datos, es que esa ruta de un solo tramo no existe. El
+// estimado curado en originBaseCosts.ts para estos ya asume el conector
+// doméstico (precio y duración sensiblemente más altos que un salto
+// corto real), así que no hace falta verificarlo en vivo contra un
+// vuelo directo — mejor no gastar ciclos del cron en una ruta que jamás
+// va a tener resultado.
+//  - galapagos (GPS/SCY): sin vuelo comercial internacional directo a
+//    agosto 2026 desde ningún origen — se llega vía Quito/Guayaquil.
+//    Investigado y confirmado por el usuario (2026-08-10).
+//  - cusco (CUZ): mismo patrón de 100% sin tarifa en los logs, y el
+//    curado ya luce "conectado" (JFK $780, 8h — no un salto corto) —
+//    se llega vía Lima. Inferido por el mismo patrón, no confirmado con
+//    la misma investigación puntual que Galápagos; revisar si aparece
+//    evidencia de que sí hay vuelos directos a algún origen.
+const NO_DIRECT_INTERNATIONAL_SERVICE = new Set(["galapagos", "cusco"]);
+
 function buildAllRoutePairs(): RoutePair[] {
   const pairs: RoutePair[] = [];
   const destById = new Map(destinations.map((d) => [d.id, d]));
 
   for (const destinationId of Object.keys(originBaseCosts).sort()) {
+    if (NO_DIRECT_INTERNATIONAL_SERVICE.has(destinationId)) continue;
     const destination = destById.get(destinationId);
     if (!destination) continue; // catálogo pudo cambiar desde que se curó originBaseCosts
 

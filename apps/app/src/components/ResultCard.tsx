@@ -23,6 +23,9 @@ export type RecommendationResult = {
   country: string;
   totalEstimatedCostUSD: number;
   costBreakdown: { flightUSD: number; hotelUSD: number; activitiesUSD: number };
+  flightPriceRange?: { minUSD: number; maxUSD: number; confidence: number };
+  flightTransfers?: number | null;
+  flightAirline?: string | null;
   finalScore: number;
   subScores: SubScores;
   reasons: string[];
@@ -180,6 +183,15 @@ export function ResultCard({
           <div>
             <p className="font-medium text-ink">${result.costBreakdown.flightUSD.toLocaleString()}</p>
             <p className="text-muted">Flights</p>
+            {/* Solo aparece con precio en vivo real — Travelpayouts ya
+                incluye vuelos con escala, no solo directos, esto lo hace
+                visible en vez de dejarlo sin usar (2026-08-10). */}
+            {typeof result.flightTransfers === "number" && (
+              <p className="text-[10px] text-muted">
+                {result.flightTransfers === 0 ? "Nonstop" : `${result.flightTransfers} stop${result.flightTransfers > 1 ? "s" : ""}`}
+                {result.flightAirline ? ` · ${result.flightAirline}` : ""}
+              </p>
+            )}
           </div>
           <div>
             <p className="font-medium text-ink">${result.costBreakdown.hotelUSD.toLocaleString()}</p>

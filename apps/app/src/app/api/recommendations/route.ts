@@ -106,6 +106,8 @@ export async function POST(request: Request) {
           maxUSD: Math.round(r.flightPriceRange.maxUSD),
           confidence: r.flightPriceRange.confidence,
         },
+        flightTransfers: r.flightTransfers ?? null,
+        flightAirline: r.flightAirline ?? null,
         finalScore: r.finalScore,
         subScores: r.subScores,
         reasons: r.reasons,

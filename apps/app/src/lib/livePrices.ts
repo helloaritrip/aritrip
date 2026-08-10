@@ -34,6 +34,8 @@ export async function getLivePrices(env: Env): Promise<LiveFlightPrice[]> {
         avgFlightCostUSD: d.avgFlightCostUSD as number,
         avgFlightDurationMinutes: (d.avgFlightDurationMinutes as number) ?? 0,
         capturedAt: (d.capturedAt as string) ?? new Date().toISOString(),
+        transfers: typeof d.transfers === "number" ? d.transfers : undefined,
+        airline: typeof d.airline === "string" ? d.airline : undefined,
       }));
     cachedPrices = { prices, expiresAt: Date.now() + CACHE_TTL_MS };
     return prices;

@@ -138,6 +138,13 @@ export interface PriceSnapshot {
   avgActivityCostPerDayUSD: number;
   source: "static_seed" | "provider_api";
   capturedAt: string; // ISO date
+  // Solo presentes cuando source === "provider_api" — Travelpayouts ya
+  // devuelve la tarifa más barata sin importar si es directa o con
+  // escalas (transfers viene de ahí, no es algo que filtremos nosotros),
+  // 2026-08-10, a pedido del usuario de mostrar esto en vez de dejarlo
+  // sin usar.
+  transfers?: number;
+  airline?: string;
 }
 
 export interface TripQuery {
