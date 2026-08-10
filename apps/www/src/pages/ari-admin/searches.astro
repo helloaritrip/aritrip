@@ -17,6 +17,7 @@ type TrackedEventDoc = {
   id: string;
   name?: string;
   createdAt?: string;
+  searchId?: string;
   originAirportCode?: string;
   budgetUSD?: number;
   destinationId?: string;
@@ -99,6 +100,65 @@ const topClicked = topCounts(clicked.map((e) => e.destinationId ?? "unknown"));
 const avgBudget =
   searches.length > 0
     ? Math.round(searches.reduce((sum, e) => sum + (typeof e.budgetUSD === "number" ? e.budgetUSD : 0), 0) / searches.length)
+    : null;
+
+// Acceptance Rate, con searchId real (2026-08-10) — para cada búsqueda,
+// se une "qué se mostró" con "qué se clickeó primero" y se compara contra
+// el puntaje del #1, no solo si ganó o no. Un click en el #2 con un
+// puntaje casi idéntico al #1 es una señal sana (dos opciones parecidas,
+// el usuario eligió por gusto); un click en un puntaje mucho más bajo que
+// el #1 es la señal real de que el scoring podría estar mal calibrado —
+// el "% de veces que gana el #1" solo, sin esto, puede confundirse con
+// puro sesgo de posición (la gente clickea lo primero que ve).
+type ShownEntry = { rank: number; finalScore: number };
+const shownBySearch = new Map<string, ShownEntry[]>();
+const clicksBySearch = new Map<string, { rank: number; createdAt: string }[]>();
+
+for (const e of statsEvents) {
+  if (e.name === "recommendation_shown" && e.searchId && typeof e.rank === "number" && typeof e.finalScore === "number") {
+    const arr = shownBySearch.get(e.searchId) ?? [];
+    arr.push({ rank: e.rank, finalScore: e.finalScore });
+    shownBySearch.set(e.searchId, arr);
+  }
+  if (e.name === "recommendation_clicked" && e.searchId && typeof e.rank === "number") {
+    const arr = clicksBySearch.get(e.searchId) ?? [];
+    arr.push({ rank: e.rank, createdAt: e.createdAt ?? "" });
+    clicksBySearch.set(e.searchId, arr);
+  }
+}
+
+type SearchOutcome = { firstClickRank: number; rank1Score: number; clickedScore: number };
+const outcomes: SearchOutcome[] = [];
+
+for (const [searchId, clicks] of clicksBySearch) {
+  const shownList = shownBySearch.get(searchId);
+  if (!shownList) continue;
+  const rank1 = shownList.find((s) => s.rank === 1);
+  // Sin el #1 en lo que se trajo, la muestra está incompleta para esta
+  // búsqueda (puede haber quedado cortada en el borde de STATS_SAMPLE_SIZE)
+  // — se descarta en vez de mostrar un número engañoso.
+  if (!rank1) continue;
+
+  const firstClick = [...clicks].sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
+  const clickedShown = shownList.find((s) => s.rank === firstClick.rank);
+  if (!clickedShown) continue;
+
+  outcomes.push({ firstClickRank: firstClick.rank, rank1Score: rank1.finalScore, clickedScore: clickedShown.finalScore });
+}
+
+const MIN_OUTCOMES_FOR_CONFIDENCE = 5;
+const totalOutcomes = outcomes.length;
+const acceptancePct = (predicate: (o: SearchOutcome) => boolean) =>
+  totalOutcomes > 0 ? Math.round((outcomes.filter(predicate).length / totalOutcomes) * 1000) / 10 : null;
+
+const rank1Pct = acceptancePct((o) => o.firstClickRank === 1);
+const rank2Pct = acceptancePct((o) => o.firstClickRank === 2);
+const rank3PlusPct = acceptancePct((o) => o.firstClickRank >= 3);
+
+const notRank1 = outcomes.filter((o) => o.firstClickRank !== 1);
+const avgScoreGap =
+  notRank1.length > 0
+    ? Math.round((notRank1.reduce((sum, o) => sum + (o.rank1Score - o.clickedScore), 0) / notRank1.length) * 10) / 10
     : null;
 
 function formatEvent(e: TrackedEventDoc): string {
@@ -196,6 +256,57 @@ const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
               ))}
             </div>
           </div>
+        </div>
+
+        <div class="flex flex-col gap-3 rounded-lg border border-rule bg-surface p-5">
+          <div>
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Acceptance Rate</h2>
+            <p class="text-xs text-muted">
+              De las búsquedas donde se puede unir qué se mostró con qué se clickeó primero — {totalOutcomes} hasta ahora.
+            </p>
+          </div>
+
+          {totalOutcomes === 0 ? (
+            <p class="text-sm text-muted">
+              Todavía no hay ninguna búsqueda completa (con clic) desde que se agregó el searchId — va a empezar a
+              llenarse con uso real.
+            </p>
+          ) : (
+            <>
+              {totalOutcomes < MIN_OUTCOMES_FOR_CONFIDENCE && (
+                <p class="rounded-md bg-highlight/10 px-3 py-2 text-xs text-highlight">
+                  Todavía es poca muestra ({totalOutcomes}) — estos porcentajes van a moverse mucho hasta que haya al
+                  menos {MIN_OUTCOMES_FOR_CONFIDENCE}.
+                </p>
+              )}
+
+              <div class="grid grid-cols-3 gap-3">
+                <div class="rounded-md bg-bg p-3 text-center">
+                  <p class="text-xl font-semibold text-ink">{rank1Pct}%</p>
+                  <p class="text-xs text-muted">Eligió el #1</p>
+                </div>
+                <div class="rounded-md bg-bg p-3 text-center">
+                  <p class="text-xl font-semibold text-ink">{rank2Pct}%</p>
+                  <p class="text-xs text-muted">Eligió el #2</p>
+                </div>
+                <div class="rounded-md bg-bg p-3 text-center">
+                  <p class="text-xl font-semibold text-ink">{rank3PlusPct}%</p>
+                  <p class="text-xs text-muted">Eligió #3 o peor</p>
+                </div>
+              </div>
+
+              <div class="rounded-md bg-bg p-3 text-sm">
+                <p class="text-ink">
+                  Cuando no eligió el #1, la diferencia de puntaje promedio con el #1 fue de{" "}
+                  <span class="font-semibold">{avgScoreGap !== null ? avgScoreGap : "—"}</span> puntos.
+                </p>
+                <p class="mt-1 text-xs text-muted">
+                  Diferencia chica (cerca de 0) = las opciones eran parecidas y eligió por gusto propio, señal sana.
+                  Diferencia grande = puede que el scoring esté sobrevalorando algo que a la gente no le importa tanto.
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         <div class="flex flex-col gap-2">
