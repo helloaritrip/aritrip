@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ShareButton } from "@aritrips/ui";
-import type { DiscoverSlot, OriginHub } from "@aritrips/data";
+import { ORIGIN_HUBS, type DiscoverSlot, type OriginHub } from "@aritrips/data";
 import { ORIGIN_LABELS } from "@/lib/originLabels";
 import { DestinationModal } from "./DestinationModal";
 
@@ -34,7 +34,20 @@ export function DiscoverSection() {
   const [openDestinationId, setOpenDestinationId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/discover")
+    // Mismo ?origin=XXX que ya lee SearchForm (viene de los links "Find
+    // your trip" de las páginas /p/best-trips-from-{city}) — sin esto,
+    // "Trip ideas" ignoraba por completo de qué página venías y siempre
+    // usaba geo-detección, aunque el formulario de arriba ya mostrara la
+    // ciudad correcta (bug real reportado por el usuario, 2026-08-10:
+    // entrar desde best-trips-from-new-york dejaba el formulario en New
+    // York pero las 3 ideas seguían siendo desde el origen geo-detectado).
+    const params = new URLSearchParams(window.location.search);
+    const originParam = params.get("origin");
+    const url =
+      originParam && (ORIGIN_HUBS as readonly string[]).includes(originParam)
+        ? `/api/discover?origin=${encodeURIComponent(originParam)}`
+        : "/api/discover";
+    fetch(url)
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then(setData)
       .catch(() => setFailed(true));
@@ -53,9 +66,11 @@ export function DiscoverSection() {
       <div className="text-center">
         <h2 className="text-xl font-semibold text-ink">Trip ideas from {ORIGIN_LABELS[data.originAirportCode]}</h2>
         <p className="text-sm text-muted">
-          {data.detectionSource === "geo"
-            ? "Based on where you're connecting from."
-            : "Showing ideas from a default origin — search above to personalize."}
+          {data.detectionSource === "override"
+            ? "Matching the city you started from."
+            : data.detectionSource === "geo"
+              ? "Based on where you're connecting from."
+              : "Showing ideas from a default origin — search above to personalize."}
         </p>
       </div>
 
