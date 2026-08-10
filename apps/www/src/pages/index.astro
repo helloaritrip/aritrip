@@ -62,12 +62,15 @@ const homeJsonLd = [
 
 // Ari es un activo de marca, no solo un logo (2026-08-10, a pedido del
 // usuario) — este bloque pasa de "Step 1/2/3" genérico a hablar de Ari
-// directamente, con su propio emoji por paso en vez de una etiqueta
-// uppercase de SaaS.
+// directamente. Los íconos son recortes reales de la hoja de marca (Ari,
+// la maleta) que compartió el usuario — no emoji. Nota: el gato 🐱 que
+// había acá antes NO era un error de branding (Ari es literalmente su
+// gata, de ahí el nombre del proyecto) pero sí era el ícono equivocado
+// para "presupuesto" — la alcancía de la hoja de marca es mucho más clara.
 const steps = [
-  { emoji: "🐱", title: "1. Give Ari your budget", body: "Tell Ari how much you want to spend." },
-  { emoji: "✈️", title: "2. Ari finds your trip", body: "Flights + hotels + activities that fit." },
-  { emoji: "🎒", title: "3. Book what you like", body: "Ari sends you directly to the provider." },
+  { icon: "/ari/icon-piggybank.png", title: "1. Give Ari your budget", body: "Tell Ari how much you want to spend." },
+  { icon: "/ari/icon-search.png", title: "2. Ari finds your trip", body: "Flights + hotels + activities that fit." },
+  { icon: "/ari/icon-map.png", title: "3. Book what you like", body: "Ari sends you directly to the provider." },
 ];
 
 // Demo estático a propósito (2026-08-10) — el objetivo es que el visitante
@@ -106,24 +109,32 @@ const demoTrips = [
   jsonLd={homeJsonLd}
 >
   <main class="mx-auto flex max-w-5xl flex-col gap-24 px-6 py-20">
-    <!-- 1. Hero, 2. Budget CTA — un mismo bloque visual a propósito (nadie
+    <!-- 1. Hero, 2. Budget CTA — mismo bloque visual a propósito (nadie
          quiere un salto grande entre el subtítulo y el botón), pero el CTA
-         y la franja de confianza quedan en su propio <div> para que sigan
-         siendo dos piezas distinguibles, tal como pidió el usuario. -->
-    <section class="flex flex-col items-center gap-6 text-center">
-      <p class="text-sm font-medium uppercase tracking-wide text-accent">AriTrips</p>
-      <h1 class="max-w-2xl text-4xl font-semibold text-balance text-ink sm:text-5xl">
-        Find the best trip you can take on your budget.
-      </h1>
-      <p class="max-w-xl text-lg text-muted">
-        Tell us how much you want to spend. Ari finds destinations where your flight, hotel and
-        activities actually fit.
-      </p>
-      <div class="flex flex-col items-center gap-3">
+         queda en su propio <div> para seguir siendo una pieza distinguible,
+         tal como pidió el usuario. Ari (recorte real de la hoja de marca)
+         acompaña el texto, invertido en mobile (mascota arriba, texto abajo). -->
+    <section class="flex flex-col-reverse items-center gap-8 sm:flex-row sm:justify-between sm:text-left">
+      <div class="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
+        <p class="text-sm font-medium uppercase tracking-wide text-accent">AriTrips</p>
+        <h1 class="max-w-lg text-4xl font-semibold text-balance text-ink sm:text-5xl">
+          Find the best trip you can take on your budget.
+        </h1>
+        <p class="max-w-md text-lg text-muted">
+          Tell us how much you want to spend. Ari finds destinations where your flight, hotel and
+          activities actually fit.
+        </p>
         <Button href={APP_URL} className="px-6 py-3 text-base">
           Find my trip →
         </Button>
       </div>
+      <img
+        src="/ari/hero-mascot.png"
+        alt="Ari, the AriTrips suitcase mascot"
+        width="260"
+        height="273"
+        class="w-48 shrink-0 sm:w-64"
+      />
     </section>
 
     <!-- 3. Example trip / product demo -->
@@ -168,7 +179,7 @@ const demoTrips = [
         {
           steps.map((step) => (
             <div class="flex flex-col items-center gap-2 rounded-lg border border-rule bg-surface p-6 text-center">
-              <span class="text-3xl" aria-hidden="true">{step.emoji}</span>
+              <img src={step.icon} alt="" width="72" height="72" class="h-16 w-16" />
               <h3 class="text-lg font-semibold text-ink">{step.title}</h3>
               <p class="text-sm text-muted">{step.body}</p>
             </div>
