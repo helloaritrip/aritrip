@@ -1,0 +1,198 @@
+---
+import { env } from "cloudflare:workers";
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { getAdminSession } from "../../lib/requireAdminSession";
+import { listDocuments, destinations, ORIGIN_LABELS, type OriginHub } from "@aritrips/data";
+
+export const prerender = false;
+
+const session = await getAdminSession(Astro.cookies, env);
+if (!session) {
+  return Astro.redirect(`/ari-admin/login?next=${encodeURIComponent(Astro.url.pathname)}`);
+}
+
+const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
+
+type TrackedEventDoc = {
+  id: string;
+  name?: string;
+  createdAt?: string;
+  originAirportCode?: string;
+  budgetUSD?: number;
+  destinationId?: string;
+  rank?: number;
+  finalScore?: number;
+  category?: string;
+};
+
+let events: TrackedEventDoc[] = [];
+let loadError: string | null = null;
+
+if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+  try {
+    const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
+    events = (await listDocuments("events", credentials)) as TrackedEventDoc[];
+    events.sort((a, b) => String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")));
+  } catch (err) {
+    console.error("[searches] Failed to load events", err);
+    loadError = "Couldn't load search data right now.";
+  }
+} else {
+  loadError = "Firestore isn't configured yet (missing secrets).";
+}
+
+const destinationName = (id?: string) => destinations.find((d) => d.id === id)?.name ?? id ?? "—";
+const originLabel = (code?: string) => ORIGIN_LABELS[code as OriginHub] ?? code ?? "—";
+
+const searches = events.filter((e) => e.name === "search_performed");
+const shown = events.filter((e) => e.name === "recommendation_shown");
+const clicked = events.filter((e) => e.name === "recommendation_clicked");
+
+// CTR aproximado — sin un searchId compartido entre eventos todavía no
+// se puede saber con certeza si un click pertenece a una búsqueda
+// puntual, así que esto es una razón agregada (clicks totales / vistas
+// totales), no "por búsqueda". Suficiente para una primera lectura de
+// tendencia; una versión por-búsqueda real necesita ese searchId.
+const roughCTR = shown.length > 0 ? Math.round((clicked.length / shown.length) * 1000) / 10 : null;
+
+function topCounts<T extends string>(items: T[], limit = 8): { key: T; count: number }[] {
+  const counts = new Map<T, number>();
+  for (const item of items) counts.set(item, (counts.get(item) ?? 0) + 1);
+  return [...counts.entries()]
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+}
+
+const topOrigins = topCounts(searches.map((e) => e.originAirportCode ?? "unknown"));
+const topShown = topCounts(shown.map((e) => e.destinationId ?? "unknown"));
+const topClicked = topCounts(clicked.map((e) => e.destinationId ?? "unknown"));
+
+const avgBudget =
+  searches.length > 0
+    ? Math.round(searches.reduce((sum, e) => sum + (typeof e.budgetUSD === "number" ? e.budgetUSD : 0), 0) / searches.length)
+    : null;
+
+const recentEvents = events.slice(0, 150);
+
+function formatEvent(e: TrackedEventDoc): string {
+  if (e.name === "search_performed") return `${originLabel(e.originAirportCode)} · $${(e.budgetUSD ?? 0).toLocaleString()}`;
+  if (e.name === "recommendation_shown") return `${destinationName(e.destinationId)} · rank #${e.rank} · score ${e.finalScore}`;
+  if (e.name === "recommendation_clicked") return `${destinationName(e.destinationId)} · ${e.category}`;
+  return "—";
+}
+
+function formatDate(iso?: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+---
+
+<AdminLayout title="Searches — AriTrips Admin" session={session} active="searches">
+  <div class="flex max-w-4xl flex-col gap-8">
+    <div>
+      <h1 class="text-2xl font-semibold text-ink">Searches</h1>
+      <p class="text-sm text-muted">
+        Lo que la gente busca de verdad, y qué eligió — {searches.length} búsquedas, {shown.length} recomendaciones
+        mostradas, {clicked.length} clicks registrados hasta ahora.
+      </p>
+    </div>
+
+    {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
+
+    {!loadError && events.length === 0 && (
+      <div class="rounded-lg border border-dashed border-rule bg-surface/50 p-8 text-center text-sm text-muted">
+        Todavía no hay datos — van a empezar a aparecer acá apenas alguien use el buscador.
+      </div>
+    )}
+
+    {events.length > 0 && (
+      <>
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div class="rounded-lg border border-rule bg-surface p-4">
+            <p class="text-2xl font-semibold text-ink">{searches.length}</p>
+            <p class="text-xs text-muted">Búsquedas</p>
+          </div>
+          <div class="rounded-lg border border-rule bg-surface p-4">
+            <p class="text-2xl font-semibold text-ink">{avgBudget !== null ? `$${avgBudget.toLocaleString()}` : "—"}</p>
+            <p class="text-xs text-muted">Budget promedio</p>
+          </div>
+          <div class="rounded-lg border border-rule bg-surface p-4">
+            <p class="text-2xl font-semibold text-ink">{shown.length}</p>
+            <p class="text-xs text-muted">Recomendaciones mostradas</p>
+          </div>
+          <div class="rounded-lg border border-rule bg-surface p-4">
+            <p class="text-2xl font-semibold text-ink">{roughCTR !== null ? `${roughCTR}%` : "—"}</p>
+            <p class="text-xs text-muted">CTR agregado (no por búsqueda)</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div class="flex flex-col gap-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Top orígenes</h2>
+            <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+              {topOrigins.length === 0 && <p class="p-3 text-sm text-muted">Sin datos.</p>}
+              {topOrigins.map((o) => (
+                <div class="flex items-center justify-between p-3 text-sm">
+                  <span class="text-ink">{originLabel(o.key)}</span>
+                  <span class="text-muted">{o.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Más mostrados</h2>
+            <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+              {topShown.length === 0 && <p class="p-3 text-sm text-muted">Sin datos.</p>}
+              {topShown.map((d) => (
+                <div class="flex items-center justify-between p-3 text-sm">
+                  <span class="text-ink">{destinationName(d.key)}</span>
+                  <span class="text-muted">{d.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Más clickeados</h2>
+            <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+              {topClicked.length === 0 && <p class="p-3 text-sm text-muted">Sin datos.</p>}
+              {topClicked.map((d) => (
+                <div class="flex items-center justify-between p-3 text-sm">
+                  <span class="text-ink">{destinationName(d.key)}</span>
+                  <span class="text-muted">{d.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Actividad reciente</h2>
+          <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+            {recentEvents.map((e) => (
+              <div class="flex items-center justify-between gap-4 p-3 text-sm">
+                <span
+                  class={`w-44 shrink-0 rounded-full px-2 py-0.5 text-center text-xs font-medium ${
+                    e.name === "search_performed"
+                      ? "bg-accent/10 text-accent"
+                      : e.name === "recommendation_clicked"
+                        ? "bg-highlight/10 text-highlight"
+                        : "bg-rule/60 text-muted"
+                  }`}
+                >
+                  {e.name}
+                </span>
+                <span class="flex-1 truncate text-ink">{formatEvent(e)}</span>
+                <span class="shrink-0 text-xs text-muted">{formatDate(e.createdAt)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </>
+    )}
+  </div>
+</AdminLayout>
