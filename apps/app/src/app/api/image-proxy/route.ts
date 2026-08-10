@@ -13,13 +13,16 @@
  * nombre propio del destino, ej. "Cancún") antes de rendirse — mismo
  * proveedor, sin sumar una fuente nueva.
  */
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+
 const FALLBACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
   <rect width="800" height="500" fill="#c9ccd1"/>
   <text x="400" y="250" font-family="sans-serif" font-size="24" fill="#5b6472" text-anchor="middle">Image unavailable</text>
 </svg>`;
 
-function fallbackResponse(): Response {
+function fallbackResponse(status = 200): Response {
   return new Response(FALLBACK_SVG, {
+    status,
     headers: {
       "Content-Type": "image/svg+xml",
       "Cache-Control": "public, max-age=3600",
@@ -65,6 +68,25 @@ async function searchWikimediaImageUrl(query: string): Promise<string | null> {
 const MAX_QUERY_LENGTH = 120;
 
 export async function GET(request: Request) {
+  // Rate limit propio (Workers Rate Limiting API, no depende del plan de
+  // Cloudflare) — sin esto, cada pedido dispara 1-2 llamadas reales a
+  // Wikimedia sin ningún tope de cuántas veces por minuto (auditoría de
+  // seguridad, 2026-08-10).
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    const limiter = (env as { IMAGE_PROXY_LIMITER?: { limit: (opts: { key: string }) => Promise<{ success: boolean }> } })
+      .IMAGE_PROXY_LIMITER;
+    if (limiter) {
+      const clientIp = request.headers.get("cf-connecting-ip") ?? "unknown";
+      const { success } = await limiter.limit({ key: clientIp });
+      if (!success) return fallbackResponse(429);
+    }
+  } catch {
+    // Si el binding no está disponible (ej. entorno local sin Cloudflare
+    // context), no bloqueamos el proxy — mismo criterio "fail open" que
+    // el resto de las integraciones externas del proyecto.
+  }
+
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.slice(0, MAX_QUERY_LENGTH) ?? null;
   const fallbackQuery = searchParams.get("fallback")?.slice(0, MAX_QUERY_LENGTH) ?? null;
