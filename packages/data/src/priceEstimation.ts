@@ -63,10 +63,11 @@ export function advancePurchaseFactor(daysToDeparture: number): number {
 
 // Guardrails — sin esto, un precio base ya alto multiplicado por 2.00x
 // (0-2 días) podría dar un número absurdo. Y un piso: ninguna ruta real
-// cuesta menos que esto ida y vuelta.
-const MAX_TOTAL_MULTIPLIER = 2.0;
-const MIN_TOTAL_MULTIPLIER = 0.75;
-const MIN_REASONABLE_ROUND_TRIP_USD = 40;
+// cuesta menos que esto ida y vuelta. Exportadas para poder mostrarlas
+// en el panel de admin ("Travel Rules"), no solo usarlas acá adentro.
+export const MAX_TOTAL_MULTIPLIER = 2.0;
+export const MIN_TOTAL_MULTIPLIER = 0.75;
+export const MIN_REASONABLE_ROUND_TRIP_USD = 40;
 
 export interface PriceEstimate {
   estimatedPriceUSD: number;

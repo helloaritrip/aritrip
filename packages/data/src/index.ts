@@ -2,10 +2,20 @@ export * from "./types";
 export { destinations } from "./destinations";
 export { originBaseCosts, destinationBaseStayCosts } from "./destinations/originBaseCosts";
 export { destinationCoordinates } from "./destinations/coordinates";
-export { generatePriceSnapshotsForDestination, generateAllPriceSnapshots } from "./priceSnapshots";
+export { generatePriceSnapshotsForDestination, generateAllPriceSnapshots, COST_TIER_MULTIPLIER } from "./priceSnapshots";
 export { getRecommendations } from "./recommend";
 export type { RecommendationInput, ScoredDestination, CostBreakdown } from "./recommend";
-export { estimateFlightPrice, advancePurchaseFactor, computeConfidence, classifyPrice, daysUntil, ADVANCE_PURCHASE_FACTORS } from "./priceEstimation";
+export {
+  estimateFlightPrice,
+  advancePurchaseFactor,
+  computeConfidence,
+  classifyPrice,
+  daysUntil,
+  ADVANCE_PURCHASE_FACTORS,
+  MAX_TOTAL_MULTIPLIER,
+  MIN_TOTAL_MULTIPLIER,
+  MIN_REASONABLE_ROUND_TRIP_USD,
+} from "./priceEstimation";
 export type { PriceEstimate, PriceClassification, AdvancePurchaseBucket } from "./priceEstimation";
 export { SCORING_WEIGHTS_V1 } from "./scoringWeights";
 export {

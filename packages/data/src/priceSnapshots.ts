@@ -1,7 +1,7 @@
 import type { Destination, PriceSnapshot } from "./types";
 import { originBaseCosts, destinationBaseStayCosts } from "./destinations/originBaseCosts";
 
-const COST_TIER_MULTIPLIER: Record<"low" | "medium" | "high", number> = {
+export const COST_TIER_MULTIPLIER: Record<"low" | "medium" | "high", number> = {
   low: 0.85,
   medium: 1.0,
   high: 1.25,
