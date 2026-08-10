@@ -5,6 +5,7 @@ import {
   generateAllPriceSnapshots,
   applyLivePriceOverlay,
   applyLiveHotelPriceOverlay,
+  applyImageOverlay,
   getDiscoverPicks,
   nearestOriginHub,
   DEFAULT_ORIGIN_HUB,
@@ -12,6 +13,7 @@ import {
   type OriginHub,
 } from "@aritrips/data";
 import { getLivePrices, getLiveHotelPrices } from "@/lib/livePrices";
+import { getLiveImages } from "@/lib/liveImages";
 
 const curatedPriceSnapshots = generateAllPriceSnapshots(destinations);
 
@@ -48,13 +50,15 @@ export async function GET(request: Request) {
   }
 
   const { env } = await getCloudflareContext({ async: true });
-  const [livePrices, liveHotelPrices] = await Promise.all([
+  const [livePrices, liveHotelPrices, liveImages] = await Promise.all([
     getLivePrices({ FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY }),
     getLiveHotelPrices({ FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY }),
+    getLiveImages({ FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY }),
   ]);
   const priceSnapshots = applyLiveHotelPriceOverlay(applyLivePriceOverlay(curatedPriceSnapshots, livePrices), liveHotelPrices);
+  const destinationsWithImages = applyImageOverlay(destinations, liveImages);
 
-  const picks = getDiscoverPicks(originAirportCode, destinations, priceSnapshots);
+  const picks = getDiscoverPicks(originAirportCode, destinationsWithImages, priceSnapshots);
 
   return NextResponse.json({ originAirportCode, detectionSource, picks });
 }

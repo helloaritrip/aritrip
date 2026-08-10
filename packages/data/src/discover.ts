@@ -26,6 +26,7 @@ export interface DiscoverPick {
   country: string;
   estimatedFromUSD: number;
   imageQuery: string;
+  imageUrl?: string;
 }
 
 export const DEFAULT_TRIP_DAYS = 5;
@@ -104,6 +105,7 @@ export function getDiscoverPicks(
       country: best.destination.country,
       estimatedFromUSD: Math.round(best.estimatedFromUSD),
       imageQuery: best.destination.imageQuery,
+      imageUrl: best.destination.imageUrl,
     });
   }
 
@@ -120,6 +122,7 @@ export interface DiscoverDetail {
   name: string;
   country: string;
   imageQuery: string;
+  imageUrl?: string;
   tripDays: number;
   adults: number;
   startDate: string; // ISO yyyy-mm-dd, misma fecha de referencia usada para el clima/precio
@@ -186,6 +189,7 @@ export function getDiscoverDetail(
     name: destination.name,
     country: destination.country,
     imageQuery: destination.imageQuery,
+    imageUrl: destination.imageUrl,
     tripDays: DEFAULT_TRIP_DAYS,
     adults: DEFAULT_ADULTS,
     startDate,

@@ -12,6 +12,7 @@ type DestinationDetail = {
   name: string;
   country: string;
   imageQuery: string;
+  imageUrl?: string | null;
   tripDays: number;
   adults: number;
   startDate: string;
@@ -114,7 +115,7 @@ export function DestinationModal({
             <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element -- viene de un proxy propio */}
               <img
-                src={`/api/image-proxy?q=${encodeURIComponent(detail.imageQuery)}&fallback=${encodeURIComponent(detail.name)}`}
+                src={detail.imageUrl || `/api/image-proxy?q=${encodeURIComponent(detail.imageQuery)}&fallback=${encodeURIComponent(detail.name)}`}
                 alt={`${detail.name}, ${detail.country}`}
                 className="h-48 w-full object-cover"
               />

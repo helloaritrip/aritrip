@@ -31,6 +31,7 @@ export type RecommendationResult = {
   reasons: string[];
   rank: number;
   imageQuery: string;
+  imageUrl?: string | null;
   weather: { avgTempMinC: number; avgTempMaxC: number; rainfallLevel: "low" | "medium" | "high" } | null;
   // Resueltos server-side en /api/recommendations (lee Firestore, con
   // fallback) — el componente ya no arma los links él mismo, ver
@@ -106,7 +107,7 @@ export function ResultCard({
       <div className="relative">
         {/* eslint-disable-next-line @next/next/no-img-element -- viene de un proxy propio, no de next/image remote patterns */}
         <img
-          src={`/api/image-proxy?q=${encodeURIComponent(result.imageQuery)}&fallback=${encodeURIComponent(result.name)}`}
+          src={result.imageUrl || `/api/image-proxy?q=${encodeURIComponent(result.imageQuery)}&fallback=${encodeURIComponent(result.name)}`}
           alt={`${result.name}, ${result.country}`}
           className="h-48 w-full object-cover"
           loading="lazy"

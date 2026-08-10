@@ -6,12 +6,14 @@ import {
   getRecommendations,
   applyLivePriceOverlay,
   applyLiveHotelPriceOverlay,
+  applyImageOverlay,
   ORIGIN_HUBS,
   type OriginHub,
   type InterestTag,
 } from "@aritrips/data";
 import { getPartnerConfig, buildPartnerLinks } from "@/lib/partnerLinks";
 import { getLivePrices, getLiveHotelPrices } from "@/lib/livePrices";
+import { getLiveImages } from "@/lib/liveImages";
 
 // Fase 1 (MVP): catálogo 100% estático, generado en memoria. Los precios
 // de vuelo empezaron como estimados curados a mano puros (2026-08-05);
@@ -58,11 +60,13 @@ export async function POST(request: Request) {
   // getPartnerConfig ya cachean en memoria (1h y 5min respectivamente), así
   // que esto no le pega a Firestore en cada búsqueda.
   const { env } = await getCloudflareContext({ async: true });
-  const [livePrices, liveHotelPrices] = await Promise.all([
+  const [livePrices, liveHotelPrices, liveImages] = await Promise.all([
     getLivePrices({ FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY }),
     getLiveHotelPrices({ FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY }),
+    getLiveImages({ FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY }),
   ]);
   const priceSnapshots = applyLiveHotelPriceOverlay(applyLivePriceOverlay(curatedPriceSnapshots, livePrices), liveHotelPrices);
+  const destinationsWithImages = applyImageOverlay(destinations, liveImages);
 
   const results = getRecommendations(
     {
@@ -74,7 +78,7 @@ export async function POST(request: Request) {
       children: Number(children) || 0,
       interests: interests as InterestTag[],
     },
-    destinations,
+    destinationsWithImages,
     priceSnapshots
   );
 
@@ -113,6 +117,7 @@ export async function POST(request: Request) {
         reasons: r.reasons,
         rank: r.rank,
         imageQuery: r.destination.imageQuery,
+        imageUrl: r.destination.imageUrl ?? null,
         weather: season
           ? { avgTempMinC: season.avgTempC.min, avgTempMaxC: season.avgTempC.max, rainfallLevel: season.rainfallLevel }
           : null,

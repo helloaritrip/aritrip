@@ -112,6 +112,12 @@ export interface Destination {
   powerPlugType: string[];
   mobileCoverageQuality: Level;
   imageQuery: string;
+  // Foto fijada a mano desde /ari-admin/images (2026-08-10) — cuando existe,
+  // gana sobre una búsqueda en vivo por imageQuery en todos los lugares que
+  // muestran este destino (cards de recomendación, Discover, guías /p/{slug}),
+  // así lo que se aprueba en el panel se ve igual en todos lados. Ver
+  // liveImages.ts — se aplica como overlay, no vive en el catálogo estático.
+  imageUrl?: string;
 
   status: "active" | "inactive";
 }

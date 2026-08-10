@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { env } from "cloudflare:workers";
 import type { Data } from "@measured/puck";
-import { getDocument, setDocument } from "@aritrips/data";
+import { getDocument, setDocument, destinations } from "@aritrips/data";
 import { getAdminSession } from "../../../../../lib/requireAdminSession";
 import type { Props } from "../../../../../puck/config";
 
@@ -97,6 +97,19 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
   // Elegir una foto a mano es la revisión — se marca aprobada sola, sin
   // que haga falta un segundo clic en el grid de /ari-admin/images.
   await setDocument("imageReviews", slug, { slug, status: "approved", reviewedBy: session.email, reviewedAt: now }, credentials);
+
+  // Si el slug de la página coincide con un destino real del catálogo
+  // (ej. "cancun"), la foto elegida ACÁ también se guarda como la foto
+  // canónica de ese destino — así se ve igual en las cards de
+  // recomendación/Discover de apps/app, no solo en esta guía (2026-08-10,
+  // a pedido del usuario: "que vayan acorde a las fotos que hemos
+  // seleccionado"). Páginas hub (ej. "best-trips-from-panama-city") no
+  // coinciden con ningún destinationId, así que no disparan esto — su
+  // foto es del hub, no de un destino puntual.
+  const isDirectDestinationPage = destinations.some((d) => d.id === slug);
+  if (isDirectDestinationPage) {
+    await setDocument("destinationImages", slug, { destinationId: slug, imageUrl, updatedAt: now }, credentials);
+  }
 
   return json({ ok: true }, 200);
 };

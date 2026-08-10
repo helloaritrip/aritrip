@@ -36,4 +36,6 @@ export { PARTNER_CATEGORIES, PARTNER_LABELS, DEFAULT_PARTNER_CONFIG } from "./pa
 export type { PartnerCategory, PartnerConfigEntry, PartnerConfig } from "./partners";
 export { applyLivePriceOverlay, applyLiveHotelPriceOverlay, livePriceDocId } from "./livePrices";
 export type { LiveFlightPrice, LiveHotelPrice } from "./livePrices";
+export { applyImageOverlay } from "./liveImages";
+export type { LiveDestinationImage } from "./liveImages";
 export { HOTEL_KEYS } from "./hotelKeys";
