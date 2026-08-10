@@ -8,6 +8,14 @@ import type { Props } from "../../puck/config";
 
 export const prerender = false;
 
+// Sin esto, volver a esta página con el botón "atrás" del navegador (o al
+// cambiar entre pestañas) puede restaurar una copia congelada de ANTES de
+// marcar nada (bfcache) — dando la falsa impresión de que las marcas se
+// perdieron, cuando en realidad sí quedaron guardadas en Firestore (bug
+// reportado por el usuario, 2026-08-10 — confirmado con un script de
+// diagnóstico que los docs de imageReviews persistían correctamente).
+Astro.response.headers.set("Cache-Control", "no-store");
+
 const session = await getAdminSession(Astro.cookies, env);
 if (!session) {
   return Astro.redirect(`/ari-admin/login?next=${encodeURIComponent(Astro.url.pathname)}`);
@@ -99,7 +107,8 @@ const flaggedCount = rows.filter((r) => r.reviewStatus === "flagged").length;
       <h1 class="text-2xl font-semibold text-ink">Images</h1>
       <p class="text-sm text-muted">
         La foto de portada que hoy se ve en cada página de destino (/p/{"{slug}"}). {rows.length} página{rows.length === 1 ? "" : "s"}
-        con Hero — {unreviewedCount} sin revisar, {flaggedCount} marcada{flaggedCount === 1 ? "" : "s"} para cambiar.
+        con Hero — <span data-summary-unreviewed>{unreviewedCount}</span> sin revisar,{" "}
+        <span data-summary-flagged>{flaggedCount}</span> marcada{flaggedCount === 1 ? "" : "s"} para cambiar.
       </p>
     </div>
 
@@ -108,7 +117,12 @@ const flaggedCount = rows.filter((r) => r.reviewStatus === "flagged").length;
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {
         rows.map((r) => (
-          <div class="flex flex-col overflow-hidden rounded-lg border border-rule bg-surface" data-image-card data-slug={r.slug}>
+          <div
+            class="flex flex-col overflow-hidden rounded-lg border border-rule bg-surface"
+            data-image-card
+            data-slug={r.slug}
+            data-status={r.reviewStatus}
+          >
             <div class="relative aspect-[16/10] w-full overflow-hidden bg-rule/40">
               <img
                 src={imageProxyUrl(r.imageQuery, r.heading)}
@@ -173,7 +187,22 @@ const flaggedCount = rows.filter((r) => r.reviewStatus === "flagged").length;
     unreviewed: "bg-black/60 text-white",
   };
 
-  document.querySelectorAll<HTMLElement>("[data-image-card]").forEach((card) => {
+  const cards = document.querySelectorAll<HTMLElement>("[data-image-card]");
+  const summaryUnreviewed = document.querySelector<HTMLElement>("[data-summary-unreviewed]");
+  const summaryFlagged = document.querySelector<HTMLElement>("[data-summary-flagged]");
+
+  function updateSummary() {
+    let unreviewed = 0;
+    let flagged = 0;
+    cards.forEach((card) => {
+      if (card.dataset.status === "unreviewed") unreviewed++;
+      if (card.dataset.status === "flagged") flagged++;
+    });
+    if (summaryUnreviewed) summaryUnreviewed.textContent = String(unreviewed);
+    if (summaryFlagged) summaryFlagged.textContent = String(flagged);
+  }
+
+  cards.forEach((card) => {
     const slug = card.dataset.slug!;
     const badge = card.querySelector<HTMLElement>("[data-status-badge]");
     card.querySelectorAll<HTMLButtonElement>("[data-action]").forEach((btn) => {
@@ -187,8 +216,10 @@ const flaggedCount = rows.filter((r) => r.reviewStatus === "flagged").length;
             body: JSON.stringify({ slug, status }),
           });
           if (res.ok && badge) {
+            card.dataset.status = status;
             badge.textContent = STATUS_LABEL[status] ?? status;
             badge.className = `absolute right-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_CLASS[status] ?? ""}`;
+            updateSummary();
           }
         } finally {
           btn.disabled = false;
