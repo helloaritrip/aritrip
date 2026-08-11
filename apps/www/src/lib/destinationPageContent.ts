@@ -150,6 +150,7 @@ export function buildDestinationPageContent(destination: Destination) {
         text: `On the ground, most trips here revolve around a handful of things: ${signatureExperiences.map(lowerFirst).join("; ")}.`,
       },
     },
+    { type: "ExperienceGallery", props: { id: "gallery-1", destinationId: destination.id } },
     { type: "Heading", props: { id: "h-know", text: "Good to know before you go", level: "h2" } },
     {
       type: "TextBlock",

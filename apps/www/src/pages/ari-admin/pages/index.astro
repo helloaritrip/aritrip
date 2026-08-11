@@ -65,10 +65,10 @@ for (const p of pages) categoryCounts[categoryOf(p)] += 1;
       <div class="flex shrink-0 flex-wrap items-center gap-2">
         <button
           type="button"
-          id="publish-destination-pages-btn"
+          id="republish-destination-pages-btn"
           class="rounded-md border border-rule px-3 py-1.5 text-sm font-medium text-ink hover:border-accent hover:text-accent"
         >
-          🌍 Publish new destination pages
+          🖼️ Republish destination pages
         </button>
         <button
           type="button"
@@ -86,7 +86,7 @@ for (const p of pages) categoryCounts[categoryOf(p)] += 1;
       </div>
     </div>
 
-    <p id="publish-destination-status" class="text-xs text-muted"></p>
+    <p id="republish-destination-status" class="text-xs text-muted"></p>
     <p id="republish-status" class="text-xs text-muted"></p>
 
     {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
@@ -186,30 +186,30 @@ for (const p of pages) categoryCounts[categoryOf(p)] += 1;
     });
   });
 
-  document.getElementById("publish-destination-pages-btn")?.addEventListener("click", async (e) => {
+  document.getElementById("republish-destination-pages-btn")?.addEventListener("click", async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
-    const statusEl = document.getElementById("publish-destination-status")!;
+    const statusEl = document.getElementById("republish-destination-status")!;
     btn.disabled = true;
-    statusEl.textContent = "Publicando páginas de destino nuevas...";
+    statusEl.textContent = "Republicando las 48 páginas de destino...";
     try {
-      const res = await fetch("/api/admin/publish-destination-pages", { method: "POST" });
+      const res = await fetch("/api/admin/republish-destination-pages", { method: "POST" });
       const data = (await res.json().catch(() => ({}))) as {
         results?: { slug: string; status: string }[];
         error?: string;
       };
       if (res.ok && data.results) {
-        const published = data.results.filter((r) => r.status === "published").length;
-        const skipped = data.results.filter((r) => r.status === "skipped_exists").length;
-        const problems = data.results.filter((r) => r.status !== "published" && r.status !== "skipped_exists");
+        const created = data.results.filter((r) => r.status === "created").length;
+        const updated = data.results.filter((r) => r.status === "updated").length;
+        const problems = data.results.filter((r) => r.status !== "created" && r.status !== "updated");
         statusEl.textContent =
           problems.length === 0
-            ? `Listo — ${published} publicadas, ${skipped} ya existían ✓`
-            : `${published} publicadas, ${skipped} ya existían. Con problemas: ${problems.map((p) => `${p.slug} (${p.status})`).join(", ")}`;
+            ? `Listo — ${created} creadas, ${updated} actualizadas ✓`
+            : `${created} creadas, ${updated} actualizadas. Con problemas: ${problems.map((p) => `${p.slug} (${p.status})`).join(", ")}`;
       } else {
-        statusEl.textContent = data.error || "No se pudo publicar.";
+        statusEl.textContent = data.error || "No se pudo republicar.";
       }
     } catch {
-      statusEl.textContent = "No se pudo publicar (error de red).";
+      statusEl.textContent = "No se pudo republicar (error de red).";
     } finally {
       btn.disabled = false;
     }

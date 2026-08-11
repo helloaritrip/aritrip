@@ -117,6 +117,10 @@ type ImageTextSplitProps = {
   imagePosition: "left" | "right";
 };
 
+type ExperienceGalleryProps = {
+  destinationId: string;
+};
+
 export type Props = {
   Hero: HeroProps;
   Heading: HeadingProps;
@@ -130,6 +134,7 @@ export type Props = {
   CTABanner: CTABannerProps;
   DestinationGrid: DestinationGridProps;
   ImageTextSplit: ImageTextSplitProps;
+  ExperienceGallery: ExperienceGalleryProps;
 };
 
 export const config: Config<Props> = {
@@ -326,6 +331,49 @@ export const config: Config<Props> = {
                 </p>
               </div>
             </a>
+          </div>
+        );
+      },
+    },
+    // Fotos reales de las experiencias destacadas del destino (2026-08-11,
+    // a pedido del usuario tras ver las páginas de destino: "les falta
+    // ilustrar el destino"). Tira horizontal con scroll nativo (scroll-snap
+    // CSS), no un carrusel con JS con flechas/estado — mismo principio de
+    // "0 <script>" en páginas públicas que ya usa FAQAccordion (<details>
+    // nativo en vez de useState). Cada foto sale de signatureExperiences,
+    // no de un campo nuevo curado a mano — 48 destinos × hasta 3 fotos
+    // habría sido demasiado para curar una por una.
+    ExperienceGallery: {
+      fields: {
+        destinationId: { type: "select", options: destinationOptions },
+      },
+      defaultProps: { destinationId: destinations[0]?.id ?? "" },
+      render: ({ destinationId }) => {
+        const destination = destinations.find((d) => d.id === destinationId);
+        if (!destination || destination.signatureExperiences.length === 0) return <></>;
+        const photos = destination.signatureExperiences.slice(0, 3).map((experience) => ({
+          caption: experience,
+          // Sin el paréntesis aclaratorio ("(the world's 2nd largest)") —
+          // ruido para una búsqueda de imagen, útil solo como texto.
+          query: experience.replace(/\s*\([^)]*\)/g, "").trim(),
+        }));
+        return (
+          <div className="mx-auto mt-6 max-w-3xl px-6">
+            <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
+              {photos.map((photo, i) => (
+                <figure key={i} className="w-64 shrink-0 snap-start">
+                  <img
+                    src={imageProxyUrl(photo.query, destination.name)}
+                    alt={photo.caption}
+                    width="320"
+                    height="220"
+                    loading="lazy"
+                    className="h-44 w-full rounded-lg object-cover"
+                  />
+                  <figcaption className="mt-1.5 text-xs text-muted">{photo.caption}</figcaption>
+                </figure>
+              ))}
+            </div>
           </div>
         );
       },
