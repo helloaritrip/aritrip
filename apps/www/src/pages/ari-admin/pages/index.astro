@@ -2,7 +2,7 @@
 import { env } from "cloudflare:workers";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../../lib/requireAdminSession";
-import { listDocuments } from "@aritrips/data";
+import { listDocuments, destinations } from "@aritrips/data";
 import { getAdRailsEnabled } from "../../../lib/adConfig";
 
 export const prerender = false;
@@ -13,7 +13,8 @@ if (!session) {
 }
 
 const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
-let pages: { id: string; title?: unknown; status?: unknown; template?: unknown; updatedAt?: unknown }[] = [];
+type PageDoc = { id: string; title?: unknown; status?: unknown; template?: unknown; updatedAt?: unknown };
+let pages: PageDoc[] = [];
 let loadError: string | null = null;
 let adRailsEnabled = true;
 
@@ -29,6 +30,29 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
 } else {
   loadError = "Firestore isn't configured yet (missing secrets).";
 }
+
+// Categorización para los filtros de abajo — el campo `template` guardado
+// en Firestore solo distingue "hub"/"blog"/"custom" (migrate-to-firestore.ts),
+// no alcanza para separar las 40 páginas de destino individual del resto de
+// "custom" (about, comparativas). El slug + el catálogo real de destinos
+// (packages/data) son más confiables que confiar solo en ese campo.
+const destinationIds = new Set(destinations.map((d) => d.id));
+type PageCategory = "hub" | "destino" | "blog" | "otras";
+function categoryOf(p: PageDoc): PageCategory {
+  if (p.id.startsWith("best-trips-from-")) return "hub";
+  if (p.template === "blog") return "blog";
+  if (destinationIds.has(p.id)) return "destino";
+  return "otras";
+}
+const CATEGORY_LABELS: Record<"todas" | PageCategory, string> = {
+  todas: "Todas",
+  hub: "Hubs",
+  destino: "Destinos",
+  blog: "Blog",
+  otras: "Otras",
+};
+const categoryCounts: Record<"todas" | PageCategory, number> = { todas: pages.length, hub: 0, destino: 0, blog: 0, otras: 0 };
+for (const p of pages) categoryCounts[categoryOf(p)] += 1;
 ---
 
 <AdminLayout title="Pages — AriTrips Admin" session={session} active="pages">
@@ -92,10 +116,29 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
       </button>
     </form>
 
+    <div class="flex flex-wrap gap-2">
+      {
+        (Object.keys(CATEGORY_LABELS) as (keyof typeof CATEGORY_LABELS)[]).map((key) => (
+          <button
+            type="button"
+            class="page-filter-btn rounded-full border border-rule px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:border-accent aria-pressed:border-accent aria-pressed:bg-accent/10 aria-pressed:text-accent"
+            data-filter={key}
+            aria-pressed={key === "todas" ? "true" : "false"}
+          >
+            {CATEGORY_LABELS[key]} ({categoryCounts[key]})
+          </button>
+        ))
+      }
+    </div>
+
     <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
       {
         pages.map((p) => (
-          <a href={`/ari-admin/edit?slug=${encodeURIComponent(p.id)}`} class="flex items-center justify-between gap-3 p-4 hover:bg-bg">
+          <a
+            href={`/ari-admin/edit?slug=${encodeURIComponent(p.id)}`}
+            data-category={categoryOf(p)}
+            class="page-row flex items-center justify-between gap-3 p-4 hover:bg-bg"
+          >
             <div>
               <p class="text-sm font-medium text-ink">{String(p.title ?? p.id)}</p>
               <p class="text-xs text-muted">/p/{p.id}</p>
@@ -111,11 +154,30 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
         ))
       }
       {pages.length === 0 && !loadError && <p class="p-4 text-sm text-muted">No pages yet — create one above.</p>}
+      <p id="filter-empty-msg" class="hidden p-4 text-sm text-muted">No pages in this category.</p>
     </div>
   </div>
 </AdminLayout>
 
 <script>
+  const filterBtns = document.querySelectorAll<HTMLButtonElement>(".page-filter-btn");
+  const pageRows = document.querySelectorAll<HTMLAnchorElement>(".page-row");
+  const emptyMsg = document.getElementById("filter-empty-msg")!;
+
+  filterBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      filterBtns.forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+      const filter = btn.dataset.filter;
+      let visibleCount = 0;
+      pageRows.forEach((row) => {
+        const match = filter === "todas" || row.dataset.category === filter;
+        row.classList.toggle("hidden", !match);
+        if (match) visibleCount += 1;
+      });
+      emptyMsg.classList.toggle("hidden", visibleCount !== 0);
+    });
+  });
+
   document.getElementById("republish-hub-pages-btn")?.addEventListener("click", async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
     const statusEl = document.getElementById("republish-status")!;
