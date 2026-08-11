@@ -64,6 +64,17 @@ type CTAButtonProps = {
 
 type DestinationHighlightProps = {
   destinationId: string;
+  // Por qué este destino está en la página — los hubs "Best trips from
+  // {city}" (generate-hub-pages.ts) muestran 3 destinos con roles
+  // distintos (getDiscoverPicks: popular / recommended / dream), no 3
+  // "mejores opciones" iguales. Sin esto, la tarjeta mostraba siempre
+  // valueRating con la etiqueta "Value score" aunque el destino haya
+  // sido elegido por ser el más lujoso (luxuryScore), no por ser buen
+  // valor — se veía como una recomendación con puntaje bajo sin
+  // explicación (bug real reportado por el usuario, 2026-08-11).
+  // Vacío/undefined para páginas armadas a mano: se mantiene el
+  // comportamiento anterior (solo Value score, sin badge).
+  slot?: "popular" | "recommended" | "dream" | "";
 };
 
 type FeatureGridProps = {
@@ -254,17 +265,39 @@ export const config: Config<Props> = {
     DestinationHighlight: {
       fields: {
         destinationId: { type: "select", options: destinationOptions },
+        slot: {
+          type: "select",
+          options: [
+            { label: "None (just show value score)", value: "" },
+            { label: "Popular right now", value: "popular" },
+            { label: "Best value pick", value: "recommended" },
+            { label: "Dream trip (splurge)", value: "dream" },
+          ],
+        },
       },
-      defaultProps: { destinationId: destinations[0]?.id ?? "" },
+      defaultProps: { destinationId: destinations[0]?.id ?? "", slot: "" },
       // Antes max-w-md (448px) apilado en columna — se veía como una card
       // de celular perdida en medio de una página de escritorio (2026-08-11,
       // bug real reportado por el usuario, con capturas). Ahora ocupa toda
       // la columna de lectura (max-w-3xl, igual que Heading/TextBlock) y es
       // horizontal en desktop (imagen a la izquierda, ficha a la derecha) —
       // mismo patrón ya probado en la card de ejemplo de la Home.
-      render: ({ destinationId }) => {
+      render: ({ destinationId, slot }) => {
         const destination = destinations.find((d) => d.id === destinationId);
         if (!destination) return <p className="mx-auto mt-4 max-w-3xl px-6 text-sm text-muted">Destination not found.</p>;
+
+        // El badge y el score que se muestran dependen de POR QUÉ este
+        // destino está acá — mostrar siempre "Value score" (valueRating)
+        // sin importar el motivo real de la elección es lo que generaba la
+        // confusión: un destino elegido por ser el más lujoso (luxuryScore)
+        // mostraba un "Value score" bajo, como si fuera un error.
+        const SLOT_INFO: Record<string, { badge: string; scoreLabel: string; score: number }> = {
+          popular: { badge: "🔥 Popular right now", scoreLabel: "Popularity score", score: destination.popularityScore },
+          recommended: { badge: "✅ Best value pick", scoreLabel: "Value score", score: destination.valueRating },
+          dream: { badge: "✨ Dream trip (splurge)", scoreLabel: "Luxury score", score: destination.luxuryScore },
+        };
+        const info = slot ? SLOT_INFO[slot] : undefined;
+
         return (
           <div className="mx-auto mt-6 max-w-3xl px-6">
             <a
@@ -279,12 +312,17 @@ export const config: Config<Props> = {
                 className="h-48 w-full shrink-0 object-cover sm:h-auto sm:w-72"
               />
               <div className="flex flex-col justify-center gap-2 p-5">
+                {info && (
+                  <span className="w-fit rounded-full bg-highlight/10 px-2 py-0.5 text-xs font-medium text-highlight">
+                    {info.badge}
+                  </span>
+                )}
                 <h3 className="text-lg font-semibold text-ink">
                   {destination.name}, {destination.country}
                 </h3>
                 <p className="text-sm text-muted">{destination.insiderNotes}</p>
                 <p className="text-xs uppercase tracking-wide text-highlight">
-                  Value score: {destination.valueRating}/100
+                  {info ? info.scoreLabel : "Value score"}: {info ? info.score : destination.valueRating}/100
                 </p>
               </div>
             </a>

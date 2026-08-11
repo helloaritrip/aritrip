@@ -38,13 +38,24 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
         <h1 class="text-2xl font-semibold text-ink">Pages</h1>
         <p class="text-sm text-muted">Built with the Puck templates — {pages.length} page{pages.length === 1 ? "" : "s"}.</p>
       </div>
-      <a
-        href="/ari-admin/home-layout"
-        class="shrink-0 rounded-md border border-rule px-3 py-1.5 text-sm font-medium text-ink hover:border-accent hover:text-accent"
-      >
-        🎨 Edit Home layout
-      </a>
+      <div class="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          id="republish-hub-pages-btn"
+          class="rounded-md border border-rule px-3 py-1.5 text-sm font-medium text-ink hover:border-accent hover:text-accent"
+        >
+          🔄 Republish hub pages
+        </button>
+        <a
+          href="/ari-admin/home-layout"
+          class="rounded-md border border-rule px-3 py-1.5 text-sm font-medium text-ink hover:border-accent hover:text-accent"
+        >
+          🎨 Edit Home layout
+        </a>
+      </div>
     </div>
+
+    <p id="republish-status" class="text-xs text-muted"></p>
 
     {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
 
@@ -105,6 +116,34 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
 </AdminLayout>
 
 <script>
+  document.getElementById("republish-hub-pages-btn")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    const statusEl = document.getElementById("republish-status")!;
+    btn.disabled = true;
+    statusEl.textContent = "Regenerando las 24 páginas de ciudad...";
+    try {
+      const res = await fetch("/api/admin/republish-hub-pages", { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as {
+        results?: { slug: string; status: string }[];
+        error?: string;
+      };
+      if (res.ok && data.results) {
+        const updated = data.results.filter((r) => r.status === "updated").length;
+        const problems = data.results.filter((r) => r.status !== "updated");
+        statusEl.textContent =
+          problems.length === 0
+            ? `Listo — ${updated}/24 páginas republicadas ✓`
+            : `${updated}/24 republicadas. Con problemas: ${problems.map((p) => `${p.slug} (${p.status})`).join(", ")}`;
+      } else {
+        statusEl.textContent = data.error || "No se pudo republicar.";
+      }
+    } catch {
+      statusEl.textContent = "No se pudo republicar (error de red).";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
   document.getElementById("ad-rails-toggle")?.addEventListener("change", async (e) => {
     const checkbox = e.target as HTMLInputElement;
     const statusEl = document.getElementById("ad-rails-status")!;

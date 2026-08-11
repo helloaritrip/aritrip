@@ -1,0 +1,103 @@
+---
+import { env } from "cloudflare:workers";
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { getAdminSession } from "../../lib/requireAdminSession";
+import { SCORING_WEIGHTS_V1 } from "@aritrips/data";
+
+export const prerender = false;
+
+const session = await getAdminSession(Astro.cookies, env);
+if (!session) {
+  return Astro.redirect(`/ari-admin/login?next=${encodeURIComponent(Astro.url.pathname)}`);
+}
+
+// Página de solo lectura, igual que Travel Rules — estos pesos viven como
+// código en packages/data/src/scoringWeights.ts, cambiarlos requiere deploy.
+const weightRows = Object.entries(SCORING_WEIGHTS_V1.weights).sort((a, b) => b[1] - a[1]);
+---
+
+<AdminLayout title="Scoring — AriTrips Admin" session={session} active="scoring">
+  <div class="flex max-w-3xl flex-col gap-8">
+    <div>
+      <h1 class="text-2xl font-semibold text-ink">Scoring</h1>
+      <p class="text-sm text-muted">
+        Cómo Ari puntúa y elige destinos — hay <strong>dos sistemas distintos</strong>, y no es obvio a simple vista
+        cuál está usando cada pantalla del sitio.
+      </p>
+    </div>
+
+    <div class="flex flex-col gap-4 rounded-lg border border-rule bg-surface p-5">
+      <div>
+        <h2 class="text-base font-semibold text-ink">1. Búsqueda real (con presupuesto) — "Search score"</h2>
+        <p class="mt-1 text-sm text-muted">
+          Se usa cuando alguien llena el formulario con presupuesto, fechas e intereses (el buscador real de
+          app.aritrips.com). Cada destino candidato recibe un puntaje de 0 a 100 que combina 7 factores con pesos
+          fijos — la tabla de abajo. El presupuesto manda: cualquier destino que use más del 105% del presupuesto se
+          descarta antes de puntuar, no compite por más buen puntaje que tenga en el resto.
+        </p>
+      </div>
+
+      <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-bg">
+        {
+          weightRows.map(([key, value]) => (
+            <div class="flex items-center gap-3 p-3">
+              <span class="w-40 shrink-0 text-sm text-ink">{key}</span>
+              <div class="h-2 flex-1 overflow-hidden rounded-full bg-rule">
+                <div class="h-full rounded-full bg-accent" style={`width: ${value * 100}%`} />
+              </div>
+              <span class="w-12 shrink-0 text-right text-sm font-medium text-ink">{Math.round(value * 100)}%</span>
+            </div>
+          ))
+        }
+      </div>
+      <p class="text-xs text-muted">
+        Versión {SCORING_WEIGHTS_V1.version}. Suman 100%. Los ajustes de precio por anticipación de compra y por
+        temporada están en <a href="/ari-admin/travel-rules" class="text-accent hover:underline">Travel Rules</a>,
+        no acá — esos afectan el precio estimado, no el puntaje.
+      </p>
+    </div>
+
+    <div class="flex flex-col gap-4 rounded-lg border border-rule bg-surface p-5">
+      <div>
+        <h2 class="text-base font-semibold text-ink">2. Discover / hub pages (sin presupuesto) — "Discover picks"</h2>
+        <p class="mt-1 text-sm text-muted">
+          Se usa en la sección "Trip ideas" del Home de la app y en cada página "Best trips from {`{city}`}" — donde
+          todavía no hay presupuesto ni fechas del visitante. Acá <strong>no hay un puntaje único</strong>: se
+          eligen 3 destinos, cada uno ganador de un rol distinto:
+        </p>
+      </div>
+
+      <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-bg text-sm">
+        <div class="flex items-start gap-3 p-3">
+          <span class="w-fit shrink-0 rounded-full bg-highlight/10 px-2 py-0.5 text-xs font-medium text-highlight">
+            🔥 Popular right now
+          </span>
+          <span class="text-muted">Gana por <code class="text-ink">popularityScore</code> — el destino más buscado, no el más barato.</span>
+        </div>
+        <div class="flex items-start gap-3 p-3">
+          <span class="w-fit shrink-0 rounded-full bg-highlight/10 px-2 py-0.5 text-xs font-medium text-highlight">
+            ✅ Best value pick
+          </span>
+          <span class="text-muted">Gana por <code class="text-ink">valueRating</code> — acá sí es "buen valor" literal.</span>
+        </div>
+        <div class="flex items-start gap-3 p-3">
+          <span class="w-fit shrink-0 rounded-full bg-highlight/10 px-2 py-0.5 text-xs font-medium text-highlight">
+            ✨ Dream trip (splurge)
+          </span>
+          <span class="text-muted">
+            Gana por <code class="text-ink">luxuryScore</code> — a propósito el más caro/aspiracional del lote, no
+            se elige por ser buen valor.
+          </span>
+        </div>
+      </div>
+
+      <p class="text-sm text-muted">
+        <strong>Esto es lo que pasaba con Aspen:</strong> en "Best trips from Las Vegas", Aspen ganó el slot
+        "Dream trip" (luxuryScore 98/100), no el de "Best value". La tarjeta mostraba igual la etiqueta genérica
+        "Value score: 35/100" sin aclarar por qué estaba ahí — parecía una recomendación con mala nota, cuando en
+        realidad es la opción de lujo a propósito. Arreglado (2026-08-11): ahora cada tarjeta muestra un badge
+        (🔥/✅/✨) y el puntaje que de verdad la eligió, no siempre "Value score".
+      </p>
+    </div>
+  </div>
+</AdminLayout>

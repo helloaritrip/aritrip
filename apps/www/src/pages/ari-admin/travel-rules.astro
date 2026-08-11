@@ -3,7 +3,6 @@ import { env } from "cloudflare:workers";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../lib/requireAdminSession";
 import {
-  SCORING_WEIGHTS_V1,
   ADVANCE_PURCHASE_FACTORS,
   COST_TIER_MULTIPLIER,
   MAX_TOTAL_MULTIPLIER,
@@ -24,8 +23,6 @@ if (!session) {
 // pero cambiarlas todavía requiere un deploy — hacerlas editables desde
 // acá es una decisión aparte (implica que el motor las lea de Firestore
 // en cada búsqueda, con su propio costo/caché a pensar).
-const weightRows = Object.entries(SCORING_WEIGHTS_V1.weights).sort((a, b) => b[1] - a[1]);
-
 function formatDayRange(minDays: number, maxDays: number): string {
   if (maxDays === Infinity) return `${minDays}+ días`;
   if (minDays === maxDays) return `${minDays} días`;
@@ -38,31 +35,10 @@ function formatDayRange(minDays: number, maxDays: number): string {
     <div>
       <h1 class="text-2xl font-semibold text-ink">Travel Rules</h1>
       <p class="text-sm text-muted">
-        Las reglas que usa Ari hoy para puntuar destinos y estimar precios. Todavía es de solo lectura — viven como
-        código en <code class="rounded bg-surface-2 px-1 py-0.5 text-xs">packages/data</code>, cambiarlas requiere un
-        deploy.
-      </p>
-    </div>
-
-    <div class="flex flex-col gap-3">
-      <div>
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Pesos del scoring ({SCORING_WEIGHTS_V1.version})</h2>
-        <p class="text-xs text-muted">Cuánto pesa cada factor al ordenar los destinos recomendados. Suman 100%.</p>
-      </div>
-      <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
-        {weightRows.map(([key, value]) => (
-          <div class="flex items-center gap-3 p-3">
-            <span class="w-40 shrink-0 text-sm text-ink">{key}</span>
-            <div class="h-2 flex-1 overflow-hidden rounded-full bg-rule">
-              <div class="h-full rounded-full bg-accent" style={`width: ${value * 100}%`} />
-            </div>
-            <span class="w-12 shrink-0 text-right text-sm font-medium text-ink">{Math.round(value * 100)}%</span>
-          </div>
-        ))}
-      </div>
-      <p class="text-xs text-muted">
-        Además, una búsqueda descarta cualquier destino que use más del 105% del presupuesto — no compite ni por
-        puntaje, se saca antes.
+        Las reglas que usa Ari hoy para estimar precios (no para puntuar destinos — eso está en{" "}
+        <a href="/ari-admin/scoring" class="text-accent hover:underline">Scoring</a>). Todavía es de solo lectura —
+        viven como código en <code class="rounded bg-surface-2 px-1 py-0.5 text-xs">packages/data</code>, cambiarlas
+        requiere un deploy.
       </p>
     </div>
 

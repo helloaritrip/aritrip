@@ -19,68 +19,32 @@
     {
       "type": "TextBlock",
       "props": {
-        "id": "text-intro",
-        "text": "Cancún is the only true nonstop of the three from Toronto — Oaxaca and Aspen both require a layover, most often through the U.S. Flying out of YYZ, a trip to Oaxaca can start around $1,232 for flight, hotel, and activities together — not just the flight, pulled from our own cost data, not guesses."
-      }
-    },
-    {
-      "type": "Heading",
-      "props": {
-        "id": "heading-flights",
-        "text": "Getting there from Toronto",
-        "level": "h2"
-      }
-    },
-    {
-      "type": "FeatureGrid",
-      "props": {
-        "id": "flight-facts",
-        "heading": "Flight basics from YYZ",
-        "features": [
-          {
-            "icon": "✈️",
-            "title": "Cancún — nonstop, ~4h18m",
-            "text": "Air Canada, Air Transat, WestJet, Flair, and Porter all fly it direct — about 38 weekly nonstop departures, the easiest of the three routes."
-          },
-          {
-            "icon": "🔁",
-            "title": "Oaxaca — no nonstop",
-            "text": "Connects via a U.S. hub or Mexico City; total travel typically runs 6+ hours. Note: Air Canada does fly nonstop from Toronto to Puerto Escondido (PXM) — a different coastal airport in Oaxaca state — worth double-checking you're not booking that instead."
-          },
-          {
-            "icon": "🔁",
-            "title": "Aspen — no nonstop",
-            "text": "Standard routing connects through Denver, totaling 4h46m–8h25m depending on the stopover airport."
-          }
-        ]
+        "id": "text-1",
+        "text": "Flying out of YYZ, a trip to Oaxaca can start around $1,232 for flight, hotel, and activities together — not just the flight. Below: the most popular pick, our best-value pick, and one aspirational splurge — pulled from our own cost data, not guesses."
       }
     },
     {
       "type": "DestinationHighlight",
       "props": {
         "id": "dest-1",
-        "destinationId": "cancun"
+        "destinationId": "cancun",
+        "slot": "popular"
       }
     },
     {
       "type": "DestinationHighlight",
       "props": {
         "id": "dest-2",
-        "destinationId": "oaxaca"
+        "destinationId": "oaxaca",
+        "slot": "recommended"
       }
     },
     {
       "type": "DestinationHighlight",
       "props": {
         "id": "dest-3",
-        "destinationId": "aspen"
-      }
-    },
-    {
-      "type": "TextBlock",
-      "props": {
-        "id": "text-why",
-        "text": "Cancún rides the well-documented Canadian \"snowbird\" pattern — roughly a million Canadians head south each winter, and airline capacity to Mexico beach destinations grew accordingly for the 2026 season. Oaxaca is riding real, separate growth in Day of the Dead tourism, which roughly doubled from 2019 to 2022. Aspen draws Toronto skiers for drier, more reliable powder and more terrain than Whistler, at the cost of a Denver connection."
+        "destinationId": "aspen",
+        "slot": "dream"
       }
     },
     {
@@ -94,12 +58,8 @@
             "answer": "They're estimates based on our own curated cost data for this route and season, not a live quote — the real price on the partner site may be a bit higher or lower depending on exact dates."
           },
           {
-            "question": "Do I need to connect through the U.S. to reach Oaxaca or Aspen from Toronto?",
-            "answer": "Yes, both require a layover — Oaxaca via a U.S. hub or Mexico City, Aspen almost always via Denver. Cancún is the only true nonstop of the three from Toronto."
-          },
-          {
-            "question": "Is Toronto's Oaxaca flight actually going to Oaxaca City?",
-            "answer": "Double-check — Air Canada flies nonstop from Toronto to Puerto Escondido (PXM), a different airport on the Oaxaca coast. Oaxaca City itself has no nonstop from Toronto."
+            "question": "Why these destinations from Toronto?",
+            "answer": "Each one plays a different role: the most popular destination travelers from YYZ actually book, our top pick for value (full package — flight, hotel, and activities — for the money), and one aspirational splurge if you want to treat yourself. Not all three are meant to be \"the best deal.\""
           }
         ]
       }
