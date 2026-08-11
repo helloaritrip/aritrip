@@ -206,9 +206,16 @@ export const config: Config<Props> = {
         },
       },
       defaultProps: { text: "Heading", level: "h2" },
+      // mx-auto + max-w-3xl (2026-08-11, bug real reportado por el usuario:
+      // texto pegado al header, sin centrar, sin separación entre bloques)
+      // — mismo ancho de columna de lectura que TextBlock/DestinationHighlight
+      // de acá abajo, para que un heading y el párrafo que le sigue queden
+      // alineados al mismo borde en vez de cada bloque de Puck usando su
+      // propio ancho ad-hoc. Más margen arriba que abajo a propósito: separa
+      // del bloque anterior sin alejarse de su propio párrafo siguiente.
       render: ({ text, level }) => {
         const Tag = level;
-        return <Tag className="text-2xl font-semibold text-ink">{text}</Tag>;
+        return <Tag className="mx-auto mt-10 max-w-3xl px-6 text-2xl font-semibold text-balance text-ink">{text}</Tag>;
       },
     },
     TextBlock: {
@@ -216,7 +223,7 @@ export const config: Config<Props> = {
         text: { type: "textarea" },
       },
       defaultProps: { text: "Write something here." },
-      render: ({ text }) => <p className="max-w-2xl text-base leading-relaxed text-muted">{text}</p>,
+      render: ({ text }) => <p className="mx-auto mt-4 max-w-3xl px-6 text-base leading-relaxed text-muted">{text}</p>,
     },
     CTAButton: {
       fields: {
@@ -249,31 +256,39 @@ export const config: Config<Props> = {
         destinationId: { type: "select", options: destinationOptions },
       },
       defaultProps: { destinationId: destinations[0]?.id ?? "" },
+      // Antes max-w-md (448px) apilado en columna — se veía como una card
+      // de celular perdida en medio de una página de escritorio (2026-08-11,
+      // bug real reportado por el usuario, con capturas). Ahora ocupa toda
+      // la columna de lectura (max-w-3xl, igual que Heading/TextBlock) y es
+      // horizontal en desktop (imagen a la izquierda, ficha a la derecha) —
+      // mismo patrón ya probado en la card de ejemplo de la Home.
       render: ({ destinationId }) => {
         const destination = destinations.find((d) => d.id === destinationId);
-        if (!destination) return <p className="text-sm text-muted">Destination not found.</p>;
+        if (!destination) return <p className="mx-auto mt-4 max-w-3xl px-6 text-sm text-muted">Destination not found.</p>;
         return (
-          <a
-            href={`/p/${destination.id}`}
-            className="mx-auto flex max-w-md flex-col overflow-hidden rounded-lg border border-rule bg-surface transition-shadow hover:shadow-md"
-          >
-            <img
-              src={imageProxyUrl(destination.imageQuery, destination.name)}
-              alt={destination.name}
-              width="448"
-              height="192"
-              className="h-48 w-full object-cover"
-            />
-            <div className="flex flex-col gap-2 p-5">
-              <h3 className="text-lg font-semibold text-ink">
-                {destination.name}, {destination.country}
-              </h3>
-              <p className="text-sm text-muted">{destination.insiderNotes}</p>
-              <p className="text-xs uppercase tracking-wide text-highlight">
-                Value score: {destination.valueRating}/100
-              </p>
-            </div>
-          </a>
+          <div className="mx-auto mt-6 max-w-3xl px-6">
+            <a
+              href={`/p/${destination.id}`}
+              className="flex flex-col overflow-hidden rounded-lg border border-rule bg-surface transition-shadow hover:shadow-md sm:flex-row"
+            >
+              <img
+                src={imageProxyUrl(destination.imageQuery, destination.name)}
+                alt={destination.name}
+                width="320"
+                height="220"
+                className="h-48 w-full shrink-0 object-cover sm:h-auto sm:w-72"
+              />
+              <div className="flex flex-col justify-center gap-2 p-5">
+                <h3 className="text-lg font-semibold text-ink">
+                  {destination.name}, {destination.country}
+                </h3>
+                <p className="text-sm text-muted">{destination.insiderNotes}</p>
+                <p className="text-xs uppercase tracking-wide text-highlight">
+                  Value score: {destination.valueRating}/100
+                </p>
+              </div>
+            </a>
+          </div>
         );
       },
     },
