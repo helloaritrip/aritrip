@@ -18,9 +18,10 @@ export default function TermsPage() {
 
       <h2>Estimates, not quotes</h2>
       <p>
-        Costs shown (flight, hotel, activities, total) are <strong>estimates</strong> based on our own
-        curated data, not live prices. The actual price you find on a partner site may be higher or
-        lower. We do our best to keep estimates reasonable, but they are not a guarantee or a quote.
+        Costs shown (flight, hotel, activities, total) are <strong>estimates</strong> — for some
+        routes and dates pulled from live partner pricing, and otherwise based on our own curated
+        data. Either way, the actual price you find on a partner site may be higher or lower. We do
+        our best to keep estimates reasonable, but they are not a guarantee or a quote.
       </p>
 
       <h2>Affiliate relationships</h2>
@@ -33,12 +34,13 @@ export default function TermsPage() {
 
       <h2>No warranty</h2>
       <p>
-        The service is provided &quot;as is,&quot; without warranty of any kind, during this MVP
-        stage. We&apos;re a small, early-stage product — treat it accordingly.
+        The service is provided &quot;as is,&quot; without warranty of any kind. AriTrips is a small,
+        early-stage product, and we make no guarantee that recommendations, estimates, or partner
+        links will be complete, accurate, or uninterrupted at all times.
       </p>
 
       <h2>Changes</h2>
-      <p>These terms will be replaced with a version reviewed by a lawyer before real launch.</p>
+      <p>We&apos;ll update these terms as the product changes, and update the date above when we do.</p>
 
       <h2>Contact</h2>
       <p>
