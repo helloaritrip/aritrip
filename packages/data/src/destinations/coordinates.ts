@@ -46,4 +46,18 @@ export const destinationCoordinates: Record<string, { lat: number; lng: number }
   nashville: { lat: 36.1627, lng: -86.7816 },
   guadalajara: { lat: 20.6597, lng: -103.3496 },
   "iguazu-falls": { lat: -25.6953, lng: -54.4367 },
+
+  // 8 destinos domésticos EE.UU./Canadá — 2026-08-11. Mismas coords que
+  // ORIGIN_HUB_COORDS en originGeo.ts (es la misma ciudad), duplicadas acá
+  // a propósito: ese archivo es sobre hubs de origen, este es sobre
+  // destinos, y no vale la pena introducir un import cruzado por 8 pares
+  // de números que no van a cambiar.
+  "new-york": { lat: 40.64, lng: -73.78 },
+  "san-francisco": { lat: 37.62, lng: -122.38 },
+  miami: { lat: 25.8, lng: -80.29 },
+  "los-angeles": { lat: 33.94, lng: -118.41 },
+  chicago: { lat: 41.98, lng: -87.9 },
+  dallas: { lat: 32.9, lng: -97.04 },
+  toronto: { lat: 43.68, lng: -79.63 },
+  montreal: { lat: 45.47, lng: -73.74 },
 };
