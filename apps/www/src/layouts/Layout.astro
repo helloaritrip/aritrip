@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import Footer from "../components/Footer.astro";
 
 interface Props {
   title: string;
@@ -91,5 +92,6 @@ const canonicalUrl = `${SITE_URL}${canonicalPath}`;
         <slot />
       )
     }
+    <Footer />
   </body>
 </html>
