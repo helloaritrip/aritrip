@@ -12,6 +12,7 @@ import { Render } from "@measured/puck";
 import { getDocument } from "@aritrips/data";
 import { config, type Props } from "../../puck/config";
 import Layout from "../../layouts/Layout.astro";
+import { getAdRailsEnabled } from "../../lib/adConfig";
 
 export const prerender = false;
 
@@ -22,12 +23,11 @@ if (!slug || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
   return new Response("Not found", { status: 404 });
 }
 
+const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
+
 let doc: Record<string, unknown> | null;
 try {
-  doc = await getDocument("pages", slug, {
-    clientEmail: FIREBASE_CLIENT_EMAIL,
-    privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-  });
+  doc = await getDocument("pages", slug, credentials);
 } catch {
   // Un problema real de Firestore (no solo "no existe") no debe tirar un
   // 500 sin explicación — se ve igual que "no encontrado" para el visitante.
@@ -55,6 +55,7 @@ function imageProxyUrl(query: string, fallback: string): string {
 }
 
 const isBlogPost = doc.template === "blog";
+const adRailsEnabled = await getAdRailsEnabled(credentials);
 
 // Imagen para OG/Twitter: la del post de blog, o el fondo del Hero si
 // la página tiene uno — mismas fuentes que ya usa la página, sin
@@ -103,7 +104,7 @@ if (faqItems.length > 0) {
 <Layout
   title={pageTitle}
   description={pageDescription}
-  showAdRails
+  showAdRails={adRailsEnabled}
   type={isBlogPost ? "article" : "website"}
   image={pageImage}
   jsonLd={jsonLd}

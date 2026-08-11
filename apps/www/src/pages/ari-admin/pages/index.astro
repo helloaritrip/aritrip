@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../../lib/requireAdminSession";
 import { listDocuments } from "@aritrips/data";
+import { getAdRailsEnabled } from "../../../lib/adConfig";
 
 export const prerender = false;
 
@@ -14,17 +15,17 @@ if (!session) {
 const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
 let pages: { id: string; title?: unknown; status?: unknown; template?: unknown; updatedAt?: unknown }[] = [];
 let loadError: string | null = null;
+let adRailsEnabled = true;
 
 if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+  const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
   try {
-    pages = await listDocuments("pages", {
-      clientEmail: FIREBASE_CLIENT_EMAIL,
-      privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-    });
+    pages = await listDocuments("pages", credentials);
     pages.sort((a, b) => String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")));
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Failed to load pages.";
   }
+  adRailsEnabled = await getAdRailsEnabled(credentials);
 } else {
   loadError = "Firestore isn't configured yet (missing secrets).";
 }
@@ -46,6 +47,22 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
     </div>
 
     {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
+
+    <div class="flex items-center justify-between gap-4 rounded-lg border border-rule bg-surface p-4">
+      <div>
+        <p class="text-sm font-medium text-ink">Ad space rails</p>
+        <p class="text-xs text-muted">
+          Columnas de 160×600 reservadas a los costados de cada página de contenido. Apagalas mientras dure la revisión
+          de AdSense u otro momento en que no quieras mostrarlas — no requiere deploy.
+        </p>
+      </div>
+      <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+        <input type="checkbox" id="ad-rails-toggle" class="peer sr-only" checked={adRailsEnabled} />
+        <div class="h-6 w-11 rounded-full bg-rule transition-colors peer-checked:bg-accent" />
+        <div class="absolute left-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
+      </label>
+    </div>
+    <p id="ad-rails-status" class="-mt-4 text-xs text-muted"></p>
 
     <form id="new-page-form" class="flex items-end gap-3 rounded-lg border border-rule bg-surface p-4">
       <label class="flex flex-1 flex-col gap-1.5 text-sm">
@@ -88,6 +105,24 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
 </AdminLayout>
 
 <script>
+  document.getElementById("ad-rails-toggle")?.addEventListener("change", async (e) => {
+    const checkbox = e.target as HTMLInputElement;
+    const statusEl = document.getElementById("ad-rails-status")!;
+    statusEl.textContent = "Guardando...";
+    const res = await fetch("/api/admin/ad-rails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: checkbox.checked }),
+    });
+    if (res.ok) {
+      statusEl.textContent = checkbox.checked ? "Anuncios reservados: visibles ✓" : "Anuncios reservados: ocultos ✓";
+      setTimeout(() => (statusEl.textContent = ""), 2500);
+    } else {
+      checkbox.checked = !checkbox.checked;
+      statusEl.textContent = "No se pudo guardar, intentá de nuevo.";
+    }
+  });
+
   document.getElementById("new-page-form")?.addEventListener("submit", (e) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
