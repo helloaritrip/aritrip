@@ -79,6 +79,26 @@ const SUB_SCORE_ROWS: { key: keyof SubScores; label: string }[] = [
   { key: "safety", label: "Safety" },
 ];
 
+// Kiwi.com (vía Travelpayouts) soporta un parámetro `sub1` para rastrear
+// cada click por separado — confirmado a mano el 2026-08-11 generando un
+// link de prueba en el panel de Travelpayouts y resolviendo a dónde
+// redirige de verdad (kiwi.com/deep?...&sub1=...). Usamos el searchId acá:
+// una reserva que Travelpayouts reporte con un sub1 dado se puede cruzar
+// directo contra nuestra propia colección de eventos por searchId, sin
+// tener que adivinar de qué búsqueda salió. Solo aplica al link de Kiwi —
+// no confirmado que Booking/Klook acepten el mismo parámetro, así que no
+// se toca su URL.
+function withKiwiSub1(url: string, searchId: string | null): string {
+  if (!searchId) return url;
+  try {
+    const withSub = new URL(url);
+    withSub.searchParams.set("sub1", searchId);
+    return withSub.toString();
+  } catch {
+    return url;
+  }
+}
+
 function formatDateRange(startDate: string, endDate: string): string {
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
   const start = new Date(`${startDate}T00:00:00`);
@@ -218,7 +238,7 @@ export function ResultCard({
           {(Object.keys(links) as (keyof typeof links)[]).map((category) => (
             <a
               key={category}
-              href={links[category]}
+              href={category === "flight" ? withKiwiSub1(links[category]!, searchId) : links[category]}
               target="_blank"
               rel="noopener noreferrer sponsored"
               onClick={() =>
