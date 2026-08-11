@@ -14,7 +14,13 @@
  * searchId + el subScores/rank ya agregados abajo, "qué eligió el
  * usuario frente a lo que Ari puntuó" pasa a ser una consulta real, no
  * una aproximación agregada.
+ *
+ * isTest (2026-08-11) — bug real encontrado durante el arranque de Fase 2:
+ * las propias pruebas de QA (Playwright) contra el sitio en producción
+ * generaban búsquedas reales en la misma colección que después había que
+ * contar como "1,000 búsquedas reales". Ver testMode.ts.
  */
+import { isTestMode } from "./testMode";
 export type SubScoresPayload = {
   budgetFit: number;
   activitiesMatch: number;
@@ -55,10 +61,11 @@ export function trackEvent(event: TrackedEvent) {
   if (process.env.NODE_ENV !== "production") {
     console.log("[track]", event);
   }
+  const payload = { ...event, isTest: isTestMode() };
   fetch("/api/track", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(event),
+    body: JSON.stringify(payload),
   }).catch(() => {
     // best-effort — sin conexión, ad blocker, etc. no debe afectar al usuario
   });

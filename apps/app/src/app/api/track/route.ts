@@ -29,7 +29,7 @@ function isValidSubScores(v: unknown): v is SubScores {
 }
 
 type ValidatedEvent =
-  | { name: "search_performed"; searchId: string; originAirportCode: string; budgetUSD: number }
+  | { name: "search_performed"; searchId: string; originAirportCode: string; budgetUSD: number; isTest: boolean }
   | {
       name: "recommendation_shown";
       searchId: string;
@@ -37,14 +37,26 @@ type ValidatedEvent =
       rank: number;
       finalScore: number;
       subScores: SubScores;
+      isTest: boolean;
     }
-  | { name: "recommendation_clicked"; searchId?: string; destinationId: string; rank?: number; category: string };
+  | { name: "recommendation_clicked"; searchId?: string; destinationId: string; rank?: number; category: string; isTest: boolean };
+
+// isTest (2026-08-11) — las propias pruebas de QA contra producción
+// generaban búsquedas reales indistinguibles de las de un visitante real,
+// contaminando el conteo hacia las 1,000 búsquedas de la Fase 2. Ver
+// apps/app/src/lib/testMode.ts. `!== true` en vez de solo leer el
+// booleano: clientes viejos (antes de este deploy) no mandan el campo,
+// así que ausente = evento real, no test.
+function readIsTest(body: Record<string, unknown>): boolean {
+  return body.isTest === true;
+}
 
 function validateEvent(body: Record<string, unknown>): ValidatedEvent | null {
+  const isTest = readIsTest(body);
   switch (body.name) {
     case "search_performed":
       if (isShortString(body.searchId, 64) && isShortString(body.originAirportCode, 8) && isFiniteNumberInRange(body.budgetUSD, 0, 1_000_000)) {
-        return { name: "search_performed", searchId: body.searchId, originAirportCode: body.originAirportCode, budgetUSD: body.budgetUSD };
+        return { name: "search_performed", searchId: body.searchId, originAirportCode: body.originAirportCode, budgetUSD: body.budgetUSD, isTest };
       }
       return null;
     case "recommendation_shown":
@@ -62,6 +74,7 @@ function validateEvent(body: Record<string, unknown>): ValidatedEvent | null {
           rank: body.rank,
           finalScore: body.finalScore,
           subScores: body.subScores,
+          isTest,
         };
       }
       return null;
@@ -81,6 +94,7 @@ function validateEvent(body: Record<string, unknown>): ValidatedEvent | null {
         destinationId: body.destinationId,
         rank: body.rank as number | undefined,
         category: body.category,
+        isTest,
       };
     }
     default:

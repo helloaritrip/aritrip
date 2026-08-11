@@ -24,6 +24,7 @@ type TrackedEventDoc = {
   rank?: number;
   finalScore?: number;
   category?: string;
+  isTest?: boolean;
 };
 
 const PAGE_SIZE = 20;
@@ -73,9 +74,19 @@ const totalPages = Math.max(1, Math.ceil(totalEvents / PAGE_SIZE));
 const destinationName = (id?: string) => destinations.find((d) => d.id === id)?.name ?? id ?? "—";
 const originLabel = (code?: string) => ORIGIN_LABELS[code as OriginHub] ?? code ?? "—";
 
-const searches = statsEvents.filter((e) => e.name === "search_performed");
-const shown = statsEvents.filter((e) => e.name === "recommendation_shown");
-const clicked = statsEvents.filter((e) => e.name === "recommendation_clicked");
+// isTest (2026-08-11) — se excluye de TODOS los números de acá para abajo.
+// Las propias pruebas de QA (y las del founder probando desde su PC)
+// generaban búsquedas indistinguibles de las de un visitante real, y el
+// objetivo de Fase 2 es justamente contar visitantes reales. La
+// "Actividad reciente" paginada de más abajo sí las sigue mostrando (con
+// una etiqueta), para no perder la trazabilidad de qué se marcó como
+// prueba y cuándo — ver testMode.ts en apps/app.
+const testEventsInSample = statsEvents.filter((e) => e.isTest === true).length;
+const realStatsEvents = statsEvents.filter((e) => e.isTest !== true);
+
+const searches = realStatsEvents.filter((e) => e.name === "search_performed");
+const shown = realStatsEvents.filter((e) => e.name === "recommendation_shown");
+const clicked = realStatsEvents.filter((e) => e.name === "recommendation_clicked");
 
 // CTR aproximado — sin un searchId compartido entre eventos todavía no
 // se puede saber con certeza si un click pertenece a una búsqueda
@@ -114,7 +125,7 @@ type ShownEntry = { rank: number; finalScore: number };
 const shownBySearch = new Map<string, ShownEntry[]>();
 const clicksBySearch = new Map<string, { rank: number; createdAt: string }[]>();
 
-for (const e of statsEvents) {
+for (const e of realStatsEvents) {
   if (e.name === "recommendation_shown" && e.searchId && typeof e.rank === "number" && typeof e.finalScore === "number") {
     const arr = shownBySearch.get(e.searchId) ?? [];
     arr.push({ rank: e.rank, finalScore: e.finalScore });
@@ -161,6 +172,79 @@ const avgScoreGap =
     ? Math.round((notRank1.reduce((sum, o) => sum + (o.rank1Score - o.clickedScore), 0) / notRank1.length) * 10) / 10
     : null;
 
+// Desgloses de Fase 2 (2026-08-11, roadmap acordado con el head de
+// producto) — CTR real por rank/destino/categoría, más por
+// origen/presupuesto vía searchId (solo eventos con searchId, que existe
+// desde 2026-08-10 — los más viejos quedan afuera de estos 2, mismo límite
+// que ya tiene Acceptance Rate arriba).
+function ctrRows<T extends string | number>(shownItems: T[], clickedItems: T[], limit = 8): { key: T; shown: number; clicked: number; ctr: number | null }[] {
+  const shownCounts = new Map<T, number>();
+  for (const k of shownItems) shownCounts.set(k, (shownCounts.get(k) ?? 0) + 1);
+  const clickedCounts = new Map<T, number>();
+  for (const k of clickedItems) clickedCounts.set(k, (clickedCounts.get(k) ?? 0) + 1);
+
+  const keys = new Set([...shownCounts.keys(), ...clickedCounts.keys()]);
+  return [...keys]
+    .map((key) => {
+      const shownCount = shownCounts.get(key) ?? 0;
+      const clickedCount = clickedCounts.get(key) ?? 0;
+      return { key, shown: shownCount, clicked: clickedCount, ctr: shownCount > 0 ? Math.round((clickedCount / shownCount) * 1000) / 10 : null };
+    })
+    .sort((a, b) => b.shown - a.shown)
+    .slice(0, limit);
+}
+
+// rank ya viene directo en shown/clicked, sin necesidad de join.
+const ctrByRank = ctrRows(
+  shown.filter((e) => typeof e.rank === "number").map((e) => e.rank as number),
+  clicked.filter((e) => typeof e.rank === "number").map((e) => e.rank as number)
+).sort((a, b) => (a.key as number) - (b.key as number));
+
+const ctrByDestination = ctrRows(
+  shown.map((e) => e.destinationId ?? "unknown"),
+  clicked.map((e) => e.destinationId ?? "unknown")
+);
+
+// Categoría solo existe en clicked (no tiene sentido un "shown" por
+// categoría — se muestran las 5 categorías siempre, en cada card) así que
+// esto es distribución de clicks, no un CTR.
+const clicksByCategory = topCounts(clicked.map((e) => e.category ?? "unknown"), 6);
+
+// origin/budget necesitan el contexto de la búsqueda (searchId ->
+// origin/budget), que solo vive en el evento search_performed.
+const searchContext = new Map<string, { originAirportCode?: string; budgetUSD?: number }>();
+for (const e of realStatsEvents) {
+  if (e.name === "search_performed" && e.searchId) {
+    searchContext.set(e.searchId, { originAirportCode: e.originAirportCode, budgetUSD: e.budgetUSD });
+  }
+}
+
+const shownWithContext = shown.filter((e) => e.searchId && searchContext.has(e.searchId));
+const clickedWithContext = clicked.filter((e) => e.searchId && searchContext.has(e.searchId));
+
+const ctrByOrigin = ctrRows(
+  shownWithContext.map((e) => searchContext.get(e.searchId!)!.originAirportCode ?? "unknown"),
+  clickedWithContext.map((e) => searchContext.get(e.searchId!)!.originAirportCode ?? "unknown")
+);
+
+function budgetTier(budget: number | undefined): string {
+  if (typeof budget !== "number") return "unknown";
+  if (budget < 1000) return "< $1,000";
+  if (budget < 2000) return "$1,000–1,999";
+  if (budget < 3000) return "$2,000–2,999";
+  if (budget < 5000) return "$3,000–4,999";
+  return "$5,000+";
+}
+const BUDGET_TIER_ORDER = ["< $1,000", "$1,000–1,999", "$2,000–2,999", "$3,000–4,999", "$5,000+", "unknown"];
+const ctrByBudget = ctrRows(
+  shownWithContext.map((e) => budgetTier(searchContext.get(e.searchId!)!.budgetUSD)),
+  clickedWithContext.map((e) => budgetTier(searchContext.get(e.searchId!)!.budgetUSD)),
+  BUDGET_TIER_ORDER.length
+).sort((a, b) => BUDGET_TIER_ORDER.indexOf(a.key as string) - BUDGET_TIER_ORDER.indexOf(b.key as string));
+
+const eventsWithSearchId = realStatsEvents.filter((e) => e.searchId).length;
+const breakdownCoveragePct = realStatsEvents.length > 0 ? Math.round((eventsWithSearchId / realStatsEvents.length) * 100) : 0;
+
 function formatEvent(e: TrackedEventDoc): string {
   if (e.name === "search_performed") return `${originLabel(e.originAirportCode)} · $${(e.budgetUSD ?? 0).toLocaleString()}`;
   if (e.name === "recommendation_shown") return `${destinationName(e.destinationId)} · rank #${e.rank} · score ${e.finalScore}`;
@@ -186,6 +270,12 @@ const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
         Lo que la gente busca de verdad, y qué eligió — {searches.length} búsquedas, {shown.length} recomendaciones
         mostradas, {clicked.length} clicks registrados hasta ahora.
       </p>
+      {testEventsInSample > 0 && (
+        <p class="text-xs text-muted">
+          Excluidos {testEventsInSample} eventos marcados como prueba (QA, o visitas propias con{" "}
+          <code class="rounded bg-surface-2 px-1 py-0.5">?test=1</code>) — no cuentan para estos números.
+        </p>
+      )}
     </div>
 
     {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
@@ -309,6 +399,91 @@ const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
           )}
         </div>
 
+        <div class="flex flex-col gap-3 rounded-lg border border-rule bg-surface p-5">
+          <div>
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">CTR por dimensión</h2>
+            <p class="text-xs text-muted">
+              Origen y presupuesto solo cubren eventos con searchId ({breakdownCoveragePct}% de la muestra) — el resto
+              es de antes de que existiera ese campo.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div class="flex flex-col gap-2">
+              <h3 class="text-xs font-semibold uppercase tracking-wide text-muted">Por rank</h3>
+              <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-bg">
+                {ctrByRank.map((r) => (
+                  <div class="flex items-center justify-between p-2.5 text-sm">
+                    <span class="text-ink">#{r.key}</span>
+                    <span class="text-muted">{r.clicked}/{r.shown} shown</span>
+                    <span class="font-medium text-ink">{r.ctr !== null ? `${r.ctr}%` : "—"}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <h3 class="text-xs font-semibold uppercase tracking-wide text-muted">Por destino</h3>
+              <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-bg">
+                {ctrByDestination.map((r) => (
+                  <div class="flex items-center justify-between p-2.5 text-sm">
+                    <span class="truncate text-ink">{destinationName(r.key as string)}</span>
+                    <span class="shrink-0 text-muted">{r.clicked}/{r.shown}</span>
+                    <span class="shrink-0 font-medium text-ink">{r.ctr !== null ? `${r.ctr}%` : "—"}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <h3 class="text-xs font-semibold uppercase tracking-wide text-muted">Por origen</h3>
+              <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-bg">
+                {ctrByOrigin.length === 0 && <p class="p-2.5 text-sm text-muted">Sin datos con searchId todavía.</p>}
+                {ctrByOrigin.map((r) => (
+                  <div class="flex items-center justify-between p-2.5 text-sm">
+                    <span class="truncate text-ink">{originLabel(r.key as string)}</span>
+                    <span class="shrink-0 text-muted">{r.clicked}/{r.shown}</span>
+                    <span class="shrink-0 font-medium text-ink">{r.ctr !== null ? `${r.ctr}%` : "—"}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <h3 class="text-xs font-semibold uppercase tracking-wide text-muted">Por presupuesto</h3>
+              <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-bg">
+                {ctrByBudget.length === 0 && <p class="p-2.5 text-sm text-muted">Sin datos con searchId todavía.</p>}
+                {ctrByBudget.map((r) => (
+                  <div class="flex items-center justify-between p-2.5 text-sm">
+                    <span class="truncate text-ink">{r.key}</span>
+                    <span class="shrink-0 text-muted">{r.clicked}/{r.shown}</span>
+                    <span class="shrink-0 font-medium text-ink">{r.ctr !== null ? `${r.ctr}%` : "—"}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-3 rounded-lg border border-rule bg-surface p-5">
+          <div>
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Negocio — clicks por categoría</h2>
+            <p class="text-xs text-muted">
+              Todavía no hay forma de mostrar revenue real acá — el dashboard de Travelpayouts sigue en $0 de
+              comisión, así que cualquier número de "revenue estimado" sería inventado. Esto es lo único que sí
+              podemos afirmar con los datos que tenemos: cuántos clicks salieron a cada categoría de afiliado.
+            </p>
+          </div>
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {clicksByCategory.map((c) => (
+              <div class="rounded-md bg-bg p-3 text-center">
+                <p class="text-xl font-semibold text-ink">{c.count}</p>
+                <p class="text-xs text-muted">{c.key}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div class="flex flex-col gap-2">
           <div class="flex items-baseline justify-between">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Actividad reciente</h2>
@@ -329,6 +504,11 @@ const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
                   {e.name}
                 </span>
                 <span class="flex-1 truncate text-ink">{formatEvent(e)}</span>
+                {e.isTest && (
+                  <span class="shrink-0 rounded-full bg-red-600/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600">
+                    Test
+                  </span>
+                )}
                 <span class="shrink-0 text-xs text-muted">{formatDate(e.createdAt)}</span>
               </div>
             ))}
