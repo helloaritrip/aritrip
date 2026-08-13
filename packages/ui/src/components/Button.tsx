@@ -1,6 +1,6 @@
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
 
-type Variant = "primary" | "secondary";
+type Variant = "primary" | "secondary" | "highlight";
 
 type ButtonAsButton = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: Variant;
@@ -22,6 +22,10 @@ const base =
 const variants: Record<Variant, string> = {
   primary: "bg-accent text-accent-ink hover:opacity-90",
   secondary: "border border-rule text-ink hover:bg-surface",
+  // Para el único CTA que de verdad importa en una pantalla (ej. "Find my
+  // trip" del cotizador) — no reemplaza a "primary" globalmente, evita que
+  // ese cambio se propague a botones que no lo pidieron.
+  highlight: "bg-highlight text-highlight-ink hover:opacity-90",
 };
 
 /** Botón compartido — si recibe `href` se renderiza como link (uso estático en Astro, sin necesitar hidratación). */

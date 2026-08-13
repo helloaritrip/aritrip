@@ -9,8 +9,8 @@ export function Chip({ pressed, className = "", ...props }: ChipProps) {
     <button
       type="button"
       aria-pressed={pressed}
-      className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-        pressed ? "border-accent bg-accent text-accent-ink" : "border-rule text-ink hover:bg-bg"
+      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+        pressed ? "border-highlight bg-highlight/10 text-highlight" : "border-rule text-ink hover:bg-bg"
       } ${className}`}
       {...props}
     />

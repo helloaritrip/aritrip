@@ -6,6 +6,8 @@ import { destinations, ORIGIN_HUBS, DEFAULT_ORIGIN_HUB, type OriginHub, type Int
 import { ResultCard, type RecommendationResult, type TripContext } from "./ResultCard";
 import { ORIGIN_OPTIONS } from "@/lib/originLabels";
 import { trackEvent, newSearchId } from "@/lib/trackEvent";
+import { BeachIcon, AdventureIcon, CultureIcon, NightlifeIcon, FamilyIcon, HoneymoonIcon } from "@/components/Icons";
+import type { ComponentType, SVGProps } from "react";
 
 // Google Flights limita a 9 pasajeros por búsqueda; KAYAK permite hasta 9
 // adultos + 7 niños — referencia real de la industria, no un número
@@ -34,13 +36,13 @@ function getTodayISODate(): string {
 // 6 opciones, no 8 (2026-08-09) — "Food" se fusionó en "Culture" y
 // "Nature" en "Adventure" (mucho solapamiento para el usuario final);
 // 6 chips entran en una sola línea del formulario en vez de partirse.
-const INTEREST_OPTIONS: { value: InterestTag; label: string }[] = [
-  { value: "beach", label: "Beach" },
-  { value: "adventure", label: "Adventure" },
-  { value: "culture", label: "Culture" },
-  { value: "nightlife", label: "Nightlife" },
-  { value: "family", label: "Family" },
-  { value: "honeymoon", label: "Honeymoon" },
+const INTEREST_OPTIONS: { value: InterestTag; label: string; icon: ComponentType<SVGProps<SVGSVGElement>> }[] = [
+  { value: "beach", label: "Beach", icon: BeachIcon },
+  { value: "adventure", label: "Adventure", icon: AdventureIcon },
+  { value: "culture", label: "Culture", icon: CultureIcon },
+  { value: "nightlife", label: "Nightlife", icon: NightlifeIcon },
+  { value: "family", label: "Family", icon: FamilyIcon },
+  { value: "honeymoon", label: "Honeymoon", icon: HoneymoonIcon },
 ];
 
 type FormState = {
@@ -187,63 +189,81 @@ export function SearchForm() {
   return (
     <div className="flex w-full max-w-xl flex-col gap-6">
       <form onSubmit={handleSubmit} className="flex flex-col gap-5 rounded-lg border border-rule bg-surface p-6">
-        <Combobox
-          label="Flying from"
-          name="origin"
-          placeholder="Type a city or airport code..."
-          value={form.originAirportCode}
-          onChange={(value) => setForm((f) => ({ ...f, originAirportCode: value as OriginHub }))}
-          options={ORIGIN_OPTIONS}
-        />
-
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <TextInput
-            label="Departure date"
-            name="startDate"
-            type="date"
-            min={todayISODate}
-            value={form.startDate}
-            onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
-          />
-          <TextInput
-            label="Return date"
-            name="endDate"
-            type="date"
-            min={form.startDate || todayISODate}
-            value={form.endDate}
-            onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
-          />
-        </div>
-
-        <div className="grid grid-cols-4 gap-3 sm:gap-4">
-          <TextInput
-            label="Adults"
-            name="adults"
-            type="number"
-            min={1}
-            max={MAX_ADULTS}
-            value={form.adults}
-            onChange={(e) => setForm((f) => ({ ...f, adults: clampedNumberInput(e.target.value, MAX_ADULTS) }))}
-          />
-          <TextInput
-            label="Children"
-            name="children"
-            type="number"
-            min={0}
-            max={MAX_CHILDREN}
-            value={form.children}
-            onChange={(e) => setForm((f) => ({ ...f, children: clampedNumberInput(e.target.value, MAX_CHILDREN) }))}
-          />
-          <div className="col-span-2">
-            <TextInput
-              label="Total budget (USD)"
-              name="budget"
-              type="number"
-              min={0}
-              placeholder="2000"
-              value={form.budgetUSD}
-              onChange={(e) => setForm((f) => ({ ...f, budgetUSD: e.target.value }))}
+        {/* En mobile este bloque queda igual que siempre (flex-col, cada
+            grupo apilado) — a pedido explícito del usuario (2026-08-13),
+            solo el layout de desktop cambia a una sola fila. El truco es
+            `lg:contents` en los dos wrappers grid: a partir de `lg` dejan
+            de comportarse como grid y sus hijos pasan a ser ítems directos
+            del flex-row de afuera, sin tocar ninguna clase de mobile. */}
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:gap-3">
+          <div className="lg:w-48">
+            <Combobox
+              label="Flying from"
+              name="origin"
+              placeholder="Type a city or airport code..."
+              value={form.originAirportCode}
+              onChange={(value) => setForm((f) => ({ ...f, originAirportCode: value as OriginHub }))}
+              options={ORIGIN_OPTIONS}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:contents">
+            <div className="lg:w-36">
+              <TextInput
+                label="Departure date"
+                name="startDate"
+                type="date"
+                min={todayISODate}
+                value={form.startDate}
+                onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
+              />
+            </div>
+            <div className="lg:w-36">
+              <TextInput
+                label="Return date"
+                name="endDate"
+                type="date"
+                min={form.startDate || todayISODate}
+                value={form.endDate}
+                onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-3 sm:gap-4 lg:contents">
+            <div className="lg:w-20">
+              <TextInput
+                label="Adults"
+                name="adults"
+                type="number"
+                min={1}
+                max={MAX_ADULTS}
+                value={form.adults}
+                onChange={(e) => setForm((f) => ({ ...f, adults: clampedNumberInput(e.target.value, MAX_ADULTS) }))}
+              />
+            </div>
+            <div className="lg:w-20">
+              <TextInput
+                label="Children"
+                name="children"
+                type="number"
+                min={0}
+                max={MAX_CHILDREN}
+                value={form.children}
+                onChange={(e) => setForm((f) => ({ ...f, children: clampedNumberInput(e.target.value, MAX_CHILDREN) }))}
+              />
+            </div>
+            <div className="col-span-2 lg:w-32 lg:col-span-1">
+              <TextInput
+                label="Total budget (USD)"
+                name="budget"
+                type="number"
+                min={0}
+                placeholder="2000"
+                value={form.budgetUSD}
+                onChange={(e) => setForm((f) => ({ ...f, budgetUSD: e.target.value }))}
+              />
+            </div>
           </div>
         </div>
 
@@ -251,11 +271,8 @@ export function SearchForm() {
           <span className="text-sm font-medium text-ink">What are you looking for?</span>
           <div className="flex flex-wrap gap-2">
             {INTEREST_OPTIONS.map((opt) => (
-              <Chip
-                key={opt.value}
-                pressed={form.interests.includes(opt.value)}
-                onClick={() => toggleInterest(opt.value)}
-              >
+              <Chip key={opt.value} pressed={form.interests.includes(opt.value)} onClick={() => toggleInterest(opt.value)}>
+                <opt.icon className="h-4 w-4" />
                 {opt.label}
               </Chip>
             ))}
@@ -264,8 +281,14 @@ export function SearchForm() {
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-        <Button type="submit" disabled={status === "loading"}>
+        <Button type="submit" variant="highlight" disabled={status === "loading"} className="gap-2">
           {status === "loading" ? "Searching..." : "Find my trip"}
+          {status !== "loading" && (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+              <path d="M5 12h14" />
+              <path d="m13 6 6 6-6 6" />
+            </svg>
+          )}
         </Button>
       </form>
 
