@@ -62,7 +62,7 @@ export function DiscoverSection() {
   const ordered = order.map((slot) => bySlot.get(slot)).filter((p): p is DiscoverPick => Boolean(p));
 
   return (
-    <section className="flex w-full max-w-5xl flex-col items-center gap-4">
+    <section className="mx-auto flex w-full max-w-5xl flex-col items-center gap-4">
       <div className="text-center">
         <h2 className="text-xl font-semibold text-ink">Trip ideas from {ORIGIN_LABELS[data.originAirportCode]}</h2>
         <p className="text-sm text-muted">

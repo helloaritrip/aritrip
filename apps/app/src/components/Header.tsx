@@ -1,16 +1,20 @@
-"use client";
-
 import Link from "next/link";
-import { useAuth } from "@/components/AuthProvider";
-import { BriefcaseIcon, TagIcon, MapIcon, GlobeIcon, ChevronDownIcon } from "@/components/Icons";
+import { BriefcaseIcon, TagIcon, MapIcon, HoneymoonIcon, GlobeIcon, ChevronDownIcon } from "@/components/Icons";
 
 // Blog/Deals viven en aritrips.com (apps/www), no acá — un solo lugar de
 // verdad para cada uno en vez de duplicarlos en las dos apps.
 const MARKETING_URL = "https://aritrips.com";
 
+// Barra idéntica a la de apps/www (TopNav.astro) a propósito (2026-08-13,
+// a pedido del usuario: "esta barra de menu superior debe ser la misma
+// para el home como para el app") — 4 links estáticos + un solo botón fijo
+// "Join AriTrips". Antes esto cambiaba según sesión (My Favorites
+// reemplazaba a Join cuando había sesión); se sacó esa lógica porque
+// generaba dos barras visualmente distintas entre los dos sitios — la
+// versión de apps/www es estática (Astro, sin JS), así que la de acá
+// también se queda estática para que se vean iguales siempre, con o sin
+// sesión iniciada.
 export function Header() {
-  const { user } = useAuth();
-
   return (
     <header className="sticky top-0 z-30 rounded-b-3xl bg-surface shadow-sm">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
@@ -36,6 +40,10 @@ export function Header() {
             <MapIcon className="h-4 w-4" />
             Travel Guide
           </a>
+          <Link href="/favorites" className="flex items-center gap-1.5 hover:text-accent">
+            <HoneymoonIcon className="h-4 w-4" />
+            My Favorites
+          </Link>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -52,11 +60,8 @@ export function Header() {
             <ChevronDownIcon className="h-3.5 w-3.5" />
           </button>
 
-          <Link
-            href={user ? "/favorites" : "/join"}
-            className="shrink-0 rounded-full bg-muted/15 px-4 py-2 text-sm font-medium text-ink hover:bg-muted/25"
-          >
-            {user ? "My Favorites" : "Join AriTrips"}
+          <Link href="/join" className="shrink-0 rounded-full bg-muted/15 px-4 py-2 text-sm font-medium text-ink hover:bg-muted/25">
+            Join AriTrips
           </Link>
         </div>
       </div>

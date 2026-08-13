@@ -187,7 +187,7 @@ export function SearchForm() {
   }
 
   return (
-    <div className="flex w-full max-w-xl flex-col gap-6">
+    <div className="flex w-full max-w-xl flex-col gap-6 lg:max-w-5xl">
       <form onSubmit={handleSubmit} className="flex flex-col gap-5 rounded-lg border border-rule bg-surface p-6">
         {/* En mobile este bloque queda igual que siempre (flex-col, cada
             grupo apilado) — a pedido explícito del usuario (2026-08-13),
@@ -195,7 +195,7 @@ export function SearchForm() {
             `lg:contents` en los dos wrappers grid: a partir de `lg` dejan
             de comportarse como grid y sus hijos pasan a ser ítems directos
             del flex-row de afuera, sin tocar ninguna clase de mobile. */}
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:gap-3">
+        <div className="flex flex-col gap-5 lg:flex-row lg:flex-wrap lg:items-end lg:gap-4">
           <div className="lg:w-48">
             <Combobox
               label="Flying from"

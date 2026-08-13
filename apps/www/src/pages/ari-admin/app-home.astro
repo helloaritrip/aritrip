@@ -1,0 +1,194 @@
+---
+import { env } from "cloudflare:workers";
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { getAdminSession } from "../../lib/requireAdminSession";
+import { getDocument } from "@aritrips/data";
+
+export const prerender = false;
+Astro.response.headers.set("Cache-Control", "no-store");
+
+const session = await getAdminSession(Astro.cookies, env);
+if (!session) {
+  return Astro.redirect(`/ari-admin/login?next=${encodeURIComponent(Astro.url.pathname)}`);
+}
+
+const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
+let currentImageUrl: string | null = null;
+let loadError: string | null = null;
+
+const DEFAULT_QUERY = "tropical beach sunset aerial palm trees";
+
+if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+  try {
+    const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
+    const doc = await getDocument("siteConfig", "appHero", credentials);
+    currentImageUrl = typeof doc?.imageUrl === "string" ? doc.imageUrl : null;
+  } catch (err) {
+    loadError = err instanceof Error ? err.message : "Failed to load current image.";
+  }
+} else {
+  loadError = "Firestore isn't configured yet (missing secrets).";
+}
+
+const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
+const defaultImageUrl = `${APP_URL}/api/image-proxy?q=${encodeURIComponent(DEFAULT_QUERY)}&fallback=${encodeURIComponent("beach")}`;
+---
+
+<AdminLayout title="App Homepage — AriTrips Admin" session={session} active="app-home">
+  <div class="flex max-w-3xl flex-col gap-8">
+    <div>
+      <h1 class="text-2xl font-semibold text-ink">App Homepage</h1>
+      <p class="text-sm text-muted">
+        The background photo behind the quote form on app.aritrips.com. Search Pexels and Wikimedia and click a photo to use
+        it — takes effect immediately, no deploy needed.
+      </p>
+    </div>
+
+    {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
+
+    <div class="flex flex-col gap-3">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Current photo</h2>
+      <div class="relative aspect-[21/9] w-full overflow-hidden rounded-lg border border-rule bg-rule/40">
+        <img id="current-hero-img" src={currentImageUrl || defaultImageUrl} alt="" class="h-full w-full object-cover" />
+        {!currentImageUrl && (
+          <span class="absolute right-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white">
+            Default photo
+          </span>
+        )}
+      </div>
+      {currentImageUrl && (
+        <button
+          type="button"
+          id="reset-btn"
+          class="w-fit rounded-md border border-rule px-3 py-1.5 text-xs font-medium text-ink hover:border-red-600 hover:text-red-600"
+        >
+          ↺ Reset to default photo
+        </button>
+      )}
+      <p id="reset-status" class="text-xs text-muted"></p>
+    </div>
+
+    <div class="flex flex-col gap-3 border-t border-rule pt-6">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Find a new photo</h2>
+      <div class="flex gap-2">
+        <input
+          type="text"
+          id="search-input"
+          value={DEFAULT_QUERY}
+          placeholder="e.g. tropical beach sunset aerial"
+          class="flex-1 rounded-md border border-rule bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:outline focus:outline-2 focus:outline-accent"
+        />
+        <button type="button" id="search-btn" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90">
+          Search
+        </button>
+      </div>
+      <p id="search-status" class="text-xs text-muted"></p>
+      <div id="search-results" class="flex flex-col gap-3"></div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  type SearchResult = { title: string; thumbUrl: string; source: "pexels" | "wikimedia" };
+
+  const currentImg = document.getElementById("current-hero-img") as HTMLImageElement;
+  const resetBtn = document.getElementById("reset-btn") as HTMLButtonElement | null;
+  const resetStatus = document.getElementById("reset-status") as HTMLElement;
+  const input = document.getElementById("search-input") as HTMLInputElement;
+  const searchBtn = document.getElementById("search-btn") as HTMLButtonElement;
+  const statusEl = document.getElementById("search-status") as HTMLElement;
+  const resultsEl = document.getElementById("search-results") as HTMLElement;
+
+  async function pick(picked: SearchResult, pickBtn: HTMLButtonElement) {
+    pickBtn.disabled = true;
+    statusEl.textContent = "Saving…";
+    try {
+      const res = await fetch("/api/admin/app-hero-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: picked.thumbUrl }),
+      });
+      if (res.ok) {
+        currentImg.src = picked.thumbUrl;
+        statusEl.textContent = "Saved — live now on app.aritrips.com.";
+      } else {
+        statusEl.textContent = "Couldn't save — try again.";
+      }
+    } finally {
+      pickBtn.disabled = false;
+    }
+  }
+
+  function renderSourceRow(label: string, items: SearchResult[]): string {
+    if (items.length === 0) return "";
+    return `
+      <div class="flex flex-col gap-1">
+        <p class="text-[10px] font-semibold uppercase tracking-wide text-muted">${label} (${items.length})</p>
+        <div class="flex flex-wrap gap-2">
+          ${items
+            .map(
+              (r, i) =>
+                `<button type="button" data-pick-index="${i}" class="aspect-[4/3] w-24 shrink-0 overflow-hidden rounded border border-rule hover:border-accent">
+                  <img src="${r.thumbUrl}" alt="${r.title.replace(/"/g, "&quot;")}" class="h-full w-full object-cover" loading="lazy" />
+                </button>`
+            )
+            .join("")}
+        </div>
+      </div>`;
+  }
+
+  async function runSearch() {
+    const q = input.value.trim();
+    if (!q) return;
+    statusEl.textContent = "Searching…";
+    resultsEl.innerHTML = "";
+    try {
+      const res = await fetch(`/api/admin/image-search?q=${encodeURIComponent(q)}`);
+      const data = (await res.json()) as { pexels?: SearchResult[]; wikimedia?: SearchResult[] };
+      const pexels = data.pexels ?? [];
+      const wikimedia = data.wikimedia ?? [];
+      const total = pexels.length + wikimedia.length;
+      statusEl.textContent = total === 0 ? "No results — try a simpler query." : "Click a photo to use it.";
+      const sources: { label: string; items: SearchResult[] }[] = [
+        { label: "Pexels", items: pexels },
+        { label: "Wikimedia", items: wikimedia },
+      ].filter((s) => s.items.length > 0);
+      resultsEl.innerHTML = sources.map((s) => renderSourceRow(s.label, s.items)).join("");
+      resultsEl.querySelectorAll<HTMLElement>(":scope > div").forEach((row, i) => {
+        row.querySelectorAll<HTMLButtonElement>("[data-pick-index]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const picked = sources[i].items[Number(btn.dataset.pickIndex)];
+            if (picked) pick(picked, btn);
+          });
+        });
+      });
+    } catch {
+      statusEl.textContent = "Search failed — try again.";
+    }
+  }
+
+  searchBtn.addEventListener("click", runSearch);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      runSearch();
+    }
+  });
+
+  resetBtn?.addEventListener("click", async () => {
+    resetBtn.disabled = true;
+    resetStatus.textContent = "Resetting…";
+    try {
+      const res = await fetch("/api/admin/app-hero-image", { method: "DELETE" });
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        resetStatus.textContent = "Couldn't reset — try again.";
+        resetBtn.disabled = false;
+      }
+    } catch {
+      resetStatus.textContent = "Couldn't reset — try again.";
+      resetBtn.disabled = false;
+    }
+  });
+</script>

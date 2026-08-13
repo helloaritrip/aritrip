@@ -1,6 +1,10 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { SearchForm } from "@/components/SearchForm";
 import { DiscoverSection } from "@/components/DiscoverSection";
 import { CompassIcon, ShieldCheckIcon, DollarCircleIcon, WorldIcon } from "@/components/Icons";
+import { getAppHeroImageUrl } from "@/lib/appHero";
+
+const DEFAULT_HERO_IMAGE_URL = "/api/image-proxy?q=tropical+beach+sunset+aerial+palm+trees&fallback=beach";
 
 const TRUST_ITEMS = [
   { icon: CompassIcon, title: "Smart recommendations", body: "We find the best destinations that fit your budget." },
@@ -9,7 +13,10 @@ const TRUST_ITEMS = [
   { icon: WorldIcon, title: "Around the world", body: "From weekend getaways to big adventures." },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const { env } = await getCloudflareContext({ async: true });
+  const heroImageUrl = (await getAppHeroImageUrl(env)) || DEFAULT_HERO_IMAGE_URL;
+
   return (
     <main className="flex flex-1 flex-col bg-bg">
       <div className="relative">
@@ -21,11 +28,7 @@ export default function Home() {
             después (resultados) queda en fondo normal de la página. */}
         <div className="absolute inset-x-0 top-0 h-[720px] overflow-hidden sm:h-[640px] lg:h-[580px]">
           {/* eslint-disable-next-line @next/next/no-img-element -- viene del proxy propio, no de next/image remote patterns */}
-          <img
-            src="/api/image-proxy?q=tropical+beach+sunset+aerial+palm+trees&fallback=beach"
-            alt=""
-            className="h-full w-full object-cover"
-          />
+          <img src={heroImageUrl} alt="" className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-white/70 to-bg dark:from-black/10 dark:via-black/60 dark:to-bg" />
           {/* eslint-disable-next-line @next/next/no-img-element -- asset local chico */}
           <img
