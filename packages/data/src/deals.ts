@@ -30,6 +30,13 @@ export interface FlightDeal {
   travelMonth: number; // 1-12
   travelYear: number;
   capturedAt: string;
+  // Curados (no verificados en vivo como el vuelo) — se suman al precio de
+  // vuelo para armar las pestañas "Flight and hotel deals"/"Trip deals" en
+  // /deals (2026-08-14). El vuelo sigue siendo la única señal real de
+  // "esto está barato"; hotel/actividades solo describen cuánto costaría
+  // el resto del viaje, mismo criterio de "estimate" que ya usa ResultCard.
+  hotelPerNightUSD: number;
+  activityPerDayUSD: number;
 }
 
 // Un precio real que no está al menos esto por debajo de lo normal no es
@@ -76,6 +83,8 @@ export function detectFlightDeals(
       travelMonth,
       travelYear,
       capturedAt: live.capturedAt,
+      hotelPerNightUSD: Math.round(curated.avgHotelCostPerNightUSD.mid),
+      activityPerDayUSD: Math.round(curated.avgActivityCostPerDayUSD),
     });
   }
 
