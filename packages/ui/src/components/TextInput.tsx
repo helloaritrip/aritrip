@@ -1,14 +1,18 @@
-import type { InputHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode } from "react";
 
 type TextInputProps = InputHTMLAttributes<HTMLInputElement> & {
   label: string;
+  icon?: ReactNode;
 };
 
-export function TextInput({ label, id, name, className = "", ...props }: TextInputProps) {
+export function TextInput({ label, icon, id, name, className = "", ...props }: TextInputProps) {
   const inputId = id ?? name;
   return (
     <label htmlFor={inputId} className="flex flex-col gap-1.5 text-sm">
-      <span className="font-medium text-ink">{label}</span>
+      <span className="flex items-center gap-1.5 font-medium text-ink">
+        {icon}
+        {label}
+      </span>
       <input
         id={inputId}
         name={name}

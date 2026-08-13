@@ -17,8 +17,15 @@ const MARKETING_URL = "https://aritrips.com";
 export function Header() {
   return (
     <header className="sticky top-0 z-30 rounded-b-3xl bg-surface shadow-sm">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
-        <Link href="/" className="flex shrink-0 items-center gap-2">
+      {/* Grid de 3 columnas (1fr / auto / 1fr), no flex justify-between —
+          con justify-between el nav del medio queda desplazado hacia la
+          izquierda en cuanto el bloque de la derecha (selector + botón)
+          pesa más que el logo de la izquierda. Con columnas 1fr iguales a
+          los costados, el nav queda centrado de verdad respecto a la
+          página, sin importar cuánto pesen los otros dos bloques
+          (reportado 2026-08-13). */}
+      <div className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-3">
+        <Link href="/" className="flex w-fit items-center gap-2 justify-self-start">
           {/* eslint-disable-next-line @next/next/no-img-element -- asset local chico, no vale la pena next/image acá */}
           <img src="/mascot.png" alt="" className="h-9 w-9 rounded-xl object-cover" />
           <span className="text-xl font-extrabold tracking-tight">
@@ -27,7 +34,7 @@ export function Header() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-7 text-sm font-medium text-ink md:flex">
+        <nav className="hidden items-center gap-7 text-sm font-medium text-ink justify-self-center md:flex">
           <Link href="/" className="flex items-center gap-1.5 hover:text-accent">
             <BriefcaseIcon className="h-4 w-4" />
             Trips
@@ -46,7 +53,7 @@ export function Header() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-end gap-3 justify-self-end">
           {/* Decorativo por ahora — no hay sistema real de idiomas/monedas
               todavía, mismo criterio que otros "reservado, sin implementar"
               del proyecto (ver Roadmap). */}

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 type ComboboxOption = { value: string; label: string };
 
 type ComboboxProps = {
   label: string;
+  icon?: ReactNode;
   options: ComboboxOption[];
   value: string;
   onChange: (value: string) => void;
@@ -14,7 +15,7 @@ type ComboboxProps = {
 };
 
 /** Campo de texto con autocompletado — escribís, filtra, elegís con click o teclado. */
-export function Combobox({ label, options, value, onChange, placeholder, name }: ComboboxProps) {
+export function Combobox({ label, icon, options, value, onChange, placeholder, name }: ComboboxProps) {
   const id = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const selected = options.find((o) => o.value === value) ?? null;
@@ -75,7 +76,8 @@ export function Combobox({ label, options, value, onChange, placeholder, name }:
 
   return (
     <div ref={containerRef} className="relative flex flex-col gap-1.5 text-sm">
-      <label htmlFor={id} className="font-medium text-ink">
+      <label htmlFor={id} className="flex items-center gap-1.5 font-medium text-ink">
+        {icon}
         {label}
       </label>
       <input

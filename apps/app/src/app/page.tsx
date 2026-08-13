@@ -19,14 +19,15 @@ export default async function Home() {
 
   return (
     <main className="flex flex-1 flex-col bg-bg">
-      <div className="relative">
-        {/* Franja de foto a altura fija (2026-08-13, referencia visual del
-            usuario) — deliberadamente NO "inset-0 h-full" sobre todo el
-            bloque: eso haría que la imagen se estire hasta el fondo de los
-            resultados de búsqueda si la lista crece. Con altura fija, el
-            degradé ya se resolvió a bg antes de esa altura y lo que venga
-            después (resultados) queda en fondo normal de la página. */}
-        <div className="absolute inset-x-0 top-0 h-[720px] overflow-hidden sm:h-[640px] lg:h-[580px]">
+      <div className="relative overflow-hidden">
+        {/* La franja de foto llena exactamente la altura del contenido de
+            arriba (título + form) vía `absolute inset-0` — antes tenía una
+            altura fija adivinada a ojo que en la práctica quedaba más alta
+            que el contenido real, dejando un hueco antes de la fila de
+            confianza y, en algunos anchos, tapando sus íconos (reportado
+            2026-08-13). `overflow-hidden` en el wrapper es un cinturón de
+            seguridad extra para que la foto nunca se salga de su caja. */}
+        <div className="absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element -- viene del proxy propio, no de next/image remote patterns */}
           <img src={heroImageUrl} alt="" className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-white/70 to-bg dark:from-black/10 dark:via-black/60 dark:to-bg" />
@@ -38,7 +39,7 @@ export default async function Home() {
           />
         </div>
 
-        <div className="relative z-10 flex flex-col items-center gap-8 px-6 pb-16 pt-14">
+        <div className="relative z-10 flex flex-col items-center gap-8 px-6 pb-8 pt-14">
           <div className="flex flex-col items-center gap-2 text-center">
             <h1 className="max-w-lg text-3xl font-bold text-ink sm:text-4xl">Where can you go with your budget?</h1>
             <p className="max-w-md text-muted">
@@ -49,7 +50,7 @@ export default async function Home() {
         </div>
       </div>
 
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-2 gap-x-6 gap-y-8 px-6 py-14 sm:grid-cols-4">
+      <div className="relative z-10 mx-auto grid w-full max-w-5xl grid-cols-2 gap-x-6 gap-y-8 px-6 pb-14 pt-4 sm:grid-cols-4">
         {TRUST_ITEMS.map((item) => (
           <div key={item.title} className="flex flex-col items-center gap-2 text-center sm:items-start sm:text-left">
             <item.icon className="h-7 w-7 text-highlight" />
@@ -59,7 +60,9 @@ export default async function Home() {
         ))}
       </div>
 
-      <DiscoverSection />
+      <div className="pb-16">
+        <DiscoverSection />
+      </div>
     </main>
   );
 }

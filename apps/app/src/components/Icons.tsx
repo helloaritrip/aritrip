@@ -162,3 +162,57 @@ export function ChevronDownIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function PlaneIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3.5 19 21 12 3.5 5l1.5 6.2L15 12l-10 .8Z" />
+    </svg>
+  );
+}
+
+export function CalendarIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M8 3v4M16 3v4M3 10h18" />
+    </svg>
+  );
+}
+
+export function PersonIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M4.5 20c0-4 3-6.5 7.5-6.5s7.5 2.5 7.5 6.5" />
+    </svg>
+  );
+}
+
+export function ChildIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="6" r="2.5" />
+      <path d="M12 8.5v6M8 12l4-1.5 4 1.5M9 20l3-5.5 3 5.5" />
+    </svg>
+  );
+}
+
+export function WalletIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+      <path d="M16 12h3" />
+      <path d="M3 9h18" />
+    </svg>
+  );
+}
+
+export function SparkleIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M11 2v4M11 16v4M2 11h4M16 11h4" />
+      <path d="m5.5 5.5 2 2M14.5 14.5l2 2M5.5 16.5l2-2M14.5 7.5l2-2" />
+    </svg>
+  );
+}
