@@ -1,11 +1,21 @@
 ---
 import { env } from "cloudflare:workers";
 import Layout from "../../layouts/Layout.astro";
-import { listDocuments } from "@aritrips/data";
+import { getCachedPages } from "../../lib/pagesCache";
 
 // SSR (no prerender) — mismo motivo que /p/[slug]: el listado tiene que
 // reflejar entradas nuevas apenas se publican, sin esperar un redeploy.
 export const prerender = false;
+
+// Cache de borde en Cloudflare (2026-08-14) — ver dealsCache.ts para el
+// porqué: esta página leía Firestore en cada visita sin compartir nada
+// entre visitantes, y eso agotó la cuota gratis una vez. `public` +
+// `s-maxage` cachea la respuesta en el CDN de Cloudflare por unos
+// minutos; sin `max-age`, el navegador del visitante no la cachea (así
+// que un botón de "recargar" siempre trae la versión más nueva que el
+// CDN tenga, no una vieja pegada en su propio caché local). Búsquedas
+// (?q=...) igual se cachean, solo que por combinación de query real.
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=300");
 
 const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
 function imageProxyUrl(query: string, fallback: string): string {
@@ -27,7 +37,7 @@ let loadError: string | null = null;
 if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
   try {
     const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
-    const docs = await listDocuments("pages", credentials);
+    const docs = await getCachedPages(credentials);
     // Las entradas de blog son páginas normales con template="blog" — mismo
     // sistema de siempre (Puck + Firestore), solo se filtran acá para el
     // listado. Se renderizan en /p/{slug} igual que cualquier otra página.

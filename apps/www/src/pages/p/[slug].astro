@@ -46,6 +46,12 @@ try {
   return new Response("Not found", { status: 404 });
 }
 
+// Cache de borde en Cloudflare (2026-08-14) — son las páginas de mayor
+// volumen del sitio (48 destinos + 24 hubs + posts), cada una con 2
+// lecturas de Firestore (el doc + ad-rails) por visita sin esto. Ver
+// dealsCache.ts para el porqué (cuota diaria gratis agotada una vez).
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=600");
+
 const pageTitle = (data.root.props?.title as string | undefined) || (doc.title as string | undefined) || "AriTrips";
 const pageDescription = (doc.description as string | undefined) || pageTitle;
 

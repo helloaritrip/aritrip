@@ -1,24 +1,22 @@
 ---
 import { env } from "cloudflare:workers";
 import Layout from "../layouts/Layout.astro";
-import {
-  destinations,
-  listDocuments,
-  generateAllPriceSnapshots,
-  detectFlightDeals,
-  MIN_DEAL_DISCOUNT_PERCENT,
-  ORIGIN_LABELS,
-  DEFAULT_PARTNER_CONFIG,
-  type LiveFlightPrice,
-  type FlightDeal,
-  type OriginHub,
-} from "@aritrips/data";
+import { MIN_DEAL_DISCOUNT_PERCENT, ORIGIN_LABELS, DEFAULT_PARTNER_CONFIG, type FlightDeal, type OriginHub } from "@aritrips/data";
 import { DealSaveButton } from "../components/DealSaveButton";
+import { getCachedFlightDeals, getCachedPartnerConfig } from "../lib/dealsCache";
 
 // SSR — los precios reales cambian solo (apps/price-sync corre cada 15
 // min), así que esta página tiene que leer Firestore en cada visita, no
 // quedar prerenderizada. Mismo patrón que /blog y /p/[slug].
 export const prerender = false;
+
+// Cache de borde en Cloudflare, además del caché en memoria de
+// dealsCache.ts (2026-08-14) — esta fue la página que agotó la cuota
+// diaria gratis de Firestore (ver dealsCache.ts para el detalle
+// completo). Cada combinación de filtros/orden/página cachea aparte (van
+// en la query string, que Cloudflare ya incluye en la cache key por
+// default), así que sigue siendo correcto por URL.
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=300");
 
 const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
 function imageProxyUrl(query: string, fallback: string): string {
@@ -32,44 +30,12 @@ const credentials =
     : null;
 
 let allDeals: FlightDeal[] = [];
-const affiliateIds = { ...DEFAULT_PARTNER_CONFIG };
+let affiliateIds = { ...DEFAULT_PARTNER_CONFIG };
 let loadError: string | null = null;
 
 if (credentials) {
   try {
-    const [liveDocs, partnerDocs] = await Promise.all([
-      listDocuments("livePrices", credentials),
-      listDocuments("partners", credentials),
-    ]);
-
-    const livePrices: LiveFlightPrice[] = liveDocs
-      .filter(
-        (d) =>
-          d.id !== "_cursor" &&
-          typeof d.destinationId === "string" &&
-          typeof d.originAirportCode === "string" &&
-          typeof d.avgFlightCostUSD === "number"
-      )
-      .map((d) => ({
-        destinationId: d.destinationId as string,
-        originAirportCode: d.originAirportCode as string,
-        avgFlightCostUSD: d.avgFlightCostUSD as number,
-        avgFlightDurationMinutes: (d.avgFlightDurationMinutes as number) ?? 0,
-        capturedAt: (d.capturedAt as string) ?? new Date().toISOString(),
-        transfers: typeof d.transfers === "number" ? d.transfers : undefined,
-        airline: typeof d.airline === "string" ? d.airline : undefined,
-        searchPeriod: typeof d.searchPeriod === "string" ? d.searchPeriod : undefined,
-      }));
-
-    for (const doc of partnerDocs) {
-      const category = doc.category as keyof typeof affiliateIds;
-      if (category in affiliateIds && typeof doc.value === "string" && doc.active !== false) {
-        affiliateIds[category] = { ...affiliateIds[category], value: doc.value };
-      }
-    }
-
-    const curatedSnapshots = generateAllPriceSnapshots(destinations);
-    allDeals = detectFlightDeals(livePrices, destinations, curatedSnapshots);
+    [allDeals, affiliateIds] = await Promise.all([getCachedFlightDeals(credentials), getCachedPartnerConfig(credentials)]);
   } catch (err) {
     console.error("[deals] Failed to load deals", err);
     loadError = "Couldn't load current deals right now.";

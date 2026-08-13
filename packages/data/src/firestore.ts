@@ -209,16 +209,35 @@ export async function listDocuments(
 export async function queryDocuments(
   collection: string,
   credentials: FirestoreCredentials,
-  options: { orderByField: string; direction?: "ASCENDING" | "DESCENDING"; limit: number; offset?: number }
+  options: {
+    orderByField?: string;
+    direction?: "ASCENDING" | "DESCENDING";
+    limit?: number;
+    offset?: number;
+    // Filtro de igualdad simple (2026-08-14) — agregado para que
+    // /api/favorites pueda pedirle a Firestore solo los docs de UN
+    // usuario en vez de traer la colección `favorites` entera y filtrar
+    // del lado del servidor (mismo antipatrón de "leer toda la colección"
+    // que agotó la cuota gratis de Firestore, ver dealsCache.ts).
+    where?: { field: string; op: "EQUAL"; value: string };
+  }
 ): Promise<(Record<string, unknown> & { id: string })[]> {
-  const body = {
-    structuredQuery: {
-      from: [{ collectionId: collection }],
-      orderBy: [{ field: { fieldPath: options.orderByField }, direction: options.direction ?? "DESCENDING" }],
-      limit: options.limit,
-      offset: options.offset ?? 0,
-    },
-  };
+  const structuredQuery: Record<string, unknown> = { from: [{ collectionId: collection }] };
+  if (options.orderByField) {
+    structuredQuery.orderBy = [{ field: { fieldPath: options.orderByField }, direction: options.direction ?? "DESCENDING" }];
+  }
+  if (typeof options.limit === "number") structuredQuery.limit = options.limit;
+  if (options.offset) structuredQuery.offset = options.offset;
+  if (options.where) {
+    structuredQuery.where = {
+      fieldFilter: {
+        field: { fieldPath: options.where.field },
+        op: options.where.op,
+        value: { stringValue: options.where.value },
+      },
+    };
+  }
+  const body = { structuredQuery };
   const res = await authedFetch(`${DOCS_BASE}:runQuery`, credentials, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

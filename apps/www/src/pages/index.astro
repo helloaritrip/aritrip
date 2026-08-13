@@ -2,7 +2,8 @@
 import { env } from "cloudflare:workers";
 import Layout from "../layouts/Layout.astro";
 import { Button } from "@aritrips/ui";
-import { ORIGIN_HUBS, ORIGIN_LABELS, listDocuments, getDocument } from "@aritrips/data";
+import { ORIGIN_HUBS, ORIGIN_LABELS, getDocument } from "@aritrips/data";
+import { getCachedPages } from "../lib/pagesCache";
 import { cityName, hubPageSlug } from "../lib/citySlug";
 import { getHomeLayoutConfig, HOME_SECTION_IDS, DEFAULT_SECTION_ORDER, type HomeSectionId } from "../lib/homeLayoutConfig";
 
@@ -10,6 +11,12 @@ import { getHomeLayoutConfig, HOME_SECTION_IDS, DEFAULT_SECTION_ORDER, type Home
 // resto de la home sigue siendo estático (mismo patrón ya usado en /blog
 // y /p/[slug]).
 export const prerender = false;
+
+// Cache de borde en Cloudflare (2026-08-14) — es la página con más
+// tráfico del sitio; sin esto, cada visita anónima le pegaba a Firestore
+// dos veces (pages + siteConfig/home). Ver dealsCache.ts para el
+// contexto completo (cuota diaria gratis agotada una vez por esto mismo).
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=300");
 
 const APP_URL_FOR_IMAGES = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
 function imageProxyUrl(query: string, fallback: string): string {
@@ -25,7 +32,7 @@ const credentials =
     : null;
 if (credentials) {
   try {
-    const docs = await listDocuments("pages", credentials);
+    const docs = await getCachedPages(credentials);
     latestPosts = (docs.filter((d) => d.template === "blog" && d.status === "published") as BlogDoc[])
       .sort((a, b) => String(b.publishedAt ?? "").localeCompare(String(a.publishedAt ?? "")))
       .slice(0, 3);

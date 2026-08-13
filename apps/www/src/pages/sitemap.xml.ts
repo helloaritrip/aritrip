@@ -10,7 +10,7 @@
  */
 import type { APIRoute } from "astro";
 import { env } from "cloudflare:workers";
-import { listDocuments } from "@aritrips/data";
+import { getCachedPages } from "../lib/pagesCache";
 
 export const prerender = false;
 
@@ -27,7 +27,7 @@ export const GET: APIRoute = async () => {
 
   if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
     try {
-      const pages = await listDocuments("pages", {
+      const pages = await getCachedPages({
         clientEmail: FIREBASE_CLIENT_EMAIL,
         privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
       });
@@ -51,6 +51,10 @@ ${urls.map((u) => `  <url>\n    <loc>${u.loc}</loc>\n    <priority>${u.priority}
 `;
 
   return new Response(body, {
-    headers: { "Content-Type": "application/xml" },
+    // Cache de borde en Cloudflare (2026-08-14, ver dealsCache.ts para el
+    // porqué) — Googlebot pega acá seguido; sin esto cada rastreo volvía
+    // a leer Firestore. `public` + `s-maxage` cachea en el CDN sin afectar
+    // caché de navegador (no hay `max-age`, así que el browser no cachea).
+    headers: { "Content-Type": "application/xml", "Cache-Control": "public, max-age=0, s-maxage=600" },
   });
 };
