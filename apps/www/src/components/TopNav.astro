@@ -1,0 +1,41 @@
+---
+// Barra de navegación superior (2026-08-13, a pedido del usuario con
+// referencia visual de vectitory.com) — antes no existía ningún nav
+// compartido, cada página armaba su propio encabezado suelto. "My
+// favorites" y "Join AriTrips" apuntan a app.aritrips.com por ahora:
+// todavía no existe cuenta de usuario en el producto (decisión de alcance
+// del MVP, ver Roadmap) — quedan apuntando a la app en vez de a una URL
+// que todavía no existe, y se reemplazan por el flujo real de Google
+// Sign-In + favoritos cuando se construya esa pieza (pendiente de
+// confirmar alcance con el usuario).
+const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
+---
+
+<header class="border-b border-rule bg-surface">
+  <div class="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
+    <a href="/" class="shrink-0">
+      <img src="/logo.webp" alt="AriTrips" class="h-8 w-auto" width="140" height="32" />
+    </a>
+
+    <nav class="hidden flex-1 items-center justify-center gap-8 text-sm font-medium text-ink md:flex">
+      <a href={APP_URL} class="hover:text-accent">Trips</a>
+      <a href="/deals" class="hover:text-accent">Flight Deals</a>
+      <a href="/blog" class="hover:text-accent">Travel Guides</a>
+      <a href={APP_URL} class="hover:text-accent">My Favorites</a>
+    </nav>
+
+    <a
+      href={APP_URL}
+      class="shrink-0 rounded-full bg-highlight px-5 py-2 text-sm font-semibold text-highlight-ink hover:opacity-90"
+    >
+      Join AriTrips
+    </a>
+  </div>
+
+  <nav class="flex items-center justify-center gap-6 border-t border-rule px-4 py-2 text-sm font-medium text-ink md:hidden">
+    <a href={APP_URL} class="hover:text-accent">Trips</a>
+    <a href="/deals" class="hover:text-accent">Deals</a>
+    <a href="/blog" class="hover:text-accent">Guides</a>
+    <a href={APP_URL} class="hover:text-accent">Favorites</a>
+  </nav>
+</header>

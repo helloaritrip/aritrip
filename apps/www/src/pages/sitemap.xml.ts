@@ -22,7 +22,7 @@ export const GET: APIRoute = async () => {
   const urls = [
     { loc: `${SITE_URL}/`, priority: "1.0" },
     { loc: `${SITE_URL}/blog`, priority: "0.7" },
-    { loc: `${SITE_URL}/ofertas`, priority: "0.8" },
+    { loc: `${SITE_URL}/deals`, priority: "0.8" },
   ];
 
   if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
