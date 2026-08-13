@@ -39,12 +39,90 @@ export interface FlightDeal {
   activityPerDayUSD: number;
 }
 
+/**
+ * Forma que se guarda en Firestore (dealsCache/current, ver
+ * apps/price-sync) — igual a FlightDeal pero con `destinationId` en vez
+ * del objeto `Destination` completo. Guardar el destino entero en cada
+ * entrada duplicaría datos estáticos que ya vive en el bundle de las dos
+ * apps (packages/data) — no hace falta repetirlos en Firestore, y el doc
+ * se mantiene chico. `apps/www` reconstruye el FlightDeal completo al leer
+ * (ver fromStoredFlightDeal).
+ */
+export type StoredFlightDeal = Omit<FlightDeal, "destination"> & { destinationId: string };
+
+export function toStoredFlightDeal(deal: FlightDeal): StoredFlightDeal {
+  const { destination, ...rest } = deal;
+  return { ...rest, destinationId: destination.id };
+}
+
+export function fromStoredFlightDeal(stored: StoredFlightDeal, destinations: Destination[]): FlightDeal | null {
+  const destination = destinations.find((d) => d.id === stored.destinationId);
+  if (!destination || destination.status !== "active") return null;
+  const { destinationId: _destinationId, ...rest } = stored;
+  return { ...rest, destination };
+}
+
 // Un precio real que no está al menos esto por debajo de lo normal no es
 // una "oferta" honesta, es solo el precio de siempre — mismo espíritu que
 // el 20% que ya se documentó como idea de producto (packages/data no lo
 // tenía implementado hasta ahora).
 export const MIN_DEAL_DISCOUNT_PERCENT = 12;
 
+/**
+ * Evalúa UNA ruta puntual — no necesita conocer el resto de la colección
+ * `livePrices` para decidir si esa ruta es una oferta, solo su propio
+ * precio en vivo y la curva curada de ESE destino/origen/mes. Extraído
+ * como función aparte (2026-08-14) para que apps/price-sync pueda
+ * mantener el índice de ofertas de forma incremental (ruta por ruta, a
+ * medida que ya la procesa igual) en vez de que apps/www tenga que leer
+ * la colección `livePrices` completa (cientos de docs) en cada visita —
+ * eso fue justo lo que agotó la cuota gratis de Firestore una vez, ver
+ * apps/www/src/lib/dealsCache.ts.
+ */
+export function evaluateFlightDeal(
+  live: LiveFlightPrice,
+  destination: Destination | undefined,
+  curatedSnapshots: PriceSnapshot[]
+): FlightDeal | null {
+  if (!live.searchPeriod) return null;
+  const [yearStr, monthStr] = live.searchPeriod.split("-");
+  const travelMonth = Number(monthStr);
+  const travelYear = Number(yearStr);
+  if (!travelMonth || !travelYear) return null;
+
+  if (!destination || destination.status !== "active") return null;
+
+  const curated = curatedSnapshots.find(
+    (p) => p.destinationId === live.destinationId && p.originAirportCode === live.originAirportCode && p.month === travelMonth
+  );
+  if (!curated || curated.avgFlightCostUSD <= 0) return null;
+
+  const discountPercent = Math.round((1 - live.avgFlightCostUSD / curated.avgFlightCostUSD) * 100);
+  if (discountPercent < MIN_DEAL_DISCOUNT_PERCENT) return null;
+
+  return {
+    destination,
+    originAirportCode: live.originAirportCode as OriginHub,
+    avgFlightCostUSD: live.avgFlightCostUSD,
+    expectedFlightCostUSD: Math.round(curated.avgFlightCostUSD),
+    discountPercent,
+    avgFlightDurationMinutes: live.avgFlightDurationMinutes,
+    transfers: live.transfers,
+    airline: live.airline,
+    travelMonth,
+    travelYear,
+    capturedAt: live.capturedAt,
+    hotelPerNightUSD: Math.round(curated.avgHotelCostPerNightUSD.mid),
+    activityPerDayUSD: Math.round(curated.avgActivityCostPerDayUSD),
+  };
+}
+
+/**
+ * Versión "todas de una" sobre evaluateFlightDeal — se mantiene para quien
+ * ya tenga la colección `livePrices` completa en memoria (hoy: nadie en
+ * producción, pero es una función pura útil para scripts/depuración
+ * puntuales sin tener que releer Firestore).
+ */
 export function detectFlightDeals(
   livePrices: LiveFlightPrice[],
   destinations: Destination[],
@@ -52,41 +130,9 @@ export function detectFlightDeals(
 ): FlightDeal[] {
   const destById = new Map(destinations.map((d) => [d.id, d]));
   const deals: FlightDeal[] = [];
-
   for (const live of livePrices) {
-    if (!live.searchPeriod) continue;
-    const [yearStr, monthStr] = live.searchPeriod.split("-");
-    const travelMonth = Number(monthStr);
-    const travelYear = Number(yearStr);
-    if (!travelMonth || !travelYear) continue;
-
-    const destination = destById.get(live.destinationId);
-    if (!destination || destination.status !== "active") continue;
-
-    const curated = curatedSnapshots.find(
-      (p) => p.destinationId === live.destinationId && p.originAirportCode === live.originAirportCode && p.month === travelMonth
-    );
-    if (!curated || curated.avgFlightCostUSD <= 0) continue;
-
-    const discountPercent = Math.round((1 - live.avgFlightCostUSD / curated.avgFlightCostUSD) * 100);
-    if (discountPercent < MIN_DEAL_DISCOUNT_PERCENT) continue;
-
-    deals.push({
-      destination,
-      originAirportCode: live.originAirportCode as OriginHub,
-      avgFlightCostUSD: live.avgFlightCostUSD,
-      expectedFlightCostUSD: Math.round(curated.avgFlightCostUSD),
-      discountPercent,
-      avgFlightDurationMinutes: live.avgFlightDurationMinutes,
-      transfers: live.transfers,
-      airline: live.airline,
-      travelMonth,
-      travelYear,
-      capturedAt: live.capturedAt,
-      hotelPerNightUSD: Math.round(curated.avgHotelCostPerNightUSD.mid),
-      activityPerDayUSD: Math.round(curated.avgActivityCostPerDayUSD),
-    });
+    const deal = evaluateFlightDeal(live, destById.get(live.destinationId), curatedSnapshots);
+    if (deal) deals.push(deal);
   }
-
   return deals.sort((a, b) => b.discountPercent - a.discountPercent);
 }

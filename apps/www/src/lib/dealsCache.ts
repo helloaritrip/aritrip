@@ -1,60 +1,57 @@
 import {
   destinations,
+  getDocument,
   listDocuments,
-  generateAllPriceSnapshots,
-  detectFlightDeals,
+  fromStoredFlightDeal,
   DEFAULT_PARTNER_CONFIG,
   type FirestoreCredentials,
-  type LiveFlightPrice,
   type FlightDeal,
+  type StoredFlightDeal,
   type PartnerConfig,
 } from "@aritrips/data";
 
 /**
  * Cache en memoria a nivel de módulo (2026-08-14) — bug real y grave
- * encontrado en producción: /deals leía la colección `livePrices` COMPLETA
- * (cientos de docs, cada uno cuenta como una lectura de Firestore) en
- * CADA visita, sin cachear nada. Eso agotó la cuota diaria gratis de
- * Firestore (429 "Quota exceeded"), y como la cuota es del proyecto
- * entero, tumbó TODO lo que lee Firestore — /blog, /p/[slug], el admin,
- * todo — no solo /deals. Mismo patrón de caché ya usado en
- * apps/app/src/lib/livePrices.ts (que si tenía TTL desde el principio,
- * por eso no le pasó esto). Los datos reales (apps/price-sync) solo
- * cambian cada ~15 min, así que un TTL de 10 min acá es imperceptible
- * para el usuario y baja el volumen de lecturas en varios órdenes de
- * magnitud (compartido entre TODOS los visitantes de un mismo isolate
- * caliente del Worker, no por-visitante).
+ * encontrado en producción: /deals leía la colección `livePrices`
+ * COMPLETA (cientos de docs, cada uno cuenta como una lectura de
+ * Firestore) en CADA visita para calcular las ofertas. Eso agotó la cuota
+ * diaria gratis de Firestore (429 "Quota exceeded"), y como la cuota es
+ * del proyecto entero, tumbó TODO lo que lee Firestore — /blog,
+ * /p/[slug], el admin, todo — no solo /deals.
+ *
+ * Arreglado en dos capas (2026-08-14):
+ *  1) apps/price-sync ahora mantiene un solo documento (dealsCache/current)
+ *     con las ofertas ya calculadas, actualizado de forma incremental a
+ *     medida que procesa cada lote de rutas — ver evaluateFlightDeal en
+ *     packages/data/src/deals.ts. Un cache-miss acá ya no cuesta cientos
+ *     de lecturas, cuesta UNA.
+ *  2) Este caché en memoria (TTL corto) evita incluso esa única lectura
+ *     en la mayoría de las visitas, compartido entre todos los
+ *     visitantes de un mismo isolate caliente del Worker.
  */
 let cachedDeals: { deals: FlightDeal[]; expiresAt: number } | null = null;
 let cachedPartnerConfig: { config: PartnerConfig; expiresAt: number } | null = null;
-const CACHE_TTL_MS = 10 * 60 * 1000;
+const DEALS_CACHE_TTL_MS = 2 * 60 * 1000;
+const PARTNER_CACHE_TTL_MS = 10 * 60 * 1000;
 
 export async function getCachedFlightDeals(credentials: FirestoreCredentials): Promise<FlightDeal[]> {
   if (cachedDeals && cachedDeals.expiresAt > Date.now()) return cachedDeals.deals;
 
-  const liveDocs = await listDocuments("livePrices", credentials);
-  const livePrices: LiveFlightPrice[] = liveDocs
-    .filter(
-      (d) =>
-        d.id !== "_cursor" &&
-        typeof d.destinationId === "string" &&
-        typeof d.originAirportCode === "string" &&
-        typeof d.avgFlightCostUSD === "number"
-    )
-    .map((d) => ({
-      destinationId: d.destinationId as string,
-      originAirportCode: d.originAirportCode as string,
-      avgFlightCostUSD: d.avgFlightCostUSD as number,
-      avgFlightDurationMinutes: (d.avgFlightDurationMinutes as number) ?? 0,
-      capturedAt: (d.capturedAt as string) ?? new Date().toISOString(),
-      transfers: typeof d.transfers === "number" ? d.transfers : undefined,
-      airline: typeof d.airline === "string" ? d.airline : undefined,
-      searchPeriod: typeof d.searchPeriod === "string" ? d.searchPeriod : undefined,
-    }));
+  const doc = await getDocument("dealsCache", "current", credentials);
+  let deals: FlightDeal[] = [];
+  if (doc && typeof doc.dealsJson === "string") {
+    try {
+      const stored = JSON.parse(doc.dealsJson) as StoredFlightDeal[];
+      deals = stored
+        .map((d) => fromStoredFlightDeal(d, destinations))
+        .filter((d): d is FlightDeal => d !== null)
+        .sort((a, b) => b.discountPercent - a.discountPercent);
+    } catch {
+      deals = [];
+    }
+  }
 
-  const curatedSnapshots = generateAllPriceSnapshots(destinations);
-  const deals = detectFlightDeals(livePrices, destinations, curatedSnapshots);
-  cachedDeals = { deals, expiresAt: Date.now() + CACHE_TTL_MS };
+  cachedDeals = { deals, expiresAt: Date.now() + DEALS_CACHE_TTL_MS };
   return deals;
 }
 
@@ -69,6 +66,6 @@ export async function getCachedPartnerConfig(credentials: FirestoreCredentials):
       config[category] = { ...config[category], value: doc.value };
     }
   }
-  cachedPartnerConfig = { config, expiresAt: Date.now() + CACHE_TTL_MS };
+  cachedPartnerConfig = { config, expiresAt: Date.now() + PARTNER_CACHE_TTL_MS };
   return config;
 }

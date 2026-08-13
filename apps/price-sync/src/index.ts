@@ -36,7 +36,11 @@ import {
   livePriceDocId,
   HOTEL_KEYS,
   timingSafeEqual,
+  generateAllPriceSnapshots,
+  evaluateFlightDeal,
+  toStoredFlightDeal,
   type FirestoreCredentials,
+  type StoredFlightDeal,
 } from "@aritrips/data";
 
 export interface Env {
@@ -195,6 +199,49 @@ async function fetchCheapestFare(pair: RoutePair, token: string): Promise<Travel
   return { price: fare.price, durationOneWay, transfers: fare.transfers ?? 0, airline: fare.airline ?? "" };
 }
 
+// Doc único con TODAS las ofertas vigentes, mantenido de forma
+// incremental acá mismo (2026-08-14) — antes /deals en apps/www tenía que
+// leer la colección `livePrices` COMPLETA (cientos de docs) para
+// calcularlas en cada visita, lo que agotó la cuota gratis de Firestore
+// una vez (ver apps/www/src/lib/dealsCache.ts). Evaluar si una ruta es
+// oferta solo necesita SU propio precio + la curva curada de ese destino
+// — no hace falta releer el resto de la colección, así que esto se arma
+// ruta por ruta a medida que el batch ya las procesa, sin ninguna lectura
+// nueva de colección completa. Costo extra: 1 lectura + a lo sumo 1
+// escritura por corrida del cron (cada 15 min), no por visitante.
+const DEALS_CACHE_DOC = "current";
+
+async function updateDealsIndex(
+  credentials: FirestoreCredentials,
+  updates: { destinationId: string; originAirportCode: string; deal: ReturnType<typeof evaluateFlightDeal> }[]
+): Promise<void> {
+  if (updates.length === 0) return;
+
+  const existing = await getDocument("dealsCache", DEALS_CACHE_DOC, credentials);
+  const stored: StoredFlightDeal[] = (() => {
+    if (typeof existing?.dealsJson !== "string") return [];
+    try {
+      return JSON.parse(existing.dealsJson) as StoredFlightDeal[];
+    } catch {
+      return [];
+    }
+  })();
+
+  const byKey = new Map(stored.map((d) => [livePriceDocId(d.destinationId, d.originAirportCode), d]));
+  for (const u of updates) {
+    const key = livePriceDocId(u.destinationId, u.originAirportCode);
+    if (u.deal) byKey.set(key, toStoredFlightDeal(u.deal));
+    else byKey.delete(key);
+  }
+
+  await setDocument(
+    "dealsCache",
+    DEALS_CACHE_DOC,
+    { dealsJson: JSON.stringify([...byKey.values()]), updatedAt: new Date() },
+    credentials
+  );
+}
+
 async function runFlightBatch(env: Env): Promise<{ processed: number; written: number; skipped: number; nextOffset: number; total: number }> {
   const credentials = credentialsFrom(env);
 
@@ -209,6 +256,9 @@ async function runFlightBatch(env: Env): Promise<{ processed: number; written: n
 
   let written = 0;
   let skipped = 0;
+  const destById = new Map(destinations.map((d) => [d.id, d]));
+  const curatedSnapshots = generateAllPriceSnapshots(destinations);
+  const dealUpdates: { destinationId: string; originAirportCode: string; deal: ReturnType<typeof evaluateFlightDeal> }[] = [];
 
   for (const pair of batch) {
     try {
@@ -221,6 +271,8 @@ async function runFlightBatch(env: Env): Promise<{ processed: number; written: n
         // más adelante si nuestro ancla "medio plazo" (ver
         // priceEstimation.ts) sigue siendo razonable, sin necesitar una
         // colección de historial aparte todavía.
+        const capturedAt = new Date().toISOString();
+        const searchPeriod = nextMonthPeriod();
         await setDocument(
           "livePrices",
           livePriceDocId(pair.destinationId, pair.originAirportCode),
@@ -231,12 +283,28 @@ async function runFlightBatch(env: Env): Promise<{ processed: number; written: n
             avgFlightDurationMinutes: Math.round(fare.durationOneWay),
             transfers: fare.transfers,
             airline: fare.airline,
-            searchPeriod: nextMonthPeriod(),
-            capturedAt: new Date().toISOString(),
+            searchPeriod,
+            capturedAt,
           },
           credentials
         );
         written += 1;
+
+        const deal = evaluateFlightDeal(
+          {
+            destinationId: pair.destinationId,
+            originAirportCode: pair.originAirportCode,
+            avgFlightCostUSD: Math.round(fare.price),
+            avgFlightDurationMinutes: Math.round(fare.durationOneWay),
+            transfers: fare.transfers,
+            airline: fare.airline,
+            searchPeriod,
+            capturedAt,
+          },
+          destById.get(pair.destinationId),
+          curatedSnapshots
+        );
+        dealUpdates.push({ destinationId: pair.destinationId, originAirportCode: pair.originAirportCode, deal });
       }
     } catch (err) {
       console.error(`[price-sync] flight ${pair.destinationId} from ${pair.originAirportCode}: failed`, err);
@@ -244,6 +312,8 @@ async function runFlightBatch(env: Env): Promise<{ processed: number; written: n
     }
     await delay(DELAY_BETWEEN_REQUESTS_MS);
   }
+
+  await updateDealsIndex(credentials, dealUpdates);
 
   const nextOffset = (offset + BATCH_SIZE) % allPairs.length;
   await setDocument("livePrices", "_cursor", { offset: nextOffset, updatedAt: new Date().toISOString() }, credentials);
