@@ -5,6 +5,7 @@ import type { PartnerLinks } from "@/lib/partnerLinks";
 import { trackEvent } from "@/lib/trackEvent";
 import { ORIGIN_LABELS } from "@/lib/originLabels";
 import type { OriginHub } from "@aritrips/data";
+import { SaveButton } from "@/components/SaveButton";
 
 export type SubScores = {
   budgetFit: number;
@@ -135,7 +136,19 @@ export function ResultCard({
         <span className="absolute left-3 top-3 rounded-full bg-highlight px-3 py-1 text-xs font-semibold text-highlight-ink">
           Flight + Hotel
         </span>
-        <div className="absolute right-3 top-3">
+        <div className="absolute right-3 top-3 flex items-center gap-2">
+          <SaveButton
+            itemType="destination"
+            itemId={result.destinationId}
+            snapshot={{
+              name: result.name,
+              country: result.country,
+              imageUrl: result.imageUrl ?? undefined,
+              imageQuery: result.imageQuery,
+              priceLabel: `From $${result.totalEstimatedCostUSD.toLocaleString()}`,
+              originLabel,
+            }}
+          />
           <ShareButton title={`${result.name}, ${result.country}`} text={topReason} url={shareUrl} />
         </div>
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-4 pb-3 pt-10">

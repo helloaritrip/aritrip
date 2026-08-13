@@ -2,12 +2,12 @@
 // Barra de navegación superior (2026-08-13, a pedido del usuario con
 // referencia visual de vectitory.com) — antes no existía ningún nav
 // compartido, cada página armaba su propio encabezado suelto. "My
-// favorites" y "Join AriTrips" apuntan a app.aritrips.com por ahora:
-// todavía no existe cuenta de usuario en el producto (decisión de alcance
-// del MVP, ver Roadmap) — quedan apuntando a la app en vez de a una URL
-// que todavía no existe, y se reemplazan por el flujo real de Google
-// Sign-In + favoritos cuando se construya esa pieza (pendiente de
-// confirmar alcance con el usuario).
+// favorites" y "Join AriTrips" llevan a app.aritrips.com/favorites y
+// /join (2026-08-13, cuentas de usuario vía Google Sign-In + favoritos —
+// ver GoogleSignInButton.tsx/AuthProvider.tsx en apps/app). Deliberadamente
+// estático (sin JS): no sabe si ya hay sesión iniciada, así que siempre
+// muestra "Join AriTrips" aunque el visitante ya esté logueado — /favorites
+// y /join mismos resuelven eso del lado de la app.
 const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
 ---
 
@@ -21,11 +21,11 @@ const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
       <a href={APP_URL} class="hover:text-accent">Trips</a>
       <a href="/deals" class="hover:text-accent">Flight Deals</a>
       <a href="/blog" class="hover:text-accent">Travel Guides</a>
-      <a href={APP_URL} class="hover:text-accent">My Favorites</a>
+      <a href={`${APP_URL}/favorites`} class="hover:text-accent">My Favorites</a>
     </nav>
 
     <a
-      href={APP_URL}
+      href={`${APP_URL}/join`}
       class="shrink-0 rounded-full bg-highlight px-5 py-2 text-sm font-semibold text-highlight-ink hover:opacity-90"
     >
       Join AriTrips
@@ -36,6 +36,6 @@ const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
     <a href={APP_URL} class="hover:text-accent">Trips</a>
     <a href="/deals" class="hover:text-accent">Deals</a>
     <a href="/blog" class="hover:text-accent">Guides</a>
-    <a href={APP_URL} class="hover:text-accent">Favorites</a>
+    <a href={`${APP_URL}/favorites`} class="hover:text-accent">Favorites</a>
   </nav>
 </header>

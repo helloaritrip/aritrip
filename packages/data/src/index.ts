@@ -41,3 +41,7 @@ export type { LiveDestinationImage } from "./liveImages";
 export { HOTEL_KEYS } from "./hotelKeys";
 export { detectFlightDeals, MIN_DEAL_DISCOUNT_PERCENT } from "./deals";
 export type { FlightDeal } from "./deals";
+export { verifyGoogleIdToken } from "./googleAuth";
+export type { GoogleIdentity } from "./googleAuth";
+export { signUserSession, verifyUserSession } from "./userAuth";
+export type { UserSession } from "./userAuth";
