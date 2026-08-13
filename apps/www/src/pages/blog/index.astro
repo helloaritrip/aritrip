@@ -15,7 +15,13 @@ export const prerender = false;
 // que un botón de "recargar" siempre trae la versión más nueva que el
 // CDN tenga, no una vieja pegada en su propio caché local). Búsquedas
 // (?q=...) igual se cachean, solo que por combinación de query real.
-Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=300");
+//
+// `stale-if-error` (2026-08-15, ver el comentario igual en deals.astro) —
+// si Firestore vuelve a fallar, Cloudflare puede seguir sirviendo la
+// última copia buena de esta URL hasta 24h en vez del error, siempre que
+// la respuesta que falla sea un 503 real (de ahí el `Astro.response.status`
+// más abajo).
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=300, stale-if-error=86400");
 
 const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
 function imageProxyUrl(query: string, fallback: string): string {
@@ -51,6 +57,10 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
   }
 } else {
   loadError = "Blog isn't configured yet.";
+}
+
+if (loadError) {
+  Astro.response.status = 503;
 }
 
 posts.sort((a, b) => String(b.publishedAt ?? "").localeCompare(String(a.publishedAt ?? "")));

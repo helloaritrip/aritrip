@@ -16,7 +16,17 @@ export const prerender = false;
 // completo). Cada combinación de filtros/orden/página cachea aparte (van
 // en la query string, que Cloudflare ya incluye en la cache key por
 // default), así que sigue siendo correcto por URL.
-Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=300");
+//
+// `stale-if-error` (2026-08-15) — si Firestore vuelve a fallar (ej. otro
+// agotamiento de cuota) y esta URL exacta ya se sirvió bien antes,
+// Cloudflare puede seguir mostrando esa última copia buena hasta 24h en
+// vez de la página de error, SIEMPRE que la respuesta que falla sea un
+// error real (por eso el `Astro.response.status = 503` más abajo — antes
+// esta página devolvía 200 con el mensaje de error adentro, lo cual no
+// dispara stale-if-error en ningún cache/CDN). No es retroactivo: solo
+// protege incidentes futuros, no un agotamiento que ya estaba en curso
+// antes de que existiera una copia buena cacheada.
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=300, stale-if-error=86400");
 
 const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
 function imageProxyUrl(query: string, fallback: string): string {
@@ -42,6 +52,12 @@ if (credentials) {
   }
 } else {
   loadError = "Deals aren't configured yet.";
+}
+
+// Error real (no 200-con-mensaje) para que stale-if-error de arriba tenga
+// una señal de la que agarrarse — ver el comentario del Cache-Control.
+if (loadError) {
+  Astro.response.status = 503;
 }
 
 // ---------- Tipo de oferta (pestañas) ----------
