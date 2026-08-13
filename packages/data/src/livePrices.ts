@@ -62,15 +62,18 @@ export function applyLivePriceOverlay(snapshots: PriceSnapshot[], livePrices: Li
 }
 
 /**
- * Mismo principio que LiveFlightPrice, pero el ancla es un solo hotel
- * curado por destino (ver hotelKeys.ts — el endpoint que da el promedio
+ * Mismo principio que LiveFlightPrice, pero el ancla es uno o más hoteles
+ * curados por destino (ver hotelKeys.ts — el endpoint que da el promedio
  * de toda la ciudad está roto en Xotelo), no una ruta. Un doc por
- * destinationId. Recalibra las 3 categorías curadas (budget/mid/premium)
- * manteniendo la proporción entre ellas, igual que con vuelos.
+ * destinationId. `mid` siempre viene (todo destino con hotel curado tiene
+ * al menos ese tier); `budget`/`premium` solo están presentes cuando ESE
+ * destino ya tiene un hotel_key real de esa gama en hotelKeys.ts — la
+ * mayoría del catálogo hoy solo tiene `mid` (2026-08-13, extensión
+ * incremental, no cobertura completa todavía).
  */
 export interface LiveHotelPrice {
   destinationId: string;
-  avgHotelCostPerNightUSD: number;
+  avgHotelCostPerNightUSD: { budget?: number; mid: number; premium?: number };
   capturedAt: string; // ISO date
 }
 
@@ -86,14 +89,25 @@ export function applyLiveHotelPriceOverlay(snapshots: PriceSnapshot[], liveHotel
     const base = destinationBaseStayCosts[snap.destinationId];
     if (!base || base.avgHotelCostPerNightUSD.mid <= 0) return snap;
 
-    const scaleFactor = live.avgHotelCostPerNightUSD / base.avgHotelCostPerNightUSD.mid;
+    // Ancla de fallback para cualquier tier sin hotel_key real propio —
+    // sigue el mismo nivel que ya midió `mid`, en vez de quedarse sin
+    // recalibrar. Cuando un tier SÍ tiene su propio ancla real, se usa esa
+    // en vez de la proporcional (más preciso).
+    const midScaleFactor = live.avgHotelCostPerNightUSD.mid / base.avgHotelCostPerNightUSD.mid;
+
+    const scaleTier = (tier: "budget" | "mid" | "premium"): number => {
+      const liveTier = live.avgHotelCostPerNightUSD[tier];
+      const baseTier = base.avgHotelCostPerNightUSD[tier];
+      const factor = typeof liveTier === "number" && baseTier > 0 ? liveTier / baseTier : midScaleFactor;
+      return Math.max(1, Math.round(snap.avgHotelCostPerNightUSD[tier] * factor));
+    };
 
     return {
       ...snap,
       avgHotelCostPerNightUSD: {
-        budget: Math.max(1, Math.round(snap.avgHotelCostPerNightUSD.budget * scaleFactor)),
-        mid: Math.max(1, Math.round(snap.avgHotelCostPerNightUSD.mid * scaleFactor)),
-        premium: Math.max(1, Math.round(snap.avgHotelCostPerNightUSD.premium * scaleFactor)),
+        budget: scaleTier("budget"),
+        mid: scaleTier("mid"),
+        premium: scaleTier("premium"),
       },
       source: "provider_api",
       capturedAt: live.capturedAt,

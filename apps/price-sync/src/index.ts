@@ -54,7 +54,11 @@ const HOTEL_CRON = "5-59/20 * * * *";
 // subrequests by single Worker invocation" — el plan free de Workers
 // limita a 50 subrequests/invocación, esto deja margen de sobra.
 const BATCH_SIZE = 15;
-const HOTEL_BATCH_SIZE = 15;
+// Bajado de 15 a 10 (2026-08-13): antes cada destino gastaba a lo sumo 2
+// subrequests (Xotelo + Firestore), ahora hasta 4 (hasta 3 tiers de hotel
+// + 1 escritura) porque algunos destinos ya tienen budget/mid/premium —
+// 15×4=60 se pasaría del límite de 50 que ya rompió esto una vez.
+const HOTEL_BATCH_SIZE = 10;
 // ~1 request/segundo — margen de sobra frente al límite de 60/min de
 // Travelpayouts; Xotelo no publica un límite pero se mantiene el mismo
 // ritmo por prolijidad, no hay apuro.
@@ -282,6 +286,8 @@ async function fetchHotelNightlyRate(hotelKey: string): Promise<number | null> {
   return rates.reduce((a, b) => a + b, 0) / rates.length;
 }
 
+const HOTEL_TIERS = ["budget", "mid", "premium"] as const;
+
 async function runHotelBatch(env: Env): Promise<{ processed: number; written: number; skipped: number; nextOffset: number; total: number }> {
   const credentials = credentialsFrom(env);
 
@@ -298,24 +304,45 @@ async function runHotelBatch(env: Env): Promise<{ processed: number; written: nu
   let skipped = 0;
 
   for (const destinationId of batch) {
-    try {
-      const nightly = await fetchHotelNightlyRate(HOTEL_KEYS[destinationId]);
-      if (!nightly) {
-        skipped += 1;
-      } else {
-        await setDocument(
-          "liveHotelPrices",
-          destinationId,
-          { destinationId, avgHotelCostPerNightUSD: Math.round(nightly), capturedAt: new Date().toISOString() },
-          credentials
-        );
-        written += 1;
+    const keys = HOTEL_KEYS[destinationId];
+    // Campos flat, no un objeto anidado — el cliente de Firestore
+    // (packages/data/src/firestore.ts) solo sabe serializar valores
+    // planos (string/number/boolean/Date), no mapValue. apps/app
+    // reconstruye la forma {budget?, mid, premium?} al leer.
+    const rates: { budget?: number; mid?: number; premium?: number } = {};
+
+    for (const tier of HOTEL_TIERS) {
+      const key = keys[tier];
+      if (!key) continue;
+      try {
+        const nightly = await fetchHotelNightlyRate(key);
+        if (nightly) rates[tier] = Math.round(nightly);
+      } catch (err) {
+        console.error(`[price-sync] hotel ${destinationId} (${tier}): failed`, err);
       }
-    } catch (err) {
-      console.error(`[price-sync] hotel ${destinationId}: failed`, err);
-      skipped += 1;
+      await delay(DELAY_BETWEEN_REQUESTS_MS);
     }
-    await delay(DELAY_BETWEEN_REQUESTS_MS);
+
+    // mid es obligatorio en LiveHotelPrice — sin él no hay nada útil que
+    // escribir esta vuelta, se reintenta en el próximo ciclo del cursor.
+    if (typeof rates.mid !== "number") {
+      skipped += 1;
+      continue;
+    }
+
+    await setDocument(
+      "liveHotelPrices",
+      destinationId,
+      {
+        destinationId,
+        avgHotelBudgetUSD: rates.budget as number | undefined,
+        avgHotelMidUSD: rates.mid,
+        avgHotelPremiumUSD: rates.premium as number | undefined,
+        capturedAt: new Date().toISOString(),
+      },
+      credentials
+    );
+    written += 1;
   }
 
   const nextOffset = allDestinationIds.length === 0 ? 0 : (offset + HOTEL_BATCH_SIZE) % allDestinationIds.length;

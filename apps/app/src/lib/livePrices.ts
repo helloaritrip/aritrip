@@ -52,11 +52,18 @@ export async function getLiveHotelPrices(env: Env): Promise<LiveHotelPrice[]> {
 
   try {
     const docs = await listDocuments("liveHotelPrices", credentials);
+    // Firestore guarda campos planos (avgHotelBudgetUSD/avgHotelMidUSD/
+    // avgHotelPremiumUSD — ver apps/price-sync), reconstruidos acá a la
+    // forma anidada {budget?, mid, premium?} que usa applyLiveHotelPriceOverlay.
     const prices: LiveHotelPrice[] = docs
-      .filter((d) => typeof d.destinationId === "string" && typeof d.avgHotelCostPerNightUSD === "number")
+      .filter((d) => typeof d.destinationId === "string" && typeof d.avgHotelMidUSD === "number")
       .map((d) => ({
         destinationId: d.destinationId as string,
-        avgHotelCostPerNightUSD: d.avgHotelCostPerNightUSD as number,
+        avgHotelCostPerNightUSD: {
+          budget: typeof d.avgHotelBudgetUSD === "number" ? d.avgHotelBudgetUSD : undefined,
+          mid: d.avgHotelMidUSD as number,
+          premium: typeof d.avgHotelPremiumUSD === "number" ? d.avgHotelPremiumUSD : undefined,
+        },
         capturedAt: (d.capturedAt as string) ?? new Date().toISOString(),
       }));
     cachedHotelPrices = { prices, expiresAt: Date.now() + CACHE_TTL_MS };

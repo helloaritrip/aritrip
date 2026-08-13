@@ -66,7 +66,9 @@ const pageData = {
   })),
   liveHotels: liveHotelDocs.map((d) => ({
     destinationId: d.destinationId as string,
-    avgHotelCostPerNightUSD: d.avgHotelCostPerNightUSD as number,
+    budget: typeof d.avgHotelBudgetUSD === "number" ? d.avgHotelBudgetUSD : null,
+    mid: d.avgHotelMidUSD as number,
+    premium: typeof d.avgHotelPremiumUSD === "number" ? d.avgHotelPremiumUSD : null,
     capturedAt: d.capturedAt as string,
   })),
   originLabels: ORIGIN_LABELS,
@@ -148,7 +150,7 @@ const pageData = {
     transfers: number | null;
     capturedAt: string;
   };
-  type LiveHotel = { destinationId: string; avgHotelCostPerNightUSD: number; capturedAt: string };
+  type LiveHotel = { destinationId: string; budget: number | null; mid: number; premium: number | null; capturedAt: string };
   type PageData = {
     cities: City[];
     liveFlights: LiveFlight[];
@@ -251,11 +253,22 @@ const pageData = {
     const hotel = data.liveHotels.find((h) => h.destinationId === cityId);
     const curatedHotel = data.curatedHotels[cityId];
     if (hotel) {
-      const diff = curatedHotel ? Math.round(((hotel.avgHotelCostPerNightUSD - curatedHotel) / curatedHotel) * 100) : null;
+      const diff = curatedHotel ? Math.round(((hotel.mid - curatedHotel) / curatedHotel) * 100) : null;
+      const tierRows = (
+        [
+          ["Budget", hotel.budget],
+          ["Mid", hotel.mid],
+          ["Premium", hotel.premium],
+        ] as [string, number | null][]
+      )
+        .filter(([, price]) => price !== null)
+        .map(([label, price]) => `<span class="mr-3">${label}: <span class="font-medium text-ink">$${price}</span></span>`)
+        .join("");
       hotelResult.innerHTML = `
         <div class="flex items-center justify-between rounded-lg border border-rule bg-surface p-4">
           <div>
-            <p class="text-lg font-semibold text-accent">$${hotel.avgHotelCostPerNightUSD}<span class="text-sm font-normal text-muted"> / night</span></p>
+            <p class="text-lg font-semibold text-accent">$${hotel.mid}<span class="text-sm font-normal text-muted"> / night (mid)</span></p>
+            <p class="text-xs text-muted">${tierRows}</p>
             ${diff !== null ? `<p class="text-xs text-muted">${diff >= 0 ? "+" : ""}${diff}% vs. curated estimate ($${curatedHotel}/night)</p>` : ""}
           </div>
           <p class="text-xs text-muted">Refreshed ${timeAgo(hotel.capturedAt)}</p>
