@@ -2,10 +2,11 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { TextInput, Combobox, Chip } from "@aritrips/ui";
-import { destinations, ORIGIN_HUBS, DEFAULT_ORIGIN_HUB, type OriginHub, type InterestTag } from "@aritrips/data";
-import { ResultCard, type RecommendationResult, type TripContext } from "./ResultCard";
+import { ORIGIN_HUBS, DEFAULT_ORIGIN_HUB, type OriginHub, type InterestTag } from "@aritrips/data";
+import type { RecommendationResult } from "./ResultCard";
 import { ORIGIN_OPTIONS } from "@/lib/originLabels";
 import { trackEvent, newSearchId } from "@/lib/trackEvent";
+import { useSearch } from "./SearchContext";
 import {
   BeachIcon,
   AdventureIcon,
@@ -78,15 +79,10 @@ const initialState: FormState = {
   interests: [],
 };
 
-type SearchStatus = "idle" | "loading" | "done" | "error";
-
 export function SearchForm() {
   const [form, setForm] = useState<FormState>(initialState);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<SearchStatus>("idle");
-  const [results, setResults] = useState<RecommendationResult[]>([]);
-  const [tripContext, setTripContext] = useState<TripContext | null>(null);
-  const [searchId, setSearchId] = useState<string | null>(null);
+  const { status, setSearchState } = useSearch();
   const todayISODate = getTodayISODate();
 
   // Origen por defecto: ya no siempre Dallas. Prioridad: 1) ?origin=XXX en
@@ -157,9 +153,8 @@ export function SearchForm() {
       return;
     }
 
-    setStatus("loading");
+    setSearchState({ status: "loading" });
     const currentSearchId = newSearchId();
-    setSearchId(currentSearchId);
     trackEvent({ name: "search_performed", searchId: currentSearchId, originAirportCode: form.originAirportCode, budgetUSD });
     try {
       const res = await fetch("/api/recommendations", {
@@ -180,8 +175,6 @@ export function SearchForm() {
         throw new Error(body.error ?? `Request failed (${res.status})`);
       }
       const data: { recommendations: RecommendationResult[] } = await res.json();
-      setResults(data.recommendations);
-      setTripContext({ originAirportCode: form.originAirportCode, startDate: form.startDate, endDate: form.endDate, adults });
       for (const r of data.recommendations) {
         trackEvent({
           name: "recommendation_shown",
@@ -192,18 +185,22 @@ export function SearchForm() {
           subScores: r.subScores,
         });
       }
-      setStatus("done");
+      setSearchState({
+        status: "done",
+        results: data.recommendations,
+        tripContext: { originAirportCode: form.originAirportCode, startDate: form.startDate, endDate: form.endDate, adults },
+        searchId: currentSearchId,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
-      setStatus("error");
+      setSearchState({ status: "error" });
     }
   }
 
   return (
-    <div className="flex w-full max-w-xl flex-col gap-6 lg:max-w-5xl">
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col gap-5 rounded-lg border border-rule bg-surface p-6 lg:mx-auto lg:w-fit"
+        className="flex w-full max-w-xl flex-col gap-5 rounded-lg border border-rule bg-surface p-6 lg:mx-auto lg:w-fit lg:max-w-none"
       >
         {/* En mobile este bloque queda igual que siempre (flex-col, cada
             grupo apilado) — a pedido explícito del usuario (2026-08-13),
@@ -278,7 +275,7 @@ export function SearchForm() {
             </div>
             <div className="col-span-2 lg:w-32 lg:col-span-1">
               <TextInput
-                label="Total budget (USD)"
+                label="Budget (USD)"
                 icon={<WalletIcon className="h-4 w-4 text-highlight" />}
                 name="budget"
                 type="number"
@@ -326,21 +323,5 @@ export function SearchForm() {
           )}
         </button>
       </form>
-
-      {status === "done" && results.length === 0 && (
-        <div className="rounded-lg border border-rule bg-surface p-5 text-sm text-muted">
-          No destinations fit that budget for those dates yet — our catalog is still growing (
-          {destinations.length} destinations so far). Try a higher budget or different dates.
-        </div>
-      )}
-
-      {status === "done" && results.length > 0 && tripContext && (
-        <div className="flex flex-col gap-3">
-          {results.map((r) => (
-            <ResultCard key={r.destinationId} result={r} tripContext={tripContext} searchId={searchId} />
-          ))}
-        </div>
-      )}
-    </div>
   );
 }

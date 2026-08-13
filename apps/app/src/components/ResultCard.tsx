@@ -134,7 +134,7 @@ export function ResultCard({
           loading="lazy"
         />
         <span className="absolute left-3 top-3 rounded-full bg-highlight px-3 py-1 text-xs font-semibold text-highlight-ink">
-          Flight + Hotel
+          Flight + Hotel + Activities
         </span>
         <div className="absolute right-3 top-3 flex items-center gap-2">
           <SaveButton

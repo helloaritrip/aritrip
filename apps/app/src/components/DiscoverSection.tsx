@@ -121,9 +121,7 @@ function DiscoverCard({
           onOpen();
         }
       }}
-      className={`flex cursor-pointer flex-col overflow-hidden rounded-lg border bg-surface text-left transition-shadow hover:shadow-md ${
-        emphasized ? "border-accent shadow-md sm:-translate-y-2" : "border-rule"
-      }`}
+      className="flex cursor-pointer flex-col overflow-hidden rounded-lg border border-rule bg-surface text-left transition-shadow hover:shadow-md"
     >
       <div className="relative">
         {/* eslint-disable-next-line @next/next/no-img-element -- viene de un proxy propio */}
@@ -133,7 +131,15 @@ function DiscoverCard({
           className="h-40 w-full object-cover"
           loading="lazy"
         />
-        <span className="absolute left-3 top-3 rounded-full bg-highlight px-3 py-1 text-xs font-semibold text-highlight-ink">
+        {/* "Our pick" es el único slot en nuestro azul de marca — el resto
+            se queda en el naranja de siempre (a pedido del usuario,
+            2026-08-14: la tarjeta ya no debe distinguirse por el borde, solo
+            la etiqueta). */}
+        <span
+          className={`absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-semibold ${
+            emphasized ? "bg-accent text-accent-ink" : "bg-highlight text-highlight-ink"
+          }`}
+        >
           {SLOT_LABEL[pick.slot]}
         </span>
         <div className="absolute right-3 top-3">

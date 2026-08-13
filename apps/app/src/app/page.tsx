@@ -1,5 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { SearchForm } from "@/components/SearchForm";
+import { SearchResults } from "@/components/SearchResults";
+import { SearchProvider } from "@/components/SearchContext";
 import { DiscoverSection } from "@/components/DiscoverSection";
 import { CompassIcon, ShieldCheckIcon, DollarCircleIcon, WorldIcon } from "@/components/Icons";
 import { getAppHeroImageUrl } from "@/lib/appHero";
@@ -19,6 +21,7 @@ export default async function Home() {
 
   return (
     <main className="flex flex-1 flex-col bg-bg">
+      <SearchProvider>
       <div className="relative overflow-hidden">
         {/* La franja de foto llena exactamente la altura del contenido de
             arriba (título + form) vía `absolute inset-0` — antes tenía una
@@ -49,6 +52,16 @@ export default async function Home() {
           <SearchForm />
         </div>
       </div>
+
+      {/* Fuera de la franja de foto a propósito — ver SearchContext.tsx.
+          Antes los resultados vivían adentro del mismo bloque que la
+          imagen de fondo, así que una lista larga estiraba la foto hasta
+          cubrir toda esa área (bug real reportado por el usuario,
+          2026-08-14: "la imagen de fondo se estira y cubre todo el
+          fondo"). Ahora el hero solo mide título+form, y esto queda en
+          fondo normal de la página sin importar cuántos resultados haya. */}
+      <SearchResults />
+      </SearchProvider>
 
       <div className="relative z-10 mx-auto grid w-full max-w-5xl grid-cols-2 gap-x-6 gap-y-8 px-6 pb-14 pt-4 sm:grid-cols-4">
         {TRUST_ITEMS.map((item) => (
