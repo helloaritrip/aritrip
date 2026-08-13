@@ -3,7 +3,8 @@ import { env } from "cloudflare:workers";
 import type { Data } from "@measured/puck";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../lib/requireAdminSession";
-import { listDocuments } from "@aritrips/data";
+import { getCachedPages } from "../../lib/pagesCache";
+import { getCachedCollection } from "../../lib/adminReadCache";
 import type { Props } from "../../puck/config";
 
 export const prerender = false;
@@ -49,8 +50,8 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
   const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
   try {
     const [pages, reviews] = await Promise.all([
-      listDocuments("pages", credentials) as Promise<PageDoc[]>,
-      listDocuments("imageReviews", credentials) as Promise<ReviewDoc[]>,
+      getCachedPages(credentials) as Promise<PageDoc[]>,
+      getCachedCollection("imageReviews", credentials) as Promise<ReviewDoc[]>,
     ]);
 
     const reviewBySlug = new Map(reviews.map((r) => [r.id, String(r.status ?? "unreviewed")]));

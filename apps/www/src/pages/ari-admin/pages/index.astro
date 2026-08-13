@@ -5,6 +5,13 @@ import { getAdminSession } from "../../../lib/requireAdminSession";
 import { listDocuments, destinations } from "@aritrips/data";
 import { getAdRailsEnabled } from "../../../lib/adConfig";
 
+// Deliberadamente SIN cache acá (2026-08-14) — a diferencia de /deals,
+// /blog, etc. (ver dealsCache.ts/pagesCache.ts), esta es la pantalla
+// donde el dueño crea/republica páginas y espera ver el resultado al
+// toque; la colección `pages` además es chica (decenas de docs, no
+// cientos), así que el ahorro de lecturas acá no vale el riesgo de
+// confusión ("¿por qué no aparece la página que acabo de crear?").
+
 export const prerender = false;
 
 const session = await getAdminSession(Astro.cookies, env);
