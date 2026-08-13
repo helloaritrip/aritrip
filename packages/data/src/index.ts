@@ -39,3 +39,5 @@ export type { LiveFlightPrice, LiveHotelPrice } from "./livePrices";
 export { applyImageOverlay } from "./liveImages";
 export type { LiveDestinationImage } from "./liveImages";
 export { HOTEL_KEYS } from "./hotelKeys";
+export { detectFlightDeals, MIN_DEAL_DISCOUNT_PERCENT } from "./deals";
+export type { FlightDeal } from "./deals";

@@ -22,6 +22,12 @@ export interface LiveFlightPrice {
   capturedAt: string; // ISO date
   transfers?: number;
   airline?: string;
+  // "YYYY-MM" — el mes de viaje que apps/price-sync consultó de verdad
+  // (siempre "el próximo mes" al momento del fetch, ver nextMonthPeriod()
+  // en apps/price-sync). Ya se escribía en Firestore desde 2026-08-10 pero
+  // nadie lo leía de vuelta hasta ahora — hace falta para deals.ts, que
+  // necesita saber contra qué mes de la curva curada comparar este precio.
+  searchPeriod?: string;
 }
 
 export function livePriceDocId(destinationId: string, originAirportCode: string): string {
