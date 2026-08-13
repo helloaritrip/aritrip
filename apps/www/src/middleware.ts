@@ -30,7 +30,49 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return context.redirect(url.toString(), 301);
   }
 
-  const response = await next();
+  let response = await next();
+
+  // Respaldo de "última copia buena" en la Cache API de Cloudflare
+  // (2026-08-15) — el Cache Rule creado desde el dashboard no estaba
+  // generando HITs para este dominio (probado en vivo con curl: 0 de 12
+  // intentos en 60s), así que stale-if-error nunca tenía nada de dónde
+  // agarrarse. Se implementa acá en vez de depender de esa capa: cada
+  // respuesta pública exitosa se guarda con un TTL propio de 24h (más
+  // largo que el s-maxage real que ve el visitante), y si una respuesta
+  // falla con un error real (5xx — ver Astro.response.status = 503 en
+  // deals.astro/blog/index.astro/p/[slug].astro), se sirve esa copia
+  // guardada en vez del error. No reemplaza el ahorro de lecturas de
+  // Firestore de dealsCache.ts/pagesCache.ts — esto es solo el paracaídas
+  // para cuando la página igual llega a fallar.
+  const path = url.pathname;
+  const isPubliclyCacheable = context.request.method === "GET" && !path.startsWith("/ari-admin") && !path.startsWith("/api");
+
+  if (isPubliclyCacheable) {
+    // `caches.default` es una extensión de Cloudflare — el tipo `CacheStorage`
+    // del lib DOM (que Astro carga para el código de cliente) no lo declara,
+    // de ahí el cast.
+    const cache = (caches as unknown as { default: Cache }).default;
+    // `cfContext` (antes `runtime.ctx`, ver env.d.ts) no existe en `astro dev`
+    // local — sin él, se espera la escritura al caché en vez de dispararla
+    // en paralelo, solo en desarrollo.
+    const cfContext = (context.locals as { cfContext?: { waitUntil: (p: Promise<unknown>) => void } }).cfContext;
+
+    if (response.status >= 200 && response.status < 300 && response.headers.has("Cache-Control")) {
+      const backupHeaders = new Headers(response.headers);
+      backupHeaders.set("Cache-Control", "public, max-age=86400");
+      const backup = new Response(response.clone().body, { status: response.status, headers: backupHeaders });
+      const putPromise = cache.put(context.request, backup);
+      if (cfContext) cfContext.waitUntil(putPromise);
+      else await putPromise;
+    } else if (response.status >= 500) {
+      const stale = await cache.match(context.request);
+      if (stale) {
+        const staleHeaders = new Headers(stale.headers);
+        staleHeaders.set("X-Served-Stale", "1");
+        response = new Response(stale.body, { status: 200, headers: staleHeaders });
+      }
+    }
+  }
 
   // Headers de seguridad estándar (auditoría de seguridad, 2026-08-10) —
   // el más concreto es X-Frame-Options: sin él, /ari-admin/login se
