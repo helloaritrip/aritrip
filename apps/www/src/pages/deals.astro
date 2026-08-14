@@ -244,7 +244,7 @@ function activityDealLink(deal: FlightDeal): string {
     <p class="text-sm text-white/70">
       <a href="/" class="hover:text-highlight">Home</a> / Deals
     </p>
-    <h1 class="mt-2 text-3xl font-semibold sm:text-4xl">Flight Deals</h1>
+    <h1 class="mt-2 text-3xl font-semibold sm:text-4xl">Deals</h1>
     <p class="mx-auto mt-3 max-w-xl text-sm text-white/80">
       Real fares from Travelpayouts, flagged automatically when they run at least {MIN_DEAL_DISCOUNT_PERCENT}% below what that
       route normally costs for that month — no one has to go hunting for these by hand.
@@ -253,67 +253,126 @@ function activityDealLink(deal: FlightDeal): string {
 
   <div class="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-14 lg:grid-cols-[260px_1fr]">
     <aside class="flex flex-col gap-8">
-      <div class="flex flex-col gap-3">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Sort by</h2>
-        <ul class="flex flex-col gap-1.5">
-          {SORT_OPTIONS.map((opt) => (
-            <li>
-              <a
-                href={buildUrl({ sort: opt.value })}
-                class={`block rounded-md px-2.5 py-1.5 text-sm ${
-                  selectedSort === opt.value ? "bg-accent/10 font-medium text-accent" : "text-ink hover:bg-bg"
-                }`}
-              >
+      <!-- Mobile: dropdowns compactos (2026-08-15, a pedido del usuario) —
+           las mismas listas de abajo ocupan mucho alto apiladas arriba de
+           las cards en pantallas chicas. El value de cada <option> es la
+           URL de destino ya armada con buildUrl (la misma función que usan
+           los links de desktop), así que el único JS que hace falta es
+           "navegá a donde diga la opción elegida" — nada de estado ni
+           librerías, primera línea de JS en una página pública del sitio. -->
+      <div class="flex flex-col gap-3 lg:hidden">
+        <div class="flex flex-col gap-1.5">
+          <label for="mobile-sort" class="text-sm font-semibold uppercase tracking-wide text-muted">Sort by</label>
+          <select
+            id="mobile-sort"
+            onchange="location.href=this.value"
+            class="w-full rounded-md border border-rule bg-surface px-3 py-2 text-sm text-ink focus:outline focus:outline-2 focus:outline-accent"
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option value={buildUrl({ sort: opt.value })} selected={selectedSort === opt.value}>
                 {opt.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div class="flex flex-col gap-3">
-        <div class="flex items-center justify-between">
-          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Flying from</h2>
-          {(selectedOrigin || selectedMonth) && (
-            <a href="/deals" class="text-xs font-medium text-accent hover:underline">
-              Clear
-            </a>
-          )}
+              </option>
+            ))}
+          </select>
         </div>
-        <ul class="flex flex-col gap-1.5">
-          {availableOrigins.map((origin) => (
-            <li>
-              <a
-                href={selectedOrigin === origin ? buildUrl({ origin: null }) : buildUrl({ origin })}
-                class={`block rounded-md px-2.5 py-1.5 text-sm ${
-                  selectedOrigin === origin ? "bg-accent/10 font-medium text-accent" : "text-ink hover:bg-bg"
-                }`}
-              >
+
+        <div class="flex flex-col gap-1.5">
+          <label for="mobile-origin" class="text-sm font-semibold uppercase tracking-wide text-muted">Flying from</label>
+          <select
+            id="mobile-origin"
+            onchange="location.href=this.value"
+            class="w-full rounded-md border border-rule bg-surface px-3 py-2 text-sm text-ink focus:outline focus:outline-2 focus:outline-accent"
+          >
+            <option value={buildUrl({ origin: null })} selected={!selectedOrigin}>All cities</option>
+            {availableOrigins.map((origin) => (
+              <option value={buildUrl({ origin })} selected={selectedOrigin === origin}>
                 {ORIGIN_LABELS[origin] ?? origin}
-              </a>
-            </li>
-          ))}
-          {availableOrigins.length === 0 && <li class="text-sm text-muted">No deals yet.</li>}
-        </ul>
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label for="mobile-month" class="text-sm font-semibold uppercase tracking-wide text-muted">Travel month</label>
+          <select
+            id="mobile-month"
+            onchange="location.href=this.value"
+            class="w-full rounded-md border border-rule bg-surface px-3 py-2 text-sm text-ink focus:outline focus:outline-2 focus:outline-accent"
+          >
+            <option value={buildUrl({ month: null })} selected={!selectedMonth}>All months</option>
+            {availableMonths.map((month) => (
+              <option value={buildUrl({ month: String(month) })} selected={selectedMonth === String(month)}>
+                {MONTH_NAMES[month - 1]}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <div class="flex flex-col gap-3">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Travel month</h2>
-        <ul class="flex flex-col gap-1.5">
-          {availableMonths.map((month) => (
-            <li>
-              <a
-                href={selectedMonth === String(month) ? buildUrl({ month: null }) : buildUrl({ month: String(month) })}
-                class={`block rounded-md px-2.5 py-1.5 text-sm ${
-                  selectedMonth === String(month) ? "bg-accent/10 font-medium text-accent" : "text-ink hover:bg-bg"
-                }`}
-              >
-                {MONTH_NAMES[month - 1]}
+      <!-- Desktop: mismas listas de siempre, sin JS. -->
+      <div class="hidden lg:flex lg:flex-col lg:gap-8">
+        <div class="flex flex-col gap-3">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Sort by</h2>
+          <ul class="flex flex-col gap-1.5">
+            {SORT_OPTIONS.map((opt) => (
+              <li>
+                <a
+                  href={buildUrl({ sort: opt.value })}
+                  class={`block rounded-md px-2.5 py-1.5 text-sm ${
+                    selectedSort === opt.value ? "bg-accent/10 font-medium text-accent" : "text-ink hover:bg-bg"
+                  }`}
+                >
+                  {opt.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Flying from</h2>
+            {(selectedOrigin || selectedMonth) && (
+              <a href="/deals" class="text-xs font-medium text-accent hover:underline">
+                Clear
               </a>
-            </li>
-          ))}
-          {availableMonths.length === 0 && <li class="text-sm text-muted">No deals yet.</li>}
-        </ul>
+            )}
+          </div>
+          <ul class="flex flex-col gap-1.5">
+            {availableOrigins.map((origin) => (
+              <li>
+                <a
+                  href={selectedOrigin === origin ? buildUrl({ origin: null }) : buildUrl({ origin })}
+                  class={`block rounded-md px-2.5 py-1.5 text-sm ${
+                    selectedOrigin === origin ? "bg-accent/10 font-medium text-accent" : "text-ink hover:bg-bg"
+                  }`}
+                >
+                  {ORIGIN_LABELS[origin] ?? origin}
+                </a>
+              </li>
+            ))}
+            {availableOrigins.length === 0 && <li class="text-sm text-muted">No deals yet.</li>}
+          </ul>
+        </div>
+
+        <div class="flex flex-col gap-3">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Travel month</h2>
+          <ul class="flex flex-col gap-1.5">
+            {availableMonths.map((month) => (
+              <li>
+                <a
+                  href={selectedMonth === String(month) ? buildUrl({ month: null }) : buildUrl({ month: String(month) })}
+                  class={`block rounded-md px-2.5 py-1.5 text-sm ${
+                    selectedMonth === String(month) ? "bg-accent/10 font-medium text-accent" : "text-ink hover:bg-bg"
+                  }`}
+                >
+                  {MONTH_NAMES[month - 1]}
+                </a>
+              </li>
+            ))}
+            {availableMonths.length === 0 && <li class="text-sm text-muted">No deals yet.</li>}
+          </ul>
+        </div>
       </div>
     </aside>
 
