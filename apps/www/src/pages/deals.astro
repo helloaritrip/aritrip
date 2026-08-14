@@ -234,6 +234,25 @@ function activityDealLink(deal: FlightDeal): string {
   url.searchParams.set("aid", affiliateIds.activity.value);
   return url.toString();
 }
+
+// Métricas específicas de /deals (2026-08-15, Prioridad 3 acordada con el
+// head — visitas/clicks/tipo de deal/destinos populares). Página sin JS
+// propio salvo estas dos cositas puntuales (mismo criterio ya aceptado
+// para los <select> de mobile): un solo <script> chico define ariTrack()
+// una vez, y cada link de afiliado le pasa un objeto ya armado — evita
+// repetir el fetch entero en cada uno de los ~27 links que puede haber
+// en una página con 9 cards. JSON.stringify en vez de armar el string a
+// mano: nunca hay riesgo de que un valor con comilla rompa el atributo.
+function dealClickAttr(deal: FlightDeal, category: "flight" | "hotel" | "activity"): string {
+  const payload = {
+    name: "deal_clicked" as const,
+    destinationId: deal.destination.id,
+    dealType: selectedType,
+    category,
+    discountPercent: deal.discountPercent,
+  };
+  return `ariTrack(${JSON.stringify(payload)})`;
+}
 ---
 
 <Layout
@@ -490,6 +509,7 @@ function activityDealLink(deal: FlightDeal): string {
                     href={kiwiDealLink(deal)}
                     target="_blank"
                     rel="noopener noreferrer sponsored"
+                    onclick={dealClickAttr(deal, "flight")}
                     class="mt-1 rounded-md bg-accent px-3 py-2 text-center text-sm font-medium text-accent-ink hover:opacity-90"
                   >
                     See this deal
@@ -501,6 +521,7 @@ function activityDealLink(deal: FlightDeal): string {
                       href={kiwiDealLink(deal)}
                       target="_blank"
                       rel="noopener noreferrer sponsored"
+                      onclick={dealClickAttr(deal, "flight")}
                       class="flex-1 rounded-md bg-accent px-3 py-2 text-center text-sm font-medium text-accent-ink hover:opacity-90"
                     >
                       ✈ Flight
@@ -509,6 +530,7 @@ function activityDealLink(deal: FlightDeal): string {
                       href={hotelDealLink(deal)}
                       target="_blank"
                       rel="noopener noreferrer sponsored"
+                      onclick={dealClickAttr(deal, "hotel")}
                       class="flex-1 rounded-md border border-rule px-3 py-2 text-center text-sm font-medium text-ink hover:border-accent hover:text-accent"
                     >
                       🏨 Hotel
@@ -521,6 +543,7 @@ function activityDealLink(deal: FlightDeal): string {
                       href={kiwiDealLink(deal)}
                       target="_blank"
                       rel="noopener noreferrer sponsored"
+                      onclick={dealClickAttr(deal, "flight")}
                       class="flex-1 rounded-md bg-accent px-3 py-2 text-center text-sm font-medium text-accent-ink hover:opacity-90"
                     >
                       ✈ Flight
@@ -529,6 +552,7 @@ function activityDealLink(deal: FlightDeal): string {
                       href={hotelDealLink(deal)}
                       target="_blank"
                       rel="noopener noreferrer sponsored"
+                      onclick={dealClickAttr(deal, "hotel")}
                       class="flex-1 rounded-md border border-rule px-3 py-2 text-center text-sm font-medium text-ink hover:border-accent hover:text-accent"
                     >
                       🏨 Hotel
@@ -537,6 +561,7 @@ function activityDealLink(deal: FlightDeal): string {
                       href={activityDealLink(deal)}
                       target="_blank"
                       rel="noopener noreferrer sponsored"
+                      onclick={dealClickAttr(deal, "activity")}
                       class="flex-1 rounded-md border border-rule px-3 py-2 text-center text-sm font-medium text-ink hover:border-accent hover:text-accent"
                     >
                       🎟 Activities
@@ -593,3 +618,44 @@ function activityDealLink(deal: FlightDeal): string {
     </div>
   </div>
 </Layout>
+
+<script define:vars={{ APP_URL, selectedType, selectedOrigin, selectedMonth, selectedSort }}>
+  // Métricas de /deals (2026-08-15) — define ariTrack() una vez para que
+  // cada <a> de afiliado (arriba, onclick={dealClickAttr(...)}) solo
+  // tenga que pasarle un objeto ya armado, y dispara la vista de página acá
+  // abajo. isTest mismo mecanismo que apps/app/src/lib/testMode.ts
+  // (?test=1 pegado en sessionStorage) para que el dashboard pueda excluir
+  // pruebas propias, replicado a mano porque esta página no puede
+  // importar ese archivo (vive en apps/app, esto es un <script> plano).
+  function ariTrack(payload) {
+    var isTest = false;
+    try {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get("test") === "1") {
+        sessionStorage.setItem("ari_test_mode", "1");
+        isTest = true;
+      } else {
+        isTest = sessionStorage.getItem("ari_test_mode") === "1";
+      }
+    } catch (e) {
+      // sin sessionStorage (modo privado estricto, etc.) — sigue sin marcar test
+    }
+    payload.isTest = isTest;
+    fetch(APP_URL + "/api/track", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(function () {
+      // best-effort — un evento de analytics perdido no debe afectar al usuario
+    });
+  }
+
+  ariTrack({
+    name: "deals_page_viewed",
+    dealType: selectedType,
+    origin: selectedOrigin || undefined,
+    month: selectedMonth || undefined,
+    sort: selectedSort,
+  });
+</script>

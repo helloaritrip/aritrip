@@ -65,6 +65,27 @@ export type TrackedEvent =
       itemType: "destination" | "deal";
       itemId: string;
       searchId?: string;
+    }
+  | {
+      // Métricas específicas de aritrips.com/deals (2026-08-15, Prioridad 3
+      // acordada con el head — visitas/clicks/tipo de deal/destinos
+      // populares). Disparado desde deals.astro, una página sin JS
+      // propio: no puede importar este archivo (vive en apps/app), así
+      // que llama al mismo /api/track a mano, cross-origin — ver el
+      // comentario en DealSaveButton.tsx para el mismo patrón ya
+      // establecido con favorite_saved/removed.
+      name: "deals_page_viewed";
+      dealType: "flight" | "flight-hotel" | "trip";
+      origin?: string;
+      month?: string;
+      sort?: string;
+    }
+  | {
+      name: "deal_clicked";
+      destinationId: string;
+      dealType: "flight" | "flight-hotel" | "trip";
+      category: "flight" | "hotel" | "activity";
+      discountPercent: number;
     };
 
 export function newSearchId(): string {

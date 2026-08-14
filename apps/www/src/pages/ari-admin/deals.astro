@@ -1,0 +1,270 @@
+---
+import { env } from "cloudflare:workers";
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { getAdminSession } from "../../lib/requireAdminSession";
+import { queryDocuments, destinations } from "@aritrips/data";
+
+export const prerender = false;
+
+const session = await getAdminSession(Astro.cookies, env);
+if (!session) {
+  return Astro.redirect(`/ari-admin/login?next=${encodeURIComponent(Astro.url.pathname)}`);
+}
+
+const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
+
+type TrackedEventDoc = {
+  id: string;
+  name?: string;
+  createdAt?: string;
+  dealType?: string;
+  category?: string;
+  destinationId?: string;
+  discountPercent?: number;
+  origin?: string;
+  month?: string;
+  sort?: string;
+  itemType?: string;
+  itemId?: string;
+  isTest?: boolean;
+};
+
+// Mismo patrón que /ari-admin/searches — una muestra de los últimos N
+// eventos (2026-08-15, Prioridad 3 acordada con el head: visitas/clicks/
+// favoritos/tipo de deal/destinos populares para /deals específicamente).
+// No hace falta un `where name in [...]` server-side porque `events` ya
+// es chica y esto se pagina igual que la otra pantalla — filtrar acá
+// mismo evita otra lectura más costosa.
+const STATS_SAMPLE_SIZE = 500;
+
+let statsEvents: TrackedEventDoc[] = [];
+let loadError: string | null = null;
+
+if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+  try {
+    const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
+    statsEvents = (await queryDocuments("events", credentials, {
+      orderByField: "createdAt",
+      direction: "DESCENDING",
+      limit: STATS_SAMPLE_SIZE,
+    })) as TrackedEventDoc[];
+  } catch (err) {
+    console.error("[ari-admin/deals] Failed to load events", err);
+    loadError = "Couldn't load deals data right now.";
+  }
+} else {
+  loadError = "Firestore isn't configured yet (missing secrets).";
+}
+
+const testCount = statsEvents.filter((e) => e.isTest === true).length;
+const real = statsEvents.filter((e) => e.isTest !== true);
+
+const views = real.filter((e) => e.name === "deals_page_viewed");
+const clicks = real.filter((e) => e.name === "deal_clicked");
+// itemType "deal" separa esto de los favoritos de destinos que guarda
+// Ari Core en /app — mismo evento, campo distinto (ver trackEvent.ts).
+const dealFavoriteSaves = real.filter((e) => e.name === "favorite_saved" && e.itemType === "deal");
+const dealFavoriteRemoves = real.filter((e) => e.name === "favorite_removed" && e.itemType === "deal");
+const netDealFavorites = dealFavoriteSaves.length - dealFavoriteRemoves.length;
+
+const roughCTR = views.length > 0 ? Math.round((clicks.length / views.length) * 1000) / 10 : null;
+
+function destinationName(id?: string): string {
+  return destinations.find((d) => d.id === id)?.name ?? id ?? "—";
+}
+
+function topCounts<T extends string>(items: T[], limit = 8): { key: T; count: number }[] {
+  const counts = new Map<T, number>();
+  for (const item of items) counts.set(item, (counts.get(item) ?? 0) + 1);
+  return [...counts.entries()]
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+}
+
+const DEAL_TYPE_LABELS: Record<string, string> = {
+  flight: "Flight deals",
+  "flight-hotel": "Flight and hotel deals",
+  trip: "Trip deals",
+};
+const CATEGORY_LABELS: Record<string, string> = { flight: "✈ Flight", hotel: "🏨 Hotel", activity: "🎟 Activities" };
+
+const clicksByDealType = topCounts(clicks.map((e) => e.dealType ?? "unknown"), 5).map((r) => ({
+  ...r,
+  label: DEAL_TYPE_LABELS[r.key] ?? r.key,
+}));
+const clicksByCategory = topCounts(clicks.map((e) => e.category ?? "unknown"), 5).map((r) => ({
+  ...r,
+  label: CATEGORY_LABELS[r.key] ?? r.key,
+}));
+const viewsByDealType = topCounts(views.map((e) => e.dealType ?? "unknown"), 5).map((r) => ({
+  ...r,
+  label: DEAL_TYPE_LABELS[r.key] ?? r.key,
+}));
+const topClickedDestinations = topCounts(clicks.map((e) => e.destinationId ?? "unknown"), 10);
+// itemId de favorite_saved en deals es un id compuesto
+// destinationId_origen_año-mes (ver deals.astro/DealSaveButton.tsx) — el
+// destino real es el primer segmento.
+const topFavoritedDestinations = topCounts(dealFavoriteSaves.map((e) => e.itemId?.split("_")[0] ?? "unknown"), 10);
+const topViewedOrigins = topCounts(views.map((e) => e.origin || "any").filter((o) => o !== "any"), 8);
+
+function formatDate(iso?: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+const recentClicks = clicks.slice(0, 20);
+---
+
+<AdminLayout title="Deals — AriTrips Admin" session={session} active="deals">
+  <div class="flex max-w-4xl flex-col gap-8">
+    <div>
+      <h1 class="text-2xl font-semibold text-ink">Deals</h1>
+      <p class="text-sm text-muted">
+        Qué tan bien funciona /deals como puerta de entrada — {views.length} visitas, {clicks.length} clicks a
+        afiliados, {netDealFavorites} favoritos guardados hasta ahora.
+      </p>
+      {testCount > 0 && (
+        <p class="text-xs text-muted">
+          Excluidos {testCount} eventos marcados como prueba — no cuentan para estos números.
+        </p>
+      )}
+    </div>
+
+    {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
+
+    {!loadError && views.length === 0 && clicks.length === 0 && (
+      <div class="rounded-lg border border-dashed border-rule bg-surface/50 p-8 text-center text-sm text-muted">
+        Todavía no hay datos — van a empezar a aparecer acá apenas alguien visite /deals.
+      </div>
+    )}
+
+    {(views.length > 0 || clicks.length > 0) && (
+      <>
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div class="rounded-lg border border-rule bg-surface p-4">
+            <p class="text-2xl font-semibold text-ink">{views.length}</p>
+            <p class="text-xs text-muted">Visitas</p>
+          </div>
+          <div class="rounded-lg border border-rule bg-surface p-4">
+            <p class="text-2xl font-semibold text-ink">{clicks.length}</p>
+            <p class="text-xs text-muted">Clicks a afiliados</p>
+          </div>
+          <div class="rounded-lg border border-rule bg-surface p-4">
+            <p class="text-2xl font-semibold text-ink">{roughCTR !== null ? `${roughCTR}%` : "—"}</p>
+            <p class="text-xs text-muted">CTR agregado (clicks / visitas)</p>
+          </div>
+          <div class="rounded-lg border border-rule bg-surface p-4">
+            <p class="text-2xl font-semibold text-ink">{netDealFavorites}</p>
+            <p class="text-xs text-muted">Favoritos guardados</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div class="flex flex-col gap-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Vistas por pestaña</h2>
+            <p class="text-xs text-muted">En qué pestaña estaba parado el visitante al entrar (URL con ?type=...).</p>
+            <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+              {viewsByDealType.length === 0 && <p class="p-3 text-sm text-muted">Sin datos.</p>}
+              {viewsByDealType.map((r) => (
+                <div class="flex items-center justify-between p-3 text-sm">
+                  <span class="text-ink">{r.label}</span>
+                  <span class="text-muted">{r.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Clicks por tipo de deal</h2>
+            <p class="text-xs text-muted">Qué pestaña tenía abierta cuando clickeó un link de afiliado.</p>
+            <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+              {clicksByDealType.length === 0 && <p class="p-3 text-sm text-muted">Sin datos.</p>}
+              {clicksByDealType.map((r) => (
+                <div class="flex items-center justify-between p-3 text-sm">
+                  <span class="text-ink">{r.label}</span>
+                  <span class="text-muted">{r.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Clicks por categoría</h2>
+            <p class="text-xs text-muted">A cuál de los 3 links (vuelo/hotel/actividades) le da la gente.</p>
+            <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+              {clicksByCategory.length === 0 && <p class="p-3 text-sm text-muted">Sin datos.</p>}
+              {clicksByCategory.map((r) => (
+                <div class="flex items-center justify-between p-3 text-sm">
+                  <span class="text-ink">{r.label}</span>
+                  <span class="text-muted">{r.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div class="flex flex-col gap-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Destinos más clickeados</h2>
+            <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+              {topClickedDestinations.length === 0 && <p class="p-3 text-sm text-muted">Sin datos.</p>}
+              {topClickedDestinations.map((d) => (
+                <div class="flex items-center justify-between p-3 text-sm">
+                  <span class="text-ink">{destinationName(d.key)}</span>
+                  <span class="text-muted">{d.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Destinos más guardados</h2>
+            <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+              {topFavoritedDestinations.length === 0 && <p class="p-3 text-sm text-muted">Sin datos.</p>}
+              {topFavoritedDestinations.map((d) => (
+                <div class="flex items-center justify-between p-3 text-sm">
+                  <span class="text-ink">{destinationName(d.key)}</span>
+                  <span class="text-muted">{d.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Visitas con filtro de origen</h2>
+            <p class="text-xs text-muted">Solo cuenta cuando la visita ya trae ?origin=... en la URL.</p>
+            <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+              {topViewedOrigins.length === 0 && <p class="p-3 text-sm text-muted">Sin datos todavía.</p>}
+              {topViewedOrigins.map((o) => (
+                <div class="flex items-center justify-between p-3 text-sm">
+                  <span class="text-ink">{o.key}</span>
+                  <span class="text-muted">{o.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Clicks recientes</h2>
+          <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+            {recentClicks.length === 0 && <p class="p-3 text-sm text-muted">Sin clicks todavía.</p>}
+            {recentClicks.map((e) => (
+              <div class="flex items-center justify-between gap-4 p-3 text-sm">
+                <span class="flex-1 truncate text-ink">
+                  {destinationName(e.destinationId)} · {CATEGORY_LABELS[e.category ?? ""] ?? e.category} ·{" "}
+                  {DEAL_TYPE_LABELS[e.dealType ?? ""] ?? e.dealType}
+                </span>
+                <span class="shrink-0 text-xs text-muted">-{e.discountPercent}%</span>
+                <span class="shrink-0 text-xs text-muted">{formatDate(e.createdAt)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </>
+    )}
+  </div>
+</AdminLayout>

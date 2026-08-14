@@ -48,9 +48,13 @@ type ValidatedEvent =
       isTest: boolean;
     }
   | { name: "recommendation_clicked"; searchId?: string; destinationId: string; rank?: number; category: string; isTest: boolean }
-  | { name: "favorite_saved" | "favorite_removed"; itemType: string; itemId: string; searchId?: string; isTest: boolean };
+  | { name: "favorite_saved" | "favorite_removed"; itemType: string; itemId: string; searchId?: string; isTest: boolean }
+  | { name: "deals_page_viewed"; dealType: string; origin?: string; month?: string; sort?: string; isTest: boolean }
+  | { name: "deal_clicked"; destinationId: string; dealType: string; category: string; discountPercent: number; isTest: boolean };
 
 const VALID_ITEM_TYPES = ["destination", "deal"];
+const VALID_DEAL_TYPES = ["flight", "flight-hotel", "trip"];
+const VALID_DEAL_CATEGORIES = ["flight", "hotel", "activity"];
 
 // isTest (2026-08-11) — las propias pruebas de QA contra producción
 // generaban búsquedas reales indistinguibles de las de un visitante real,
@@ -123,6 +127,45 @@ function validateEvent(body: Record<string, unknown>): ValidatedEvent | null {
         itemType: body.itemType,
         itemId: body.itemId,
         searchId: body.searchId as string | undefined,
+        isTest,
+      };
+    }
+    case "deals_page_viewed": {
+      if (
+        typeof body.dealType !== "string" ||
+        !VALID_DEAL_TYPES.includes(body.dealType) ||
+        (body.origin !== undefined && !isShortString(body.origin, 8)) ||
+        (body.month !== undefined && !isShortString(body.month, 4)) ||
+        (body.sort !== undefined && !isShortString(body.sort, 16))
+      ) {
+        return null;
+      }
+      return {
+        name: "deals_page_viewed",
+        dealType: body.dealType,
+        origin: body.origin as string | undefined,
+        month: body.month as string | undefined,
+        sort: body.sort as string | undefined,
+        isTest,
+      };
+    }
+    case "deal_clicked": {
+      if (
+        !isShortString(body.destinationId, 64) ||
+        typeof body.dealType !== "string" ||
+        !VALID_DEAL_TYPES.includes(body.dealType) ||
+        typeof body.category !== "string" ||
+        !VALID_DEAL_CATEGORIES.includes(body.category) ||
+        !isFiniteNumberInRange(body.discountPercent, 0, 100)
+      ) {
+        return null;
+      }
+      return {
+        name: "deal_clicked",
+        destinationId: body.destinationId,
+        dealType: body.dealType,
+        category: body.category,
+        discountPercent: body.discountPercent,
         isTest,
       };
     }
