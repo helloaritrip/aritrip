@@ -25,6 +25,10 @@ export const metadata: Metadata = {
   // indexadas (Google no puede volver a visitarlas para sacarlas) en
   // vez de sacarlas (auditoría SEO, 2026-08-09).
   robots: { index: false, follow: false },
+  icons: {
+    icon: "/favicon.webp",
+    apple: "/favicon.webp",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

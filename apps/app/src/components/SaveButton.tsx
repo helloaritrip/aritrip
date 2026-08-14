@@ -74,9 +74,28 @@ export function SaveButton({
       disabled={busy}
       aria-label={saved ? "Remove from favorites" : "Save to favorites"}
       aria-pressed={saved}
-      className={`flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-base shadow-sm transition-transform hover:scale-105 ${className}`}
+      className={`flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm transition-transform hover:scale-105 ${className}`}
     >
-      {saved ? "❤️" : "🤍"}
+      {/* SVG plano en vez de emoji (2026-08-15, a pedido del usuario:
+          "quiero que sea un color mate, no con relieve como es
+          actualmente, ya que casi no se distingue") — el emoji 🤍 se
+          renderiza con el brillo/relieve del set de emojis del sistema,
+          apenas visible sobre fotos claras. Mismo path que el ícono de
+          "My Favorites" del nav, para consistencia visual. Gris mate
+          (text-muted, el mismo de fondo del botón "Join AriTrips")
+          cuando no está guardado; naranja de marca (text-highlight),
+          relleno, cuando sí. */}
+      <svg
+        viewBox="0 0 24 24"
+        fill={saved ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth={1.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={`h-4 w-4 ${saved ? "text-highlight" : "text-muted"}`}
+      >
+        <path d="M12 20s-7-4.4-9.5-8.8C.9 8 2.4 4.5 5.8 4.1c1.9-.2 3.6.8 4.7 2.4a.6.6 0 0 0 1 0c1.1-1.6 2.8-2.6 4.7-2.4 3.4.4 4.9 3.9 3.3 7.1C19 15.6 12 20 12 20Z" />
+      </svg>
     </button>
   );
 }

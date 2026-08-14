@@ -22,10 +22,26 @@ function imageProxyUrl(query: string, fallback: string): string {
   return `/api/image-proxy?q=${encodeURIComponent(query)}&fallback=${encodeURIComponent(fallback)}`;
 }
 
+function favoriteKey(item: Favorite): string {
+  return `${item.itemType}-${item.itemId}`;
+}
+
 export default function FavoritesPage() {
   const { user, loading, refresh } = useAuth();
   const [favorites, setFavorites] = useState<Favorite[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Doble confirmación con la papelerita (2026-08-15, a pedido del
+  // usuario) — el primer click "arma" el botón (se pone rojo), el
+  // segundo click sobre el MISMO ítem recién borra de verdad. Se
+  // desarma solo a los 3s si no se confirma, para que no quede un botón
+  // "armado" esperando un toque accidental más tarde.
+  const [confirmingKey, setConfirmingKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!confirmingKey) return;
+    const timer = setTimeout(() => setConfirmingKey(null), 3000);
+    return () => clearTimeout(timer);
+  }, [confirmingKey]);
 
   const loadFavorites = useCallback(async () => {
     try {
@@ -52,6 +68,16 @@ export default function FavoritesPage() {
       body: JSON.stringify({ itemType: item.itemType, itemId: item.itemId }),
     });
     setFavorites((prev) => prev?.filter((f) => !(f.itemType === item.itemType && f.itemId === item.itemId)) ?? null);
+  }
+
+  function handleTrashClick(item: Favorite) {
+    const key = favoriteKey(item);
+    if (confirmingKey === key) {
+      setConfirmingKey(null);
+      remove(item);
+    } else {
+      setConfirmingKey(key);
+    }
   }
 
   if (loading) {
@@ -112,6 +138,27 @@ export default function FavoritesPage() {
               <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-ink">
                 {f.itemType === "deal" ? "Flight deal" : "Trip"}
               </span>
+              {/* Papelerita en la esquina con doble confirmación
+                  (2026-08-15, a pedido del usuario) — reemplaza el link de
+                  texto "Remove" de abajo. Primer click arma el botón (se
+                  pone rojo), segundo click sobre el mismo ítem borra de
+                  verdad; se desarma solo a los 3s si no se confirma. */}
+              <button
+                type="button"
+                onClick={() => handleTrashClick(f)}
+                aria-label={confirmingKey === favoriteKey(f) ? "Confirm remove from favorites" : "Remove from favorites"}
+                className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full shadow-sm transition-colors ${
+                  confirmingKey === favoriteKey(f) ? "bg-red-600 text-white" : "bg-white/90 text-muted hover:text-red-600"
+                }`}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+                  <path d="M4 7h16" />
+                  <path d="M6 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" />
+                  <path d="M6 7v13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                </svg>
+              </button>
             </div>
             <div className="flex flex-col gap-1 p-4">
               <p className="text-sm font-semibold text-ink">{f.snapshot.name ?? f.itemId}</p>
@@ -119,13 +166,7 @@ export default function FavoritesPage() {
               {f.snapshot.priceLabel && <p className="text-sm font-medium text-accent">{f.snapshot.priceLabel}</p>}
               {f.snapshot.originLabel && <p className="text-xs text-muted">From {f.snapshot.originLabel}</p>}
               {f.snapshot.travelLabel && <p className="text-xs text-muted">{f.snapshot.travelLabel}</p>}
-              <button
-                type="button"
-                onClick={() => remove(f)}
-                className="mt-2 self-start text-xs font-medium text-muted hover:text-red-600 dark:hover:text-red-400"
-              >
-                Remove
-              </button>
+              {confirmingKey === favoriteKey(f) && <p className="mt-1 text-xs font-medium text-red-600 dark:text-red-400">Tap the trash icon again to remove.</p>}
             </div>
           </div>
         ))}
