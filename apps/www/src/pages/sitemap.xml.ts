@@ -57,6 +57,6 @@ ${urls.map((u) => `  <url>\n    <loc>${u.loc}</loc>\n    <priority>${u.priority}
     // caché de navegador (no hay `max-age`, así que el browser no cachea).
     // s-maxage subido de 600 a 1800 (2026-08-15, auditoría de lecturas) —
     // Googlebot no necesita el sitemap al segundo.
-    headers: { "Content-Type": "application/xml", "Cache-Control": "public, max-age=0, s-maxage=1800" },
+    headers: { "Content-Type": "application/xml", "Cache-Control": "public, max-age=0, s-maxage=3600" },
   });
 };

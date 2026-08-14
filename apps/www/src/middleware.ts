@@ -97,7 +97,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       if (isOk || response.status === 404) {
         response.headers.set("X-Cache", "MISS");
         if (!response.headers.has("Cache-Control")) {
-          response.headers.set("Cache-Control", "public, max-age=0, s-maxage=300");
+          response.headers.set("Cache-Control", "public, max-age=0, s-maxage=600");
         }
         // La Cache API de Cloudflare debería preferir `s-maxage` sobre
         // `max-age=0` (se comporta como un caché compartido, no un
@@ -106,7 +106,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
         // desacoplado del header real que ve el visitante. Mismo principio
         // que ya se usaba para el respaldo de 24h de abajo.
         const storeHeaders = new Headers(response.headers);
-        storeHeaders.set("Cache-Control", `public, max-age=${extractSMaxAge(response.headers.get("Cache-Control"), 300)}`);
+        storeHeaders.set("Cache-Control", `public, max-age=${extractSMaxAge(response.headers.get("Cache-Control"), 600)}`);
         const stored = new Response(response.clone().body, { status: response.status, headers: storeHeaders });
         const putPromise = primaryCache.put(context.request, stored);
         if (cfContext) cfContext.waitUntil(putPromise);
@@ -125,6 +125,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
         if (stale) {
           const staleHeaders = new Headers(stale.headers);
           staleHeaders.set("X-Served-Stale", "1");
+          // Encontrado en vivo (2026-08-15): el `max-age=86400` de arriba
+          // es un TTL interno nuestro para que backupCache retenga la copia
+          // — nunca debe llegar tal cual a un cliente real. Se filtró una
+          // vez y la Cache Rule del dashboard (que resultó SÍ interceptar
+          // a veces, a pesar de lo que medimos antes) la clavó 24h enteras
+          // a nivel de Cloudflare, salteándose este middleware por un día
+          // entero. TTL corto acá: el contenido viejo se sigue sirviendo
+          // ahora, pero cualquier cache de por medio vuelve a chequear en
+          // menos de un minuto en vez de quedarse pegado.
+          staleHeaders.set("Cache-Control", "public, max-age=0, s-maxage=60");
           response = new Response(stale.body, { status: 200, headers: staleHeaders });
         }
       }

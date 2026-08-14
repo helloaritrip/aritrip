@@ -64,7 +64,7 @@ try {
 // una página de destino cambia incluso menos seguido que el listado del
 // blog una vez publicada; 30 min de caché no le cuesta nada de frescura
 // real y son las páginas de mayor volumen del sitio.
-Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=1800, stale-if-error=86400");
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=3600, stale-if-error=86400");
 
 const pageTitle = (data.root.props?.title as string | undefined) || (doc.title as string | undefined) || "AriTrips";
 const pageDescription = (doc.description as string | undefined) || pageTitle;

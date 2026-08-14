@@ -25,7 +25,7 @@ export const prerender = false;
 // esta colección la edita un humano a mano, no un cron; 15 min sigue
 // siendo un delay imperceptible para publicar y gasta muchas menos
 // lecturas que 5 min.
-Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=900, stale-if-error=86400");
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=1800, stale-if-error=86400");
 
 const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
 function imageProxyUrl(query: string, fallback: string): string {

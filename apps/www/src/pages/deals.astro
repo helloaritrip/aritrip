@@ -31,7 +31,7 @@ export const prerender = false;
 // lotes de 15 cada 15 min), así que 5 min de caché no ganaba frescura
 // real, solo gastaba lecturas de más. 15 min sigue siendo mucho más
 // seguido de lo que los datos de origen podrían cambiar.
-Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=900, stale-if-error=86400");
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=1800, stale-if-error=86400");
 
 const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
 function imageProxyUrl(query: string, fallback: string): string {

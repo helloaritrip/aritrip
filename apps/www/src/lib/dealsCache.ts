@@ -39,8 +39,8 @@ let cachedPartnerConfig: { config: PartnerConfig; expiresAt: number } | null = n
 // deals porque apps/price-sync solo refresca cada ruta cada ~16h — no hay
 // frescura real que ganar yendo más seguido. 30 min para partners porque
 // son valores que solo cambia un humano a mano, nunca un cron.
-const DEALS_CACHE_TTL_MS = 10 * 60 * 1000;
-const PARTNER_CACHE_TTL_MS = 30 * 60 * 1000;
+const DEALS_CACHE_TTL_MS = 20 * 60 * 1000;
+const PARTNER_CACHE_TTL_MS = 60 * 60 * 1000;
 
 export async function getCachedFlightDeals(credentials: FirestoreCredentials): Promise<FlightDeal[]> {
   if (cachedDeals && cachedDeals.expiresAt > Date.now()) return cachedDeals.deals;
