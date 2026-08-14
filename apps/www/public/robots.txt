@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /deals?
 
 Sitemap: https://aritrips.com/sitemap.xml
