@@ -87,7 +87,9 @@ export function Combobox({ label, icon, options, value, onChange, placeholder, n
         aria-expanded={open}
         aria-controls={`${id}-listbox`}
         autoComplete="off"
-        className="rounded-md border border-rule bg-surface px-3 py-2 text-ink placeholder:text-muted focus:outline focus:outline-2 focus:outline-accent"
+        // text-base en mobile — mismo motivo que TextInput.tsx (Safari
+        // iOS hace zoom automático en inputs con menos de 16px de fuente).
+        className="rounded-md border border-rule bg-surface px-3 py-2 text-base text-ink placeholder:text-muted focus:outline focus:outline-2 focus:outline-accent sm:text-sm"
         placeholder={placeholder}
         value={query}
         onChange={(e) => {

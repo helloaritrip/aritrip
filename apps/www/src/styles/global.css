@@ -5,4 +5,11 @@
 body {
   background: var(--color-bg);
   color: var(--color-ink);
+  /* Cinturón de seguridad contra scroll horizontal en mobile (reportado
+     2026-08-15: "puedes mover la pantalla a los lados") — sin esto, un
+     solo elemento apenas más ancho que el viewport (redondeo, un ancho
+     fijo, etc.) hace que toda la página se pueda desplazar de costado. No
+     rompe `position: sticky` del header porque overflow-y sigue
+     comportándose normal. */
+  overflow-x: hidden;
 }

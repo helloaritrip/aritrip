@@ -11,4 +11,7 @@ body {
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: Arial, Helvetica, sans-serif;
+  /* Cinturón de seguridad contra scroll horizontal en mobile — ver el
+     mismo comentario en apps/www/src/styles/global.css. */
+  overflow-x: hidden;
 }

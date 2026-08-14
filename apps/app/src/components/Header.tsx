@@ -17,6 +17,18 @@ const MARKETING_URL = "https://aritrips.com";
 export function Header() {
   return (
     <header className="sticky top-0 z-30 rounded-b-3xl bg-surface shadow-sm">
+      {/* Menú mobile con el truco del checkbox (2026-08-15) — cero JS,
+          igual que en TopNav.astro (apps/www): un <input type="checkbox">
+          oculto + un <label> como botón + `peer-checked:` de Tailwind
+          para mostrar el panel de abajo. Se mantiene sin useState a
+          propósito para que este componente siga siendo estático, mismo
+          criterio que el resto del archivo (ver comentario de arriba:
+          "la versión de apps/www es estática... así que la de acá también
+          se queda estática"). Antes en mobile solo se veían el logo y
+          "Join AriTrips" — los otros 4 links desaparecían del todo por
+          debajo de md (reportado 2026-08-15). */}
+      <input type="checkbox" id="mobile-menu-toggle" className="peer hidden" />
+
       {/* Grid de 3 columnas (1fr / auto / 1fr), no flex justify-between —
           con justify-between el nav del medio queda desplazado hacia la
           izquierda en cuanto el bloque de la derecha (selector + botón)
@@ -70,8 +82,41 @@ export function Header() {
           <Link href="/join" className="shrink-0 rounded-full bg-muted/15 px-4 py-2 text-sm font-medium text-ink hover:bg-muted/25">
             Join AriTrips
           </Link>
+
+          <label
+            htmlFor="mobile-menu-toggle"
+            aria-label="Toggle menu"
+            className="flex shrink-0 cursor-pointer items-center justify-center rounded-full p-2 text-ink hover:bg-bg md:hidden"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+              <path d="M4 6h16" />
+              <path d="M4 12h16" />
+              <path d="M4 18h16" />
+            </svg>
+          </label>
         </div>
       </div>
+
+      {/* Panel del menú mobile — oculto por default, visible cuando el
+          checkbox de arriba está marcado. */}
+      <nav className="hidden flex-col gap-1 border-t border-rule px-6 py-3 text-sm font-medium text-ink peer-checked:flex md:hidden">
+        <Link href="/" className="flex items-center gap-2 rounded-md px-2 py-2.5 hover:bg-bg">
+          <BriefcaseIcon className="h-4 w-4" />
+          Trips
+        </Link>
+        <a href={`${MARKETING_URL}/deals`} className="flex items-center gap-2 rounded-md px-2 py-2.5 hover:bg-bg">
+          <TagIcon className="h-4 w-4" />
+          Deals
+        </a>
+        <a href={`${MARKETING_URL}/blog`} className="flex items-center gap-2 rounded-md px-2 py-2.5 hover:bg-bg">
+          <MapIcon className="h-4 w-4" />
+          Travel Guide
+        </a>
+        <Link href="/favorites" className="flex items-center gap-2 rounded-md px-2 py-2.5 hover:bg-bg">
+          <HoneymoonIcon className="h-4 w-4" />
+          My Favorites
+        </Link>
+      </nav>
     </header>
   );
 }
