@@ -82,12 +82,54 @@ export const HOTEL_KEYS: Record<string, HotelKeySet> = {
   // Sumados 2026-08-13 — los 8 destinos EE.UU./Canadá agregados al catálogo
   // el 2026-08-11 nunca habían tenido hotel curado, así que hoy es el
   // primer dato real de precio de hotel que van a tener.
-  "new-york": { mid: "g60763-d99354" }, // Moderne Hotel NYC (Midtown Manhattan)
-  "san-francisco": { mid: "g60713-d15521276" }, // Hyatt Place San Francisco Downtown
-  miami: { mid: "g34439-d87012" }, // Beacon South Beach Hotel (Miami Beach)
-  "los-angeles": { mid: "g32655-d77798" }, // Sheraton Grand Los Angeles (Downtown/Financial District)
-  chicago: { mid: "g35805-d111487" }, // Hilton Garden Inn Chicago Downtown/Magnificent Mile
-  dallas: { mid: "g55711-d280902" }, // Dallas Marriott Downtown
-  toronto: { mid: "g155019-d183085" }, // Sheraton Centre Toronto Hotel
-  montreal: { mid: "g155032-d263978" }, // Hotel Nelligan (Old Montreal)
+  //
+  // Budget + premium sumados 2026-08-15 (roadmap pendiente desde
+  // 2026-08-07/08: "sumar 2-3 hoteles más por destino en gama alta y
+  // media") — prioridad sobre estos 8 en vez del catálogo completo,
+  // acordado con el usuario ("destinos con tráfico real comprobado" antes
+  // que los 48 de una). Cada hotel investigado en vivo contra TripAdvisor
+  // (nunca inventado, mismo criterio que Cancún/Puerto Vallarta) — no es
+  // un promedio de varios hoteles por tier todavía, sigue siendo un ancla
+  // puntual por tier, ver el comentario de arriba sobre por qué (el
+  // endpoint /list de Xotelo que daría el promedio real está roto).
+  "new-york": {
+    budget: "g60763-d93437", // Hotel Edison (Times Square)
+    mid: "g60763-d99354", // Moderne Hotel NYC (Midtown Manhattan)
+    premium: "g60763-d113298", // Four Seasons Hotel New York
+  },
+  "san-francisco": {
+    budget: "g60713-d265328", // HI San Francisco Downtown Hostel
+    mid: "g60713-d15521276", // Hyatt Place San Francisco Downtown
+    premium: "g60713-d81450", // The Ritz-Carlton, San Francisco
+  },
+  miami: {
+    budget: "g34439-d85107", // Circa 39 Miami Beach
+    mid: "g34439-d87012", // Beacon South Beach Hotel (Miami Beach)
+    premium: "g34439-d85177", // Fontainebleau Miami Beach
+  },
+  "los-angeles": {
+    budget: "g32655-d77859", // Stillwell Hotel (Downtown)
+    mid: "g32655-d77798", // Sheraton Grand Los Angeles (Downtown/Financial District)
+    premium: "g32655-d84463", // SLS Hotel, a Luxury Collection Hotel, Beverly Hills
+  },
+  chicago: {
+    budget: "g35805-d7375440", // Freehand Chicago (River North)
+    mid: "g35805-d111487", // Hilton Garden Inn Chicago Downtown/Magnificent Mile
+    premium: "g35805-d114591", // Four Seasons Hotel Chicago
+  },
+  dallas: {
+    budget: "g55711-d1631539", // Budget Inn
+    mid: "g55711-d280902", // Dallas Marriott Downtown
+    premium: "g55711-d659532", // The Ritz-Carlton, Dallas
+  },
+  toronto: {
+    budget: "g155019-d1474474", // The Rex Hotel (Queen St Entertainment District)
+    mid: "g155019-d183085", // Sheraton Centre Toronto Hotel
+    premium: "g155019-d12483976", // BISHA, a Luxury Collection Hotel, Toronto
+  },
+  montreal: {
+    budget: "g155032-d155208", // Hôtel Bonaparte (Old Montreal)
+    mid: "g155032-d263978", // Hotel Nelligan (Old Montreal)
+    premium: "g155032-d155207", // The Ritz-Carlton, Montreal
+  },
 };
