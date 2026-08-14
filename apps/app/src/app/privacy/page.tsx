@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { LegalPage } from "@/components/LegalPage";
 
 export const metadata: Metadata = { title: "Privacy Policy — AriTrips" };
@@ -23,8 +24,15 @@ export default function PrivacyPage() {
         We also store a record of each search and which destinations it showed and which ones you
         clicked, so we can measure and improve how well recommendations work. This record is a
         randomly generated search ID, your origin airport, your budget, and the destinations/rankings
-        involved — it is not linked to your name, email, or any account, because AriTrips doesn&apos;t
-        have customer accounts.
+        involved — it is not linked to your name, email, or any account, even if you&apos;re signed
+        in.
+      </p>
+      <p>
+        If you sign in with Google, we store your name, email address, and profile picture as they
+        come from your Google account, and whatever trips or deals you choose to save as favorites.
+        This is only used to show you your own favorites when you sign in again — we don&apos;t use
+        it for anything else, and it&apos;s never linked to the anonymous search records described
+        above.
       </p>
       <p>
         Our hosting provider (Cloudflare) processes standard web request data (like IP address and
@@ -45,10 +53,20 @@ export default function PrivacyPage() {
 
       <h2>What we don&apos;t collect</h2>
       <ul>
-        <li>No customer account creation, no passwords</li>
+        <li>No passwords — signing in only works through Google, we never see or store one</li>
         <li>No payment information — we never process bookings or payments directly</li>
-        <li>No name or email, unless you email us directly</li>
+        <li>Signing in is optional — you can search and browse the whole site without an account</li>
       </ul>
+
+      <h2>Delete your account</h2>
+      <p>
+        If you&apos;ve signed in with Google, you can permanently delete your profile and every
+        favorite you&apos;ve saved at any time from the{" "}
+        <Link href="/favorites">My Favorites</Link> page — look for &quot;Delete account&quot; at
+        the bottom. It takes effect immediately and can&apos;t be undone. This removes everything
+        tied to your account; it doesn&apos;t touch the anonymous search records described above,
+        since those were never linked to you in the first place.
+      </p>
 
       <h2>Third-party links</h2>
       <p>
@@ -62,8 +80,8 @@ export default function PrivacyPage() {
 
       <h2>Changes</h2>
       <p>
-        As the product grows (accounts, saved searches, price alerts), we&apos;ll update this page to
-        reflect what we actually do, and update the date above when we do.
+        As the product grows (price alerts, more ways to personalize a search), we&apos;ll update
+        this page to reflect what we actually do, and update the date above when we do.
       </p>
 
       <h2>Contact</h2>
