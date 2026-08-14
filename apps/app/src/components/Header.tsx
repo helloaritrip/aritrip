@@ -29,6 +29,37 @@ export function Header() {
           debajo de md (reportado 2026-08-15). */}
       <input type="checkbox" id="mobile-menu-toggle" className="peer hidden" />
 
+      {/* Mobile: fila propia, logo / Join / hamburguesa (2026-08-15,
+          corrección real reportada con captura) — antes compartía el grid
+          de 3 columnas de desktop; con la columna del medio (el nav)
+          vacía en mobile, Join y la hamburguesa quedaban apretados contra
+          el logo en vez de repartidos por todo el ancho. Separado del
+          grid de desktop para no pelear con sus reglas de ancho —
+          `justify-between` con exactamente 3 hijos alcanza el
+          logo-izquierda / Join-medio / hamburguesa-derecha pedido. */}
+      <div className="flex items-center justify-between gap-3 px-6 py-3 md:hidden">
+        <Link href="/" className="flex w-fit shrink-0 items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element -- asset local chico, no vale la pena next/image acá */}
+          <img src="/logo.webp" alt="AriTrips" className="h-7 w-auto" width={360} height={103} />
+        </Link>
+
+        <Link href="/join" className="shrink-0 rounded-full bg-muted/15 px-4 py-2 text-sm font-medium text-ink hover:bg-muted/25">
+          Join AriTrips
+        </Link>
+
+        <label
+          htmlFor="mobile-menu-toggle"
+          aria-label="Toggle menu"
+          className="flex shrink-0 cursor-pointer items-center justify-center rounded-full p-2 text-ink hover:bg-bg"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+            <path d="M4 6h16" />
+            <path d="M4 12h16" />
+            <path d="M4 18h16" />
+          </svg>
+        </label>
+      </div>
+
       {/* Grid de 3 columnas (1fr / auto / 1fr), no flex justify-between —
           con justify-between el nav del medio queda desplazado hacia la
           izquierda en cuanto el bloque de la derecha (selector + botón)
@@ -36,17 +67,13 @@ export function Header() {
           los costados, el nav queda centrado de verdad respecto a la
           página, sin importar cuánto pesen los otros dos bloques
           (reportado 2026-08-13). */}
-      <div className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-3">
-        <Link href="/" className="flex w-fit items-center gap-2 justify-self-start">
+      <div className="mx-auto hidden max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-3 md:grid">
+        <Link href="/" className="flex w-fit items-center justify-self-start">
           {/* eslint-disable-next-line @next/next/no-img-element -- asset local chico, no vale la pena next/image acá */}
-          <img src="/mascot.png" alt="" className="h-9 w-9 rounded-xl object-cover" />
-          <span className="text-xl font-extrabold tracking-tight">
-            <span className="text-ink">ari</span>
-            <span className="text-highlight">trips</span>
-          </span>
+          <img src="/logo.webp" alt="AriTrips" className="h-8 w-auto" width={360} height={103} />
         </Link>
 
-        <nav className="hidden items-center gap-7 text-sm font-medium text-ink justify-self-center md:flex">
+        <nav className="flex items-center gap-7 text-sm font-medium text-ink justify-self-center">
           <Link href="/" className="flex items-center gap-1.5 hover:text-accent">
             <BriefcaseIcon className="h-4 w-4" />
             Trips
@@ -72,7 +99,7 @@ export function Header() {
           <button
             type="button"
             disabled
-            className="hidden items-center gap-1 rounded-full border border-rule px-3 py-1.5 text-xs font-medium text-muted sm:flex"
+            className="flex items-center gap-1 rounded-full border border-rule px-3 py-1.5 text-xs font-medium text-muted"
           >
             <GlobeIcon className="h-3.5 w-3.5" />
             USD / EN
@@ -82,18 +109,6 @@ export function Header() {
           <Link href="/join" className="shrink-0 rounded-full bg-muted/15 px-4 py-2 text-sm font-medium text-ink hover:bg-muted/25">
             Join AriTrips
           </Link>
-
-          <label
-            htmlFor="mobile-menu-toggle"
-            aria-label="Toggle menu"
-            className="flex shrink-0 cursor-pointer items-center justify-center rounded-full p-2 text-ink hover:bg-bg md:hidden"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-              <path d="M4 6h16" />
-              <path d="M4 12h16" />
-              <path d="M4 18h16" />
-            </svg>
-          </label>
         </div>
       </div>
 

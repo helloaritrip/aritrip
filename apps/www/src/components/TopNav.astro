@@ -28,19 +28,44 @@ const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
        conecte. -->
   <input type="checkbox" id="mobile-menu-toggle" class="peer hidden" />
 
-  <!-- Grid de 3 columnas (1fr / auto / 1fr), no flex justify-between —
-       mismo motivo que Header.tsx en apps/app: con justify-between el nav
-       del medio quedaba desplazado hacia la izquierda porque el bloque de
-       la derecha pesa más que el logo (reportado 2026-08-13). -->
-  <div class="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-3">
-    <a href="/" class="flex w-fit items-center gap-2 justify-self-start">
-      <img src="/ari/mascot.png" alt="" class="h-9 w-9 rounded-xl object-cover" width="36" height="36" />
-      <span class="text-xl font-extrabold tracking-tight">
-        <span class="text-ink">ari</span><span class="text-highlight">trips</span>
-      </span>
+  <!-- Mobile: fila propia, logo / Join / hamburguesa (2026-08-15,
+       corrección real reportada con captura) — antes esto compartía el
+       grid de 3 columnas de desktop (1fr/auto/1fr); con la columna del
+       medio (el nav) vacía en mobile, Join y la hamburguesa quedaban
+       apretados contra el logo en vez de repartidos por todo el ancho.
+       Separado del grid de desktop para no pelear con sus reglas de
+       ancho — `justify-between` con exactamente 3 hijos alcanza el
+       logo-izquierda / Join-medio / hamburguesa-derecha pedido. -->
+  <div class="flex items-center justify-between gap-3 px-6 py-3 md:hidden">
+    <a href="/" class="flex w-fit shrink-0 items-center">
+      <img src="/ari/logo.webp" alt="AriTrips" class="h-7 w-auto" width="360" height="103" />
     </a>
 
-    <nav class="hidden items-center gap-7 text-sm font-medium text-ink justify-self-center md:flex">
+    <a href={`${APP_URL}/join`} class="shrink-0 rounded-full bg-muted/15 px-4 py-2 text-sm font-medium text-ink hover:bg-muted/25">
+      Join AriTrips
+    </a>
+
+    <label
+      for="mobile-menu-toggle"
+      aria-label="Toggle menu"
+      class="flex shrink-0 cursor-pointer items-center justify-center rounded-full p-2 text-ink hover:bg-bg"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+        <path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h16" />
+      </svg>
+    </label>
+  </div>
+
+  <!-- Desktop: grid de 3 columnas (1fr / auto / 1fr), no flex
+       justify-between — con justify-between el nav del medio quedaba
+       desplazado hacia la izquierda porque el bloque de la derecha pesa
+       más que el logo (reportado 2026-08-13). -->
+  <div class="mx-auto hidden max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-3 md:grid">
+    <a href="/" class="flex w-fit items-center justify-self-start">
+      <img src="/ari/logo.webp" alt="AriTrips" class="h-8 w-auto" width="360" height="103" />
+    </a>
+
+    <nav class="flex items-center gap-7 text-sm font-medium text-ink justify-self-center">
       <a href={APP_URL} class="flex items-center gap-1.5 hover:text-accent">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
           <rect x="3" y="7" width="18" height="13" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M3 12h18" />
@@ -75,7 +100,7 @@ const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
       <button
         type="button"
         disabled
-        class="hidden items-center gap-1 rounded-full border border-rule px-3 py-1.5 text-xs font-medium text-muted sm:flex"
+        class="flex items-center gap-1 rounded-full border border-rule px-3 py-1.5 text-xs font-medium text-muted"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5">
           <circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18Z" />
@@ -92,16 +117,6 @@ const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
       >
         Join AriTrips
       </a>
-
-      <label
-        for="mobile-menu-toggle"
-        aria-label="Toggle menu"
-        class="flex shrink-0 cursor-pointer items-center justify-center rounded-full p-2 text-ink hover:bg-bg md:hidden"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
-          <path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h16" />
-        </svg>
-      </label>
     </div>
   </div>
 

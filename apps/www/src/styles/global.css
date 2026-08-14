@@ -13,3 +13,13 @@ body {
      comportándose normal. */
   overflow-x: hidden;
 }
+
+/* Sigue pasando después de overflow-x: hidden (reportado 2026-08-15) —
+   causa distinta: el rebote elástico nativo de iOS Safari permite
+   arrastrar la página más allá del borde y volver de golpe, aunque no
+   haya contenido real desbordando. `overflow-x: hidden` no lo evita
+   porque no es scroll por contenido ancho, es el gesto nativo del
+   sistema. `overscroll-behavior-x` es la propiedad hecha para esto. */
+html {
+  overscroll-behavior-x: none;
+}

@@ -15,3 +15,9 @@ body {
      mismo comentario en apps/www/src/styles/global.css. */
   overflow-x: hidden;
 }
+
+/* Rebote elástico nativo de iOS — ver el mismo comentario en
+   apps/www/src/styles/global.css. */
+html {
+  overscroll-behavior-x: none;
+}
