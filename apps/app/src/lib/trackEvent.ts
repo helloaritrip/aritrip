@@ -51,6 +51,20 @@ export type TrackedEvent =
       destinationId: string;
       rank?: number;
       category: "flight" | "hotel" | "activity" | "insurance" | "esim";
+    }
+  | {
+      // Último eslabón del funnel Search → Recommendation → Click →
+      // Favorite → Affiliate Click (2026-08-15, roadmap acordado con el
+      // head de producto) — hasta ahora SaveButton/DealSaveButton
+      // guardaban el favorito de verdad pero nunca lo registraban acá,
+      // así que no había forma de medir esta parte del embudo.
+      // itemType/itemId espejan el modelo ya usado por /api/favorites.
+      // searchId es opcional: solo existe cuando el guardado viene de una
+      // card de resultados de Ari Core, no desde /deals ni Discover.
+      name: "favorite_saved" | "favorite_removed";
+      itemType: "destination" | "deal";
+      itemId: string;
+      searchId?: string;
     };
 
 export function newSearchId(): string {

@@ -1,6 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { writeFirestoreDocument } from "@/lib/firestore";
+import { corsHeaders } from "@/lib/cors";
+
+// CORS (2026-08-15) — DealSaveButton.tsx en aritrips.com/deals necesita
+// llamar esto cross-origin para trackear favorite_saved/removed, mismo
+// motivo/patrón que ya usan /api/favorites y /api/auth/me.
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: corsHeaders(request.headers.get("origin")) });
+}
 
 const VALID_CATEGORIES = ["flight", "hotel", "activity", "insurance", "esim"];
 const SUB_SCORE_KEYS = ["budgetFit", "activitiesMatch", "seasonFit", "weatherComfort", "travelTime", "valueRating", "safety"] as const;
@@ -39,7 +47,10 @@ type ValidatedEvent =
       subScores: SubScores;
       isTest: boolean;
     }
-  | { name: "recommendation_clicked"; searchId?: string; destinationId: string; rank?: number; category: string; isTest: boolean };
+  | { name: "recommendation_clicked"; searchId?: string; destinationId: string; rank?: number; category: string; isTest: boolean }
+  | { name: "favorite_saved" | "favorite_removed"; itemType: string; itemId: string; searchId?: string; isTest: boolean };
+
+const VALID_ITEM_TYPES = ["destination", "deal"];
 
 // isTest (2026-08-11) — las propias pruebas de QA contra producción
 // generaban búsquedas reales indistinguibles de las de un visitante real,
@@ -97,6 +108,24 @@ function validateEvent(body: Record<string, unknown>): ValidatedEvent | null {
         isTest,
       };
     }
+    case "favorite_saved":
+    case "favorite_removed": {
+      if (
+        !isShortString(body.itemType, 16) ||
+        !VALID_ITEM_TYPES.includes(body.itemType) ||
+        !isShortString(body.itemId, 64) ||
+        (body.searchId !== undefined && !isShortString(body.searchId, 64))
+      ) {
+        return null;
+      }
+      return {
+        name: body.name,
+        itemType: body.itemType,
+        itemId: body.itemId,
+        searchId: body.searchId as string | undefined,
+        isTest,
+      };
+    }
     default:
       return null;
   }
@@ -113,17 +142,19 @@ function toFirestoreDoc(event: ValidatedEvent): Record<string, unknown> {
   return { ...rest, ...flatSubScores };
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const headers = corsHeaders(request.headers.get("origin"));
+
   let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400, headers });
   }
 
   const event = validateEvent(body);
   if (!event) {
-    return NextResponse.json({ error: "Invalid event payload" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid event payload" }, { status: 400, headers });
   }
 
   const { env } = await getCloudflareContext({ async: true });
@@ -135,7 +166,7 @@ export async function POST(request: Request) {
   // no se persiste. Igual que el placeholder anterior, honesto en vez de
   // fingir.
   if (!clientEmail || !privateKey) {
-    return NextResponse.json({ tracked: false, reason: "not_configured" });
+    return NextResponse.json({ tracked: false, reason: "not_configured" }, { headers });
   }
 
   try {
@@ -144,10 +175,10 @@ export async function POST(request: Request) {
       { ...toFirestoreDoc(event), createdAt: new Date() },
       { clientEmail, privateKey: privateKey.replace(/\\n/g, "\n") }
     );
-    return NextResponse.json({ tracked: true });
+    return NextResponse.json({ tracked: true }, { headers });
   } catch (err) {
     console.error("[track] Firestore write failed", err);
     // Best-effort: un fallo de analytics no debe verse como error al usuario.
-    return NextResponse.json({ tracked: false, reason: "write_failed" });
+    return NextResponse.json({ tracked: false, reason: "write_failed" }, { headers });
   }
 }

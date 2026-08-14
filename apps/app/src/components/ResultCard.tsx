@@ -140,6 +140,7 @@ export function ResultCard({
           <SaveButton
             itemType="destination"
             itemId={result.destinationId}
+            searchId={searchId ?? undefined}
             snapshot={{
               name: result.name,
               country: result.country,

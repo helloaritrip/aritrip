@@ -25,6 +25,8 @@ type TrackedEventDoc = {
   finalScore?: number;
   category?: string;
   isTest?: boolean;
+  itemType?: string;
+  itemId?: string;
 };
 
 const PAGE_SIZE = 20;
@@ -87,6 +89,14 @@ const realStatsEvents = statsEvents.filter((e) => e.isTest !== true);
 const searches = realStatsEvents.filter((e) => e.name === "search_performed");
 const shown = realStatsEvents.filter((e) => e.name === "recommendation_shown");
 const clicked = realStatsEvents.filter((e) => e.name === "recommendation_clicked");
+// Último eslabón del funnel (2026-08-15) — favorite_saved/removed, ver
+// SaveButton.tsx/DealSaveButton.tsx. Se cuenta net saves (guardados menos
+// quitados), no solo guardados, para no inflar el número con gente que
+// guarda y se arrepiente al toque.
+const favoriteSaves = realStatsEvents.filter((e) => e.name === "favorite_saved");
+const favoriteRemoves = realStatsEvents.filter((e) => e.name === "favorite_removed");
+const netFavorites = favoriteSaves.length - favoriteRemoves.length;
+const roughFavoriteRate = shown.length > 0 ? Math.round((favoriteSaves.length / shown.length) * 1000) / 10 : null;
 
 // CTR aproximado — sin un searchId compartido entre eventos todavía no
 // se puede saber con certeza si un click pertenece a una búsqueda
@@ -107,6 +117,11 @@ function topCounts<T extends string>(items: T[], limit = 8): { key: T; count: nu
 const topOrigins = topCounts(searches.map((e) => e.originAirportCode ?? "unknown"));
 const topShown = topCounts(shown.map((e) => e.destinationId ?? "unknown"));
 const topClicked = topCounts(clicked.map((e) => e.destinationId ?? "unknown"));
+// itemId: para itemType "destination" es un destinationId (nombre real
+// disponible); para "deal" es un id compuesto (destinationId_origen_mes,
+// ver deals.astro) — se muestra el destinationId (primer segmento) tal
+// cual para no armar un lookup nuevo solo para esto.
+const topFavorited = topCounts(favoriteSaves.map((e) => e.itemId?.split("_")[0] ?? "unknown"));
 
 const avgBudget =
   searches.length > 0
@@ -249,6 +264,9 @@ function formatEvent(e: TrackedEventDoc): string {
   if (e.name === "search_performed") return `${originLabel(e.originAirportCode)} · $${(e.budgetUSD ?? 0).toLocaleString()}`;
   if (e.name === "recommendation_shown") return `${destinationName(e.destinationId)} · rank #${e.rank} · score ${e.finalScore}`;
   if (e.name === "recommendation_clicked") return `${destinationName(e.destinationId)} · ${e.category}`;
+  if (e.name === "favorite_saved" || e.name === "favorite_removed") {
+    return `${destinationName(e.itemId?.split("_")[0])} · ${e.itemType ?? "?"}`;
+  }
   return "—";
 }
 
@@ -268,7 +286,7 @@ const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
       <h1 class="text-2xl font-semibold text-ink">Searches</h1>
       <p class="text-sm text-muted">
         Lo que la gente busca de verdad, y qué eligió — {searches.length} búsquedas, {shown.length} recomendaciones
-        mostradas, {clicked.length} clicks registrados hasta ahora.
+        mostradas, {clicked.length} clicks y {netFavorites} favoritos guardados hasta ahora.
       </p>
       {testEventsInSample > 0 && (
         <p class="text-xs text-muted">
@@ -288,7 +306,7 @@ const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
 
     {totalEvents > 0 && (
       <>
-        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-5">
           <div class="rounded-lg border border-rule bg-surface p-4">
             <p class="text-2xl font-semibold text-ink">{searches.length}</p>
             <p class="text-xs text-muted">Búsquedas</p>
@@ -305,9 +323,15 @@ const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
             <p class="text-2xl font-semibold text-ink">{roughCTR !== null ? `${roughCTR}%` : "—"}</p>
             <p class="text-xs text-muted">CTR agregado (no por búsqueda)</p>
           </div>
+          <div class="rounded-lg border border-rule bg-surface p-4">
+            <p class="text-2xl font-semibold text-ink">{netFavorites}</p>
+            <p class="text-xs text-muted">
+              Favoritos guardados{roughFavoriteRate !== null ? ` · ${roughFavoriteRate}% de lo mostrado` : ""}
+            </p>
+          </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-4">
           <div class="flex flex-col gap-2">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Top orígenes</h2>
             <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
@@ -339,6 +363,19 @@ const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
             <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
               {topClicked.length === 0 && <p class="p-3 text-sm text-muted">Sin datos.</p>}
               {topClicked.map((d) => (
+                <div class="flex items-center justify-between p-3 text-sm">
+                  <span class="text-ink">{destinationName(d.key)}</span>
+                  <span class="text-muted">{d.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Más guardados</h2>
+            <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+              {topFavorited.length === 0 && <p class="p-3 text-sm text-muted">Sin datos.</p>}
+              {topFavorited.map((d) => (
                 <div class="flex items-center justify-between p-3 text-sm">
                   <span class="text-ink">{destinationName(d.key)}</span>
                   <span class="text-muted">{d.count}</span>
@@ -498,7 +535,9 @@ const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
                       ? "bg-accent/10 text-accent"
                       : e.name === "recommendation_clicked"
                         ? "bg-highlight/10 text-highlight"
-                        : "bg-rule/60 text-muted"
+                        : e.name === "favorite_saved" || e.name === "favorite_removed"
+                          ? "bg-green-600/10 text-green-700 dark:text-green-400"
+                          : "bg-rule/60 text-muted"
                   }`}
                 >
                   {e.name}

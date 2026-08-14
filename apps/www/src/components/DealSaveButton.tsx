@@ -13,6 +13,22 @@ import { useEffect, useState } from "react";
 
 const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
 
+// Último eslabón del funnel Search → Recommendation → Click → Favorite
+// (2026-08-15) — mismo evento que trackEvent() en apps/app, pero no se
+// puede importar esa función acá (isla aislada, sin nada compartido de
+// apps/app, ver el comentario de arriba), así que se llama a mano al
+// mismo endpoint cross-origin, con el mismo criterio fire-and-forget.
+function trackFavorite(name: "favorite_saved" | "favorite_removed", itemId: string) {
+  fetch(`${APP_URL}/api/track`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, itemType: "deal", itemId }),
+  }).catch(() => {
+    // best-effort — un evento de analytics perdido no debe afectar al usuario
+  });
+}
+
 export interface DealSaveButtonProps {
   dealId: string;
   name: string;
@@ -54,6 +70,7 @@ export function DealSaveButton(props: DealSaveButtonProps) {
           body: JSON.stringify({ itemType: "deal", itemId: props.dealId }),
         });
         setSaved(false);
+        trackFavorite("favorite_removed", props.dealId);
       } else {
         await fetch(`${APP_URL}/api/favorites`, {
           method: "POST",
@@ -74,6 +91,7 @@ export function DealSaveButton(props: DealSaveButtonProps) {
           }),
         });
         setSaved(true);
+        trackFavorite("favorite_saved", props.dealId);
       }
     } finally {
       setBusy(false);

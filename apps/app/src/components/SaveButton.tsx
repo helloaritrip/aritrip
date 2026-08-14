@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import { trackEvent } from "@/lib/trackEvent";
 
 export type FavoriteSnapshot = {
   name: string;
@@ -27,11 +28,17 @@ export function SaveButton({
   itemId,
   snapshot,
   className = "",
+  searchId,
 }: {
   itemType: "destination" | "deal";
   itemId: string;
   snapshot: FavoriteSnapshot;
   className?: string;
+  // Último eslabón del funnel Search → Recommendation → Click → Favorite
+  // (2026-08-15) — solo lo pasa ResultCard (viene de una búsqueda de Ari
+  // Core); el resto de los usos de este botón queda sin searchId, igual
+  // que ya hace recommendation_clicked.
+  searchId?: string;
 }) {
   const { user } = useAuth();
   const router = useRouter();
@@ -54,6 +61,7 @@ export function SaveButton({
           body: JSON.stringify({ itemType, itemId }),
         });
         setSaved(false);
+        trackEvent({ name: "favorite_removed", itemType, itemId, searchId });
       } else {
         await fetch("/api/favorites", {
           method: "POST",
@@ -61,6 +69,7 @@ export function SaveButton({
           body: JSON.stringify({ itemType, itemId, snapshot }),
         });
         setSaved(true);
+        trackEvent({ name: "favorite_saved", itemType, itemId, searchId });
       }
     } finally {
       setBusy(false);
