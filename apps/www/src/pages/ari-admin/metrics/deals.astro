@@ -1,7 +1,7 @@
 ---
 import { env } from "cloudflare:workers";
-import AdminLayout from "../../layouts/AdminLayout.astro";
-import { getAdminSession } from "../../lib/requireAdminSession";
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { getAdminSession } from "../../../lib/requireAdminSession";
 import { queryDocuments, destinations } from "@aritrips/data";
 
 export const prerender = false;
@@ -29,7 +29,7 @@ type TrackedEventDoc = {
   isTest?: boolean;
 };
 
-// Mismo patrón que /ari-admin/searches — una muestra de los últimos N
+// Mismo patrón que /ari-admin/metrics — una muestra de los últimos N
 // eventos (2026-08-15, Prioridad 3 acordada con el head: visitas/clicks/
 // favoritos/tipo de deal/destinos populares para /deals específicamente).
 // No hace falta un `where name in [...]` server-side porque `events` ya
@@ -49,7 +49,7 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
       limit: STATS_SAMPLE_SIZE,
     })) as TrackedEventDoc[];
   } catch (err) {
-    console.error("[ari-admin/deals] Failed to load events", err);
+    console.error("[ari-admin/metrics/deals] Failed to load events", err);
     loadError = "Couldn't load deals data right now.";
   }
 } else {
@@ -118,8 +118,18 @@ function formatDate(iso?: string): string {
 const recentClicks = clicks.slice(0, 20);
 ---
 
-<AdminLayout title="Deals — AriTrips Admin" session={session} active="deals">
-  <div class="flex max-w-4xl flex-col gap-8">
+<AdminLayout title="Deals — AriTrips Admin" session={session} active="metrics">
+  <div class="flex max-w-4xl flex-col gap-6">
+    <!-- Ver metrics/index.astro para el porqué de este tab bar. -->
+    <div class="flex gap-1 border-b border-rule">
+      <a href="/ari-admin/metrics" class="-mb-px border-b-2 border-transparent px-4 py-2 text-sm font-medium text-muted hover:text-ink">
+        Search Funnel
+      </a>
+      <a href="/ari-admin/metrics/deals" class="-mb-px border-b-2 border-accent px-4 py-2 text-sm font-medium text-accent">
+        Deals
+      </a>
+    </div>
+
     <div>
       <h1 class="text-2xl font-semibold text-ink">Deals</h1>
       <p class="text-sm text-muted">

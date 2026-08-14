@@ -1,7 +1,7 @@
 ---
 import { env } from "cloudflare:workers";
-import AdminLayout from "../../layouts/AdminLayout.astro";
-import { getAdminSession } from "../../lib/requireAdminSession";
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { getAdminSession } from "../../../lib/requireAdminSession";
 import { queryDocuments, countDocuments, destinations, ORIGIN_LABELS, type OriginHub } from "@aritrips/data";
 
 export const prerender = false;
@@ -64,7 +64,7 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
       countDocuments("events", credentials),
     ]);
   } catch (err) {
-    console.error("[searches] Failed to load events", err);
+    console.error("[metrics] Failed to load events", err);
     loadError = "Couldn't load search data right now.";
   }
 } else {
@@ -119,8 +119,8 @@ const topShown = topCounts(shown.map((e) => e.destinationId ?? "unknown"));
 const topClicked = topCounts(clicked.map((e) => e.destinationId ?? "unknown"));
 // itemId: para itemType "destination" es un destinationId (nombre real
 // disponible); para "deal" es un id compuesto (destinationId_origen_mes,
-// ver deals.astro) — se muestra el destinationId (primer segmento) tal
-// cual para no armar un lookup nuevo solo para esto.
+// ver metrics/deals.astro) — se muestra el destinationId (primer segmento)
+// tal cual para no armar un lookup nuevo solo para esto.
 const topFavorited = topCounts(favoriteSaves.map((e) => e.itemId?.split("_")[0] ?? "unknown"));
 
 const avgBudget =
@@ -280,10 +280,25 @@ function formatDate(iso?: string): string {
 const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
 ---
 
-<AdminLayout title="Searches — AriTrips Admin" session={session} active="searches">
-  <div class="flex max-w-4xl flex-col gap-8">
+<AdminLayout title="Metrics — AriTrips Admin" session={session} active="metrics">
+  <div class="flex max-w-4xl flex-col gap-6">
+    <!-- Pestañas de Metrics (2026-08-15, a pedido del usuario: "que deals sea
+         una subpestaña dentro de ella") — Searches y Deals viven en Firestore
+         en la misma colección `events`, pero responden preguntas distintas
+         (¿está bien calibrado Ari Core? vs. ¿funciona /deals como puerta de
+         entrada?), así que siguen siendo 2 páginas separadas — esto solo las
+         agrupa visualmente bajo un mismo ítem del sidebar. -->
+    <div class="flex gap-1 border-b border-rule">
+      <a href="/ari-admin/metrics" class="-mb-px border-b-2 border-accent px-4 py-2 text-sm font-medium text-accent">
+        Search Funnel
+      </a>
+      <a href="/ari-admin/metrics/deals" class="-mb-px border-b-2 border-transparent px-4 py-2 text-sm font-medium text-muted hover:text-ink">
+        Deals
+      </a>
+    </div>
+
     <div>
-      <h1 class="text-2xl font-semibold text-ink">Searches</h1>
+      <h1 class="text-2xl font-semibold text-ink">Search Funnel</h1>
       <p class="text-sm text-muted">
         Lo que la gente busca de verdad, y qué eligió — {searches.length} búsquedas, {shown.length} recomendaciones
         mostradas, {clicked.length} clicks y {netFavorites} favoritos guardados hasta ahora.
@@ -578,7 +593,7 @@ const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
                 href={page < totalPages ? `?page=${page + 1}` : undefined}
                 aria-disabled={page >= totalPages}
                 class={`rounded-md px-2.5 py-1.5 text-sm font-medium ${
-                  page >= totalPages ? "pointer-events-none text-muted opacity-40" : "text-ink hover:bg-surface-2"
+                  page >= totalPages ? "pointer-events-none text-muted opacity-50" : "text-ink hover:bg-surface-2"
                 }`}
               >
                 →

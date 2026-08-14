@@ -1,0 +1,127 @@
+---
+import { env } from "cloudflare:workers";
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { getAdminSession } from "../../lib/requireAdminSession";
+
+export const prerender = false;
+
+const session = await getAdminSession(Astro.cookies, env);
+if (!session) {
+  return Astro.redirect(`/ari-admin/login?next=${encodeURIComponent(Astro.url.pathname)}`);
+}
+
+// Primera versión de Settings (2026-08-15) — a propósito chica: la
+// investigación sobre qué debería tener un settings de un producto en
+// esta etapa dice lo mismo que ya nos había dicho "el head" del producto
+// hace poco (ver [[project_travel_package_builder]]): no construir
+// superficie especulativa, solo lo que hace falta hoy. Lo que hace falta
+// hoy es poder confirmar rápido "¿están las 3 apps bien configuradas?"
+// sin tener que abrir Cloudflare — no un editor de configuración nuevo.
+// El toggle de ads-rails YA existe (en Pages), no se duplica acá.
+type StatusCheck = { label: string; ok: boolean; hint: string };
+
+const wwwChecks: StatusCheck[] = [
+  { label: "FIREBASE_CLIENT_EMAIL", ok: Boolean(env.FIREBASE_CLIENT_EMAIL), hint: "Lectura/escritura a Firestore (Pages, Images, Metrics, etc.)" },
+  { label: "FIREBASE_PRIVATE_KEY", ok: Boolean(env.FIREBASE_PRIVATE_KEY), hint: "Va de la mano con FIREBASE_CLIENT_EMAIL" },
+  { label: "SESSION_SECRET", ok: Boolean(env.SESSION_SECRET), hint: "Firma la cookie de sesión de este panel" },
+];
+
+const allWwwOk = wwwChecks.every((c) => c.ok);
+---
+
+<AdminLayout title="Settings — AriTrips Admin" session={session} active="settings">
+  <div class="flex max-w-3xl flex-col gap-8">
+    <div>
+      <h1 class="text-2xl font-semibold text-ink">Settings</h1>
+      <p class="text-sm text-muted">
+        Estado de configuración y accesos rápidos a los paneles externos que se usan seguido. No hay nada que
+        editar todavía acá — cuando el toggle de rieles de ads, el editor de Partners, o cualquier otra config ya
+        vive en su propia sección, no se duplica acá.
+      </p>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Este sitio (aritrips-www)</h2>
+        <span
+          class={`rounded-full px-2 py-0.5 text-xs font-medium ${
+            allWwwOk ? "bg-green-600/10 text-green-700 dark:text-green-400" : "bg-red-600/10 text-red-700 dark:text-red-400"
+          }`}
+        >
+          {allWwwOk ? "Todo configurado" : "Falta algo"}
+        </span>
+      </div>
+      <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+        {wwwChecks.map((c) => (
+          <div class="flex items-center justify-between gap-4 p-3 text-sm">
+            <div class="flex flex-col">
+              <span class="font-mono text-xs text-ink">{c.label}</span>
+              <span class="text-xs text-muted">{c.hint}</span>
+            </div>
+            <span
+              class={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                c.ok ? "bg-green-600/10 text-green-700 dark:text-green-400" : "bg-red-600/10 text-red-700 dark:text-red-400"
+              }`}
+            >
+              {c.ok ? "OK" : "Falta"}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p class="text-xs text-muted">
+        Estos son los secrets de este Worker (aritrips-www) — se ven acá porque el panel puede leerlos en vivo. Si
+        falta alguno, se pone con <code class="rounded bg-surface-2 px-1 py-0.5">wrangler secret put NOMBRE</code>
+        {" "}apuntando al Worker aritrips-www.
+      </p>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Las otras 2 apps</h2>
+      <p class="text-xs text-muted">
+        Esto es de referencia, no en vivo — cada Worker solo puede leer sus propios secrets, así que este panel no
+        puede confirmar el estado de app.aritrips.com o del sincronizador de precios directamente.
+      </p>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="rounded-lg border border-rule bg-surface p-4">
+          <p class="text-sm font-semibold text-ink">app.aritrips.com (aritrips-app)</p>
+          <ul class="mt-2 flex flex-col gap-1 text-xs text-muted">
+            <li><span class="font-mono text-ink">FIREBASE_CLIENT_EMAIL</span> / <span class="font-mono text-ink">FIREBASE_PRIVATE_KEY</span></li>
+            <li><span class="font-mono text-ink">USER_SESSION_SECRET</span> — cookie de sesión de usuarios (Google Sign-In)</li>
+            <li><span class="font-mono text-ink">NEXT_PUBLIC_GOOGLE_CLIENT_ID</span> — botón de Google Sign-In</li>
+            <li><span class="font-mono text-ink">PEXELS_API_KEY</span> — fotos de destinos</li>
+          </ul>
+        </div>
+        <div class="rounded-lg border border-rule bg-surface p-4">
+          <p class="text-sm font-semibold text-ink">Price sync (aritrips-price-sync)</p>
+          <ul class="mt-2 flex flex-col gap-1 text-xs text-muted">
+            <li><span class="font-mono text-ink">FIREBASE_CLIENT_EMAIL</span> / <span class="font-mono text-ink">FIREBASE_PRIVATE_KEY</span></li>
+            <li><span class="font-mono text-ink">TRAVELPAYOUTS_TOKEN</span> — precios de vuelos</li>
+            <li><span class="font-mono text-ink">PRICE_SYNC_TRIGGER_KEY</span> — dispara una corrida manual por URL</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Accesos rápidos</h2>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <a href="https://console.firebase.google.com/" target="_blank" rel="noreferrer" class="rounded-lg border border-rule bg-surface p-4 text-sm text-ink hover:border-accent">
+          <span class="font-medium">Firebase Console</span>
+          <p class="text-xs text-muted">Datos crudos, reglas, uso de Firestore</p>
+        </a>
+        <a href="https://dash.cloudflare.com/" target="_blank" rel="noreferrer" class="rounded-lg border border-rule bg-surface p-4 text-sm text-ink hover:border-accent">
+          <span class="font-medium">Cloudflare Dashboard</span>
+          <p class="text-xs text-muted">Workers, DNS, secrets, logs en vivo</p>
+        </a>
+        <a href="https://adsense.google.com/" target="_blank" rel="noreferrer" class="rounded-lg border border-rule bg-surface p-4 text-sm text-ink hover:border-accent">
+          <span class="font-medium">Google AdSense</span>
+          <p class="text-xs text-muted">Estado de aprobación, ingresos, anuncios</p>
+        </a>
+        <a href="/ari-admin/pages" class="rounded-lg border border-rule bg-surface p-4 text-sm text-ink hover:border-accent">
+          <span class="font-medium">Rieles de ads (toggle)</span>
+          <p class="text-xs text-muted">Vive en Pages, arriba de la lista</p>
+        </a>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
