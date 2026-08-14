@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import type { Data } from "@measured/puck";
 import { getDocument, setDocument, destinations } from "@aritrips/data";
 import { getAdminSession } from "../../../../../lib/requireAdminSession";
+import { upsertPageIndexEntries } from "../../../../../lib/pagesIndex";
 import type { Props } from "../../../../../puck/config";
 
 export const prerender = false;
@@ -117,6 +118,22 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
   if (isDirectDestinationPage) {
     await setDocument("destinationImages", slug, { destinationId: slug, imageUrl, updatedAt: now }, credentials);
   }
+
+  // Mantiene pagesIndex/current al día — ver pagesIndex.ts. Ningún campo
+  // del índice cambia realmente acá (solo se toca backgroundImageUrl
+  // adentro de contentJson), pero se re-escribe igual por las dudas de
+  // que el índice esté desactualizado por otro motivo.
+  await upsertPageIndexEntries(credentials, [
+    {
+      id: slug,
+      title: String(doc.title ?? slug),
+      description: String(doc.description ?? ""),
+      featuredImageQuery: String(doc.featuredImageQuery ?? ""),
+      publishedAt: publishedAt?.toISOString(),
+      status: String(doc.status ?? "draft"),
+      template: String(doc.template ?? "custom"),
+    },
+  ]);
 
   return json({ ok: true }, 200);
 };

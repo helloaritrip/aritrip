@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { getDocument, setDocument, destinations } from "@aritrips/data";
 import { getAdminSession } from "../../../lib/requireAdminSession";
 import { buildDestinationPageContent } from "../../../lib/destinationPageContent";
+import { upsertPageIndexEntries, type PageIndexEntry } from "../../../lib/pagesIndex";
 
 export const prerender = false;
 
@@ -28,6 +29,7 @@ export const POST: APIRoute = async ({ cookies }) => {
   const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
 
   const results: { slug: string; status: "created" | "updated" | "skipped_no_data" | "error" }[] = [];
+  const indexEntries: PageIndexEntry[] = [];
 
   for (const destination of destinations) {
     const built = buildDestinationPageContent(destination);
@@ -49,6 +51,15 @@ export const POST: APIRoute = async ({ cookies }) => {
           credentials
         );
         results.push({ slug: built.slug, status: "updated" });
+        indexEntries.push({
+          id: built.slug,
+          title: String(existing.title ?? built.title),
+          description: String(existing.description ?? built.description),
+          featuredImageQuery: String(existing.featuredImageQuery ?? built.featuredImageQuery),
+          publishedAt: publishedAt?.toISOString(),
+          status: String(existing.status ?? "published"),
+          template: String(existing.template ?? "destination"),
+        });
       } else {
         await setDocument(
           "pages",
@@ -71,12 +82,23 @@ export const POST: APIRoute = async ({ cookies }) => {
           credentials
         );
         results.push({ slug: built.slug, status: "created" });
+        indexEntries.push({
+          id: built.slug,
+          title: built.title,
+          description: built.description,
+          featuredImageQuery: built.featuredImageQuery,
+          publishedAt: now.toISOString(),
+          status: "published",
+          template: "destination",
+        });
       }
     } catch (err) {
       console.error(`[republish-destination-pages] ${destination.id} failed`, err);
       results.push({ slug: destination.id, status: "error" });
     }
   }
+
+  await upsertPageIndexEntries(credentials, indexEntries);
 
   return json({ ok: true, results }, 200);
 };

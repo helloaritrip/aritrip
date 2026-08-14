@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { env } from "cloudflare:workers";
 import { getDocument, setDocument } from "@aritrips/data";
 import { getAdminSession } from "../../../../lib/requireAdminSession";
+import { upsertPageIndexEntries } from "../../../../lib/pagesIndex";
 
 export const prerender = false;
 
@@ -104,6 +105,21 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
     },
     credentials
   );
+
+  // Mantiene pagesIndex/current al día en el momento de publicar — ver
+  // pagesIndex.ts para el porqué (evita que Home/blog/sitemap tengan que
+  // releer la colección `pages` completa en cada visita).
+  await upsertPageIndexEntries(credentials, [
+    {
+      id: slug,
+      title: body.title ?? slug,
+      description,
+      featuredImageQuery: body.featuredImageQuery ?? "",
+      publishedAt: publishedAt?.toISOString(),
+      status,
+      template: body.template || "custom",
+    },
+  ]);
 
   return json({ ok: true }, 200);
 };

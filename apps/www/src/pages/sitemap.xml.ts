@@ -10,7 +10,7 @@
  */
 import type { APIRoute } from "astro";
 import { env } from "cloudflare:workers";
-import { getCachedPages } from "../lib/pagesCache";
+import { getCachedPageIndex } from "../lib/pagesCache";
 
 export const prerender = false;
 
@@ -27,7 +27,7 @@ export const GET: APIRoute = async () => {
 
   if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
     try {
-      const pages = await getCachedPages({
+      const pages = await getCachedPageIndex({
         clientEmail: FIREBASE_CLIENT_EMAIL,
         privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
       });

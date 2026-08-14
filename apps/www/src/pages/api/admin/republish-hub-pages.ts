@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { getDocument, setDocument, ORIGIN_HUBS, type OriginHub } from "@aritrips/data";
 import { getAdminSession } from "../../../lib/requireAdminSession";
 import { buildHubPageContent } from "../../../lib/hubPageContent";
+import { upsertPageIndexEntries, type PageIndexEntry } from "../../../lib/pagesIndex";
 
 export const prerender = false;
 
@@ -33,6 +34,7 @@ export const POST: APIRoute = async ({ cookies }) => {
 
   const appUrl = "https://app.aritrips.com";
   const results: { slug: string; status: "updated" | "skipped" | "not_found" | "error" }[] = [];
+  const indexEntries: PageIndexEntry[] = [];
 
   for (const hub of ORIGIN_HUBS as readonly OriginHub[]) {
     const built = buildHubPageContent(hub, appUrl);
@@ -57,11 +59,22 @@ export const POST: APIRoute = async ({ cookies }) => {
         credentials
       );
       results.push({ slug, status: "updated" });
+      indexEntries.push({
+        id: slug,
+        title: String(existing.title ?? slug),
+        description: String(existing.description ?? ""),
+        featuredImageQuery: String(existing.featuredImageQuery ?? ""),
+        publishedAt: publishedAt?.toISOString(),
+        status: String(existing.status ?? "published"),
+        template: String(existing.template ?? "custom"),
+      });
     } catch (err) {
       console.error(`[republish-hub-pages] ${slug} failed`, err);
       results.push({ slug, status: "error" });
     }
   }
+
+  await upsertPageIndexEntries(credentials, indexEntries);
 
   return json({ ok: true, results }, 200);
 };

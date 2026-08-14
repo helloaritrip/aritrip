@@ -1,7 +1,7 @@
 ---
 import { env } from "cloudflare:workers";
 import Layout from "../../layouts/Layout.astro";
-import { getCachedPages } from "../../lib/pagesCache";
+import { getCachedPageIndex } from "../../lib/pagesCache";
 
 // SSR (no prerender) — mismo motivo que /p/[slug]: el listado tiene que
 // reflejar entradas nuevas apenas se publican, sin esperar un redeploy.
@@ -47,11 +47,11 @@ let loadError: string | null = null;
 if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
   try {
     const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
-    const docs = await getCachedPages(credentials);
+    const entries = await getCachedPageIndex(credentials);
     // Las entradas de blog son páginas normales con template="blog" — mismo
     // sistema de siempre (Puck + Firestore), solo se filtran acá para el
     // listado. Se renderizan en /p/{slug} igual que cualquier otra página.
-    posts = docs.filter((d) => d.template === "blog" && d.status === "published") as BlogDoc[];
+    posts = entries.filter((e) => e.template === "blog" && e.status === "published") as BlogDoc[];
   } catch (err) {
     // El detalle real solo va al log del servidor — mostrárselo a
     // cualquier visitante público filtra detalles internos de Firestore

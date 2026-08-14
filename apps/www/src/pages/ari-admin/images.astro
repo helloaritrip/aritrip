@@ -3,7 +3,6 @@ import { env } from "cloudflare:workers";
 import type { Data } from "@measured/puck";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../lib/requireAdminSession";
-import { getCachedPages } from "../../lib/pagesCache";
 import { getCachedCollection } from "../../lib/adminReadCache";
 import type { Props } from "../../puck/config";
 
@@ -50,7 +49,7 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
   const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
   try {
     const [pages, reviews] = await Promise.all([
-      getCachedPages(credentials) as Promise<PageDoc[]>,
+      getCachedCollection("pages", credentials) as Promise<PageDoc[]>,
       getCachedCollection("imageReviews", credentials) as Promise<ReviewDoc[]>,
     ]);
 

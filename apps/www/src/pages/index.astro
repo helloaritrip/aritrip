@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import Layout from "../layouts/Layout.astro";
 import { Button } from "@aritrips/ui";
 import { ORIGIN_HUBS, ORIGIN_LABELS } from "@aritrips/data";
-import { getCachedPages } from "../lib/pagesCache";
+import { getCachedPageIndex } from "../lib/pagesCache";
 import { getCachedDestinationImageUrl } from "../lib/destinationImageCache";
 import { cityName, hubPageSlug } from "../lib/citySlug";
 import { getHomeLayoutConfig, HOME_SECTION_IDS, DEFAULT_SECTION_ORDER, type HomeSectionId } from "../lib/homeLayoutConfig";
@@ -35,8 +35,8 @@ const credentials =
     : null;
 if (credentials) {
   try {
-    const docs = await getCachedPages(credentials);
-    latestPosts = (docs.filter((d) => d.template === "blog" && d.status === "published") as BlogDoc[])
+    const entries = await getCachedPageIndex(credentials);
+    latestPosts = (entries.filter((e) => e.template === "blog" && e.status === "published") as BlogDoc[])
       .sort((a, b) => String(b.publishedAt ?? "").localeCompare(String(a.publishedAt ?? "")))
       .slice(0, 3);
   } catch {
