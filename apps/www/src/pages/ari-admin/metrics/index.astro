@@ -2,7 +2,8 @@
 import { env } from "cloudflare:workers";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../../lib/requireAdminSession";
-import { queryDocuments, countDocuments, destinations, ORIGIN_LABELS, type OriginHub } from "@aritrips/data";
+import { countDocuments, destinations, ORIGIN_LABELS, type OriginHub } from "@aritrips/data";
+import { getCachedQuery } from "../../../lib/adminReadCache";
 
 export const prerender = false;
 
@@ -51,11 +52,18 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
     // garantiza ningún orden y se corta en los primeros 300 documentos
     // que Firestore devuelva; una vez la colección creciera más allá de
     // eso, "reciente" podía dejar de ser cierto sin que nadie lo notara.
+    //
+    // Cacheado vía adminReadCache (2026-08-15) — esta página se había
+    // quedado afuera del barrido de cacheo de admin del 13/08 (heredaba
+    // la forma original de searches.astro) y leía hasta 300+20 eventos SIN
+    // cachear en cada visita/refresh. Ver adminReadCache.ts para el porqué.
     [statsEvents, pageEvents, totalEvents] = await Promise.all([
-      queryDocuments("events", credentials, { orderByField: "createdAt", direction: "DESCENDING", limit: STATS_SAMPLE_SIZE }) as Promise<
-        TrackedEventDoc[]
-      >,
-      queryDocuments("events", credentials, {
+      getCachedQuery(`events:stats:${STATS_SAMPLE_SIZE}`, "events", credentials, {
+        orderByField: "createdAt",
+        direction: "DESCENDING",
+        limit: STATS_SAMPLE_SIZE,
+      }) as Promise<TrackedEventDoc[]>,
+      getCachedQuery(`events:page:${page}:${PAGE_SIZE}`, "events", credentials, {
         orderByField: "createdAt",
         direction: "DESCENDING",
         limit: PAGE_SIZE,

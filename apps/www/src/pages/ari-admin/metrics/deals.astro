@@ -2,7 +2,8 @@
 import { env } from "cloudflare:workers";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../../lib/requireAdminSession";
-import { queryDocuments, destinations } from "@aritrips/data";
+import { destinations } from "@aritrips/data";
+import { getCachedQuery } from "../../../lib/adminReadCache";
 
 export const prerender = false;
 
@@ -30,11 +31,15 @@ type TrackedEventDoc = {
 };
 
 // Mismo patrón que /ari-admin/metrics — una muestra de los últimos N
-// eventos (2026-08-15, Prioridad 3 acordada con el head: visitas/clicks/
-// favoritos/tipo de deal/destinos populares para /deals específicamente).
-// No hace falta un `where name in [...]` server-side porque `events` ya
-// es chica y esto se pagina igual que la otra pantalla — filtrar acá
-// mismo evita otra lectura más costosa.
+// eventos (Prioridad 3 acordada con el head: visitas/clicks/favoritos/
+// tipo de deal/destinos populares para /deals específicamente). No hace
+// falta un `where name in [...]` server-side porque esto se pagina igual
+// que la otra pantalla — filtrar acá mismo evita otra lectura más costosa.
+//
+// Cacheado vía adminReadCache (2026-08-15) — esta página (heredada de
+// deals.astro original) se había quedado afuera del barrido de cacheo de
+// admin del 13/08 y leía hasta 500 eventos SIN cachear en cada visita.
+// Ver adminReadCache.ts para el porqué.
 const STATS_SAMPLE_SIZE = 500;
 
 let statsEvents: TrackedEventDoc[] = [];
@@ -43,7 +48,7 @@ let loadError: string | null = null;
 if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
   try {
     const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
-    statsEvents = (await queryDocuments("events", credentials, {
+    statsEvents = (await getCachedQuery(`events:stats:${STATS_SAMPLE_SIZE}`, "events", credentials, {
       orderByField: "createdAt",
       direction: "DESCENDING",
       limit: STATS_SAMPLE_SIZE,
