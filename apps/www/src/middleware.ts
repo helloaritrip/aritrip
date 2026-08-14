@@ -1,5 +1,13 @@
 import { defineMiddleware } from "astro:middleware";
 
+// Saca el valor de `s-maxage` de un Cache-Control real (ej. "public,
+// max-age=0, s-maxage=900") para reescribirlo como `max-age` explícito al
+// guardar en la Cache API — ver el comentario donde se usa.
+function extractSMaxAge(cacheControl: string | null, fallbackSeconds: number): number {
+  const match = cacheControl?.match(/s-maxage=(\d+)/);
+  return match ? Number(match[1]) : fallbackSeconds;
+}
+
 // Consolida el sitio en una sola URL "canónica" por página — sin esto
 // Google indexa http/https, www.aritrips.com/aritrips.com, y /p/slug
 // vs /p/slug/ como páginas separadas, repartiendo autoridad entre
@@ -41,10 +49,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
   //
   // Dos "cachés" con vida distinta, para no pisarse entre sí:
   //  - `primaryCache` (Cloudflare la llama `caches.default`): la copia
-  //    real, con el Cache-Control real de la página (s-maxage 5-10 min).
-  //    Se chequea ANTES de siquiera llamar a next(), así que un HIT acá
-  //    significa cero lecturas de Firestore — ni se ejecuta la lógica de
-  //    la página.
+  //    real, con TTL propio (15-30 min según la página, ver el s-maxage de
+  //    cada una — subido 2026-08-15 tras confirmar que ninguna fuente de
+  //    datos cambia más rápido que eso: los precios de vuelo de
+  //    apps/price-sync se refrescan por ruta cada ~16h, los de hotel cada
+  //    ~1.3h, y el contenido lo edita un humano a mano). Se chequea ANTES
+  //    de siquiera llamar a next(), así que un HIT acá significa cero
+  //    lecturas de Firestore — ni se ejecuta la lógica de la página.
   //  - `backupCache` (namespace separado): la copia de emergencia de
   //    stale-if-error, con TTL propio de 24h — necesita vivir más tiempo
   //    que la copia real, así que no puede ser la misma entrada.
@@ -78,13 +89,26 @@ export const onRequest = defineMiddleware(async (context, next) => {
       const isOk = response.status >= 200 && response.status < 300;
       // 404 también se cachea (TTL corto propio si la página no trae uno) —
       // bots probando slugs inventados bajo /p/* si no, pagan una lectura
-      // real de Firestore cada vez que repiten el mismo intento.
+      // real de Firestore cada vez que repiten el mismo intento. TTL más
+      // largo que antes (2026-08-15, ver nota de `extractSMaxAge` abajo):
+      // 5 min en vez de 2, para no penalizar de más a alguien que publica
+      // y visita esa URL exacta enseguida, pero sin volver a pagar una
+      // lectura por cada bot que repite el mismo slug inventado.
       if (isOk || response.status === 404) {
         response.headers.set("X-Cache", "MISS");
         if (!response.headers.has("Cache-Control")) {
-          response.headers.set("Cache-Control", "public, max-age=0, s-maxage=120");
+          response.headers.set("Cache-Control", "public, max-age=0, s-maxage=300");
         }
-        const putPromise = primaryCache.put(context.request, response.clone());
+        // La Cache API de Cloudflare debería preferir `s-maxage` sobre
+        // `max-age=0` (se comporta como un caché compartido, no un
+        // navegador) — pero en vez de confiar en esa resolución implícita,
+        // se guarda con un `max-age` explícito e inequívoco propio,
+        // desacoplado del header real que ve el visitante. Mismo principio
+        // que ya se usaba para el respaldo de 24h de abajo.
+        const storeHeaders = new Headers(response.headers);
+        storeHeaders.set("Cache-Control", `public, max-age=${extractSMaxAge(response.headers.get("Cache-Control"), 300)}`);
+        const stored = new Response(response.clone().body, { status: response.status, headers: storeHeaders });
+        const putPromise = primaryCache.put(context.request, stored);
         if (cfContext) cfContext.waitUntil(putPromise);
         else await putPromise;
       }

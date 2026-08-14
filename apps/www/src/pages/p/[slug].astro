@@ -60,7 +60,11 @@ try {
 // 503 real de arriba (en vez del 404 disfrazado que había antes), un
 // nuevo fallo de Firestore puede seguir sirviendo la última copia buena
 // de cada página hasta 24h en vez del error.
-Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=600, stale-if-error=86400");
+// s-maxage subido de 600 a 1800 (2026-08-15, auditoría de lecturas) —
+// una página de destino cambia incluso menos seguido que el listado del
+// blog una vez publicada; 30 min de caché no le cuesta nada de frescura
+// real y son las páginas de mayor volumen del sitio.
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=1800, stale-if-error=86400");
 
 const pageTitle = (data.root.props?.title as string | undefined) || (doc.title as string | undefined) || "AriTrips";
 const pageDescription = (doc.description as string | undefined) || pageTitle;

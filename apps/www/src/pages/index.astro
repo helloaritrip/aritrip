@@ -17,7 +17,9 @@ export const prerender = false;
 // tráfico del sitio; sin esto, cada visita anónima le pegaba a Firestore
 // dos veces (pages + siteConfig/home). Ver dealsCache.ts para el
 // contexto completo (cuota diaria gratis agotada una vez por esto mismo).
-Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=300");
+// s-maxage subido de 300 a 900 (2026-08-15, auditoría de lecturas) —
+// mismo motivo que /blog: contenido editado a mano, no en vivo.
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=900");
 
 const APP_URL_FOR_IMAGES = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
 function imageProxyUrl(query: string, fallback: string): string {

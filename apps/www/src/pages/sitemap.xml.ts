@@ -55,6 +55,8 @@ ${urls.map((u) => `  <url>\n    <loc>${u.loc}</loc>\n    <priority>${u.priority}
     // porqué) — Googlebot pega acá seguido; sin esto cada rastreo volvía
     // a leer Firestore. `public` + `s-maxage` cachea en el CDN sin afectar
     // caché de navegador (no hay `max-age`, así que el browser no cachea).
-    headers: { "Content-Type": "application/xml", "Cache-Control": "public, max-age=0, s-maxage=600" },
+    // s-maxage subido de 600 a 1800 (2026-08-15, auditoría de lecturas) —
+    // Googlebot no necesita el sitemap al segundo.
+    headers: { "Content-Type": "application/xml", "Cache-Control": "public, max-age=0, s-maxage=1800" },
   });
 };

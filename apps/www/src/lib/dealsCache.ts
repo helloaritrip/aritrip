@@ -31,8 +31,16 @@ import {
  */
 let cachedDeals: { deals: FlightDeal[]; expiresAt: number } | null = null;
 let cachedPartnerConfig: { config: PartnerConfig; expiresAt: number } | null = null;
-const DEALS_CACHE_TTL_MS = 2 * 60 * 1000;
-const PARTNER_CACHE_TTL_MS = 10 * 60 * 1000;
+// TTLs subidos (2026-08-15, auditoría de lecturas post-reset de cuota) —
+// este caché en memoria ahora es secundario (la Cache API en middleware.ts
+// es la capa principal), pero sigue siendo el que evita que /deals con
+// distintas combinaciones de filtro/orden/página (cada una una URL/cache-key
+// distinta a nivel de borde) relean Firestore por separado. 10 min para
+// deals porque apps/price-sync solo refresca cada ruta cada ~16h — no hay
+// frescura real que ganar yendo más seguido. 30 min para partners porque
+// son valores que solo cambia un humano a mano, nunca un cron.
+const DEALS_CACHE_TTL_MS = 10 * 60 * 1000;
+const PARTNER_CACHE_TTL_MS = 30 * 60 * 1000;
 
 export async function getCachedFlightDeals(credentials: FirestoreCredentials): Promise<FlightDeal[]> {
   if (cachedDeals && cachedDeals.expiresAt > Date.now()) return cachedDeals.deals;
