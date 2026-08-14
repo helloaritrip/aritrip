@@ -2,8 +2,9 @@
 import { env } from "cloudflare:workers";
 import Layout from "../layouts/Layout.astro";
 import { Button } from "@aritrips/ui";
-import { ORIGIN_HUBS, ORIGIN_LABELS, getDocument } from "@aritrips/data";
+import { ORIGIN_HUBS, ORIGIN_LABELS } from "@aritrips/data";
 import { getCachedPages } from "../lib/pagesCache";
+import { getCachedDestinationImageUrl } from "../lib/destinationImageCache";
 import { cityName, hubPageSlug } from "../lib/citySlug";
 import { getHomeLayoutConfig, HOME_SECTION_IDS, DEFAULT_SECTION_ORDER, type HomeSectionId } from "../lib/homeLayoutConfig";
 
@@ -114,12 +115,7 @@ const demoTrip = {
 // foto fijada, gana sobre la búsqueda por query.
 let demoImageUrl: string | undefined;
 if (credentials) {
-  try {
-    const doc = await getDocument("destinationImages", "cancun", credentials);
-    if (doc && typeof doc.imageUrl === "string") demoImageUrl = doc.imageUrl;
-  } catch {
-    demoImageUrl = undefined;
-  }
+  demoImageUrl = await getCachedDestinationImageUrl("cancun", credentials);
 }
 ---
 

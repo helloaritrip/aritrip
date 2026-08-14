@@ -73,9 +73,18 @@ function normalizeSectionOrder(raw: unknown): HomeSectionId[] {
   return [...deduped, ...missing];
 }
 
+// Cache en memoria (2026-08-14, auditoría post-reset de cuota) — esta
+// función se llama en CADA visita a la Home (la página de más tráfico del
+// sitio) y no tenía ningún caché, a pesar de que el layout solo cambia
+// cuando alguien lo edita a mano desde /ari-admin/home-layout. Mismo
+// patrón y TTL que pagesCache.ts.
+let cachedLayout: { config: HomeLayoutConfig; expiresAt: number } | null = null;
+const CACHE_TTL_MS = 20 * 60 * 1000;
+
 export async function getHomeLayoutConfig(credentials: FirestoreCredentials | null): Promise<HomeLayoutConfig> {
   const fallback: HomeLayoutConfig = { ...DEMO_SIZE_DEFAULTS, sectionOrder: DEFAULT_SECTION_ORDER };
   if (!credentials) return fallback;
+  if (cachedLayout && cachedLayout.expiresAt > Date.now()) return cachedLayout.config;
   try {
     const doc = await getDocument("siteConfig", "home", credentials);
     if (!doc) return fallback;
@@ -93,6 +102,7 @@ export async function getHomeLayoutConfig(credentials: FirestoreCredentials | nu
         config.sectionOrder = DEFAULT_SECTION_ORDER;
       }
     }
+    cachedLayout = { config, expiresAt: Date.now() + CACHE_TTL_MS };
     return config;
   } catch {
     return fallback;
