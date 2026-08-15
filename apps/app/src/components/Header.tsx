@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BriefcaseIcon, TagIcon, MapIcon, HoneymoonIcon, GlobeIcon, ChevronDownIcon } from "@/components/Icons";
+import { AccountMenu } from "@/components/AccountMenu";
 
 // Blog/Deals viven en aritrips.com (apps/www), no acá — un solo lugar de
 // verdad para cada uno en vez de duplicarlos en las dos apps.
@@ -7,13 +8,14 @@ const MARKETING_URL = "https://aritrips.com";
 
 // Barra idéntica a la de apps/www (TopNav.astro) a propósito (2026-08-13,
 // a pedido del usuario: "esta barra de menu superior debe ser la misma
-// para el home como para el app") — 4 links estáticos + un solo botón fijo
-// "Join AriTrips". Antes esto cambiaba según sesión (My Favorites
-// reemplazaba a Join cuando había sesión); se sacó esa lógica porque
-// generaba dos barras visualmente distintas entre los dos sitios — la
-// versión de apps/www es estática (Astro, sin JS), así que la de acá
-// también se queda estática para que se vean iguales siempre, con o sin
-// sesión iniciada.
+// para el home como para el app") — 4 links estáticos, sin JS. El único
+// pedazo que sí depende de sesión es el botón de la derecha
+// (AccountMenu, 2026-08-15): "Join AriTrips" para un visitante sin
+// cuenta, o "My AriTrips" con un mini panel (foto, fecha de alta,
+// favoritos, borrar cuenta) para quien ya inició sesión — apps/www no
+// tiene noción de sesión, así que ese lado sigue siendo solo "Join
+// AriTrips" siempre, sin que las dos barras dejen de ser idénticas en
+// todo lo demás.
 export function Header() {
   return (
     <header className="sticky top-0 z-30 rounded-b-3xl bg-surface shadow-sm">
@@ -43,9 +45,7 @@ export function Header() {
           <img src="/logo.webp" alt="AriTrips" className="h-7 w-auto" width={360} height={103} />
         </Link>
 
-        <Link href="/join" className="shrink-0 rounded-full bg-muted/15 px-4 py-2 text-sm font-medium text-ink hover:bg-muted/25">
-          Join AriTrips
-        </Link>
+        <AccountMenu />
 
         <label
           htmlFor="mobile-menu-toggle"
@@ -106,9 +106,7 @@ export function Header() {
             <ChevronDownIcon className="h-3.5 w-3.5" />
           </button>
 
-          <Link href="/join" className="shrink-0 rounded-full bg-muted/15 px-4 py-2 text-sm font-medium text-ink hover:bg-muted/25">
-            Join AriTrips
-          </Link>
+          <AccountMenu />
         </div>
       </div>
 

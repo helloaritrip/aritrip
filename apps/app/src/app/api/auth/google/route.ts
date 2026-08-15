@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
   // — leer primero y mergear preserva createdAt en logins posteriores.
   const existing = await getDocument("users", uid, credentials).catch(() => null);
   const now = new Date();
+  const createdAt = existing && typeof existing.createdAt === "string" ? new Date(existing.createdAt) : now;
   await setDocument(
     "users",
     uid,
@@ -45,14 +46,20 @@ export async function POST(request: NextRequest) {
       name: identity.name,
       picture: identity.picture,
       updatedAt: now,
-      createdAt: existing && typeof existing.createdAt === "string" ? new Date(existing.createdAt) : now,
+      createdAt,
     },
     credentials
   );
 
-  const token = await signUserSession({ uid, email: identity.email, name: identity.name, picture: identity.picture }, USER_SESSION_SECRET);
+  const token = await signUserSession(
+    { uid, email: identity.email, name: identity.name, picture: identity.picture, createdAt: createdAt.toISOString() },
+    USER_SESSION_SECRET
+  );
 
-  const res = NextResponse.json({ ok: true, user: { uid, email: identity.email, name: identity.name, picture: identity.picture } });
+  const res = NextResponse.json({
+    ok: true,
+    user: { uid, email: identity.email, name: identity.name, picture: identity.picture, createdAt: createdAt.toISOString() },
+  });
   res.cookies.set(USER_SESSION_COOKIE, token, {
     httpOnly: true,
     secure: true,

@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   if (!session) return NextResponse.json({ user: null }, { headers });
   return NextResponse.json(
-    { user: { uid: session.uid, email: session.email, name: session.name, picture: session.picture } },
+    { user: { uid: session.uid, email: session.email, name: session.name, picture: session.picture, createdAt: session.createdAt } },
     { headers }
   );
 }

@@ -24,14 +24,21 @@ function fromBase64url(str: string): Uint8Array {
   return bytes;
 }
 
-export type UserSession = { uid: string; email: string; name: string; picture: string; exp: number };
+export type UserSession = { uid: string; email: string; name: string; picture: string; createdAt: string; exp: number };
 
 // 30 días, no 7 como el panel de admin — es un producto de consumo
 // ("mantener la sesión iniciada"), no una herramienta interna donde
 // conviene forzar reingreso seguido.
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-export async function signUserSession(user: { uid: string; email: string; name: string; picture: string }, secret: string): Promise<string> {
+// createdAt viaja en la sesión firmada (2026-08-15, para "Member since" en
+// el menú de cuenta) — así /api/auth/me lo devuelve gratis, decodificando
+// el JWT, sin pegarle a Firestore en cada carga de página solo para
+// mostrar una fecha que nunca cambia.
+export async function signUserSession(
+  user: { uid: string; email: string; name: string; picture: string; createdAt: string },
+  secret: string
+): Promise<string> {
   const session: UserSession = { ...user, exp: Date.now() + SESSION_TTL_MS };
   const payload = base64url(new TextEncoder().encode(JSON.stringify(session)));
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);

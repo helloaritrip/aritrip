@@ -43,32 +43,6 @@ export default function FavoritesPage() {
     return () => clearTimeout(timer);
   }, [confirmingKey]);
 
-  // Borrado de cuenta (2026-08-15, roadmap de privacidad) — a diferencia
-  // de la papelerita por favorito (armar/confirmar con un timeout), esto
-  // borra TODO de una y no tiene vuelta atrás, así que pide escribir
-  // "DELETE" a mano en vez de un segundo click — más fricción a propósito
-  // para algo irreversible.
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  async function handleDeleteAccount() {
-    setDeleting(true);
-    setDeleteError(null);
-    try {
-      const res = await fetch("/api/account", { method: "DELETE" });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}) as { error?: string });
-        throw new Error(body.error ?? "Something went wrong.");
-      }
-      window.location.href = "/";
-    } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : "Something went wrong.");
-      setDeleting(false);
-    }
-  }
-
   const loadFavorites = useCallback(async () => {
     try {
       const res = await fetch("/api/favorites");
@@ -198,61 +172,14 @@ export default function FavoritesPage() {
         ))}
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 rounded-lg border border-red-600/30 bg-red-600/5 p-5">
-        <div>
-          <h2 className="text-sm font-semibold text-red-700 dark:text-red-400">Delete account</h2>
-          <p className="text-xs text-muted">
-            Permanently deletes your profile and every favorite you&apos;ve saved. This can&apos;t be undone.
-          </p>
-        </div>
-
-        {!showDeleteConfirm ? (
-          <button
-            type="button"
-            onClick={() => setShowDeleteConfirm(true)}
-            className="w-fit rounded-md border border-red-600/40 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-600/10 dark:text-red-400"
-          >
-            Delete my account
-          </button>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <label htmlFor="delete-confirm-input" className="text-xs text-muted">
-              Type <span className="font-semibold text-ink">DELETE</span> to confirm.
-            </label>
-            <input
-              id="delete-confirm-input"
-              type="text"
-              value={deleteConfirmText}
-              onChange={(e) => setDeleteConfirmText(e.target.value)}
-              autoComplete="off"
-              className="w-full max-w-xs rounded-md border border-rule bg-surface px-3 py-2 text-base text-ink focus:outline focus:outline-2 focus:outline-red-600 sm:text-sm"
-            />
-            {deleteError && <p className="text-xs text-red-600 dark:text-red-400">{deleteError}</p>}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={deleteConfirmText !== "DELETE" || deleting}
-                onClick={handleDeleteAccount}
-                className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
-              >
-                {deleting ? "Deleting…" : "Permanently delete"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDeleteConfirm(false);
-                  setDeleteConfirmText("");
-                  setDeleteError(null);
-                }}
-                disabled={deleting}
-                className="rounded-md border border-rule px-3 py-1.5 text-sm font-medium text-ink hover:bg-bg"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Puntero al menú de cuenta (2026-08-15) — el borrado de cuenta se
+          mudó de acá (era una caja roja grande, siempre visible, que
+          espantaba a gente que solo quería ver sus favoritos) al menú "My
+          AriTrips" del header. Sin esto, alguien que ya sabía dónde
+          buscarlo se quedaría sin encontrarlo. */}
+      <p className="text-center text-xs text-muted">
+        Manage your profile or delete your account from the <span className="font-medium text-ink">My AriTrips</span> menu at the top.
+      </p>
     </main>
   );
 }

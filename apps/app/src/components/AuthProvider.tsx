@@ -2,7 +2,10 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
-export type AuthUser = { uid: string; email: string; name: string; picture: string };
+// createdAt es opcional (2026-08-15) — sesiones firmadas ANTES de este
+// cambio no lo tienen en el JWT (viven hasta 30 días); recién lo van a
+// tener a partir del próximo login. La UI debe poder mostrarse sin esto.
+export type AuthUser = { uid: string; email: string; name: string; picture: string; createdAt?: string };
 
 interface AuthContextValue {
   user: AuthUser | null;
