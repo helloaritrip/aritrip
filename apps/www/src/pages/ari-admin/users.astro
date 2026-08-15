@@ -3,6 +3,13 @@ import { env } from "cloudflare:workers";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../lib/requireAdminSession";
 import { listDocuments } from "@aritrips/data";
+// A propósito SIN adminReadCache (2026-08-15) — esta página hace
+// window.location.reload() apenas se agrega/borra un admin (ver el script
+// más abajo), así que un caché de 1 min podría mostrar como "sigue ahí" a
+// alguien que se acaba de borrar, justo la única página donde eso importa
+// de verdad. La colección es chica (1-3 docs), así que el ahorro de no
+// cachear acá es mínimo — no vale el riesgo. Mismo criterio ya usado para
+// dejar sin cachear el listado de Pages (ver ari-admin/pages/index.astro).
 
 export const prerender = false;
 

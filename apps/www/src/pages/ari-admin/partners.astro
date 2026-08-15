@@ -2,7 +2,8 @@
 import { env } from "cloudflare:workers";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../lib/requireAdminSession";
-import { listDocuments, PARTNER_CATEGORIES, PARTNER_LABELS, DEFAULT_PARTNER_CONFIG, type PartnerCategory } from "@aritrips/data";
+import { PARTNER_CATEGORIES, PARTNER_LABELS, DEFAULT_PARTNER_CONFIG, type PartnerCategory } from "@aritrips/data";
+import { getCachedCollection } from "../../lib/adminReadCache";
 
 export const prerender = false;
 
@@ -17,7 +18,7 @@ let loadError: string | null = null;
 
 if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
   try {
-    const docs = await listDocuments("partners", {
+    const docs = await getCachedCollection("partners", {
       clientEmail: FIREBASE_CLIENT_EMAIL,
       privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
     });
