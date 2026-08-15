@@ -148,6 +148,7 @@ export function ResultCard({
               imageQuery: result.imageQuery,
               priceLabel: `From $${result.totalEstimatedCostUSD.toLocaleString()}`,
               originLabel,
+              originAirportCode: tripContext.originAirportCode,
             }}
           />
           <ShareButton title={`${result.name}, ${result.country}`} text={topReason} url={shareUrl} />

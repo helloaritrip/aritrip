@@ -13,6 +13,11 @@ export type FavoriteSnapshot = {
   priceLabel?: string;
   originLabel?: string;
   travelLabel?: string;
+  // Solo lo manda ResultCard (2026-08-15, para que la card en /favorites
+  // sirva para algo — ver DestinationModal) — el código real de origen
+  // (ej. "DFW"), no el label ("Dallas"), que es lo que necesita
+  // /api/destination para reabrir el detalle con precios en vivo.
+  originAirportCode?: string;
 };
 
 /**
