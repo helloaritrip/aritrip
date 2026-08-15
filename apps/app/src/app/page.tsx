@@ -35,10 +35,11 @@ export default async function Home() {
           <img src={heroImageUrl} alt="" className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-white/70 to-bg dark:from-black/10 dark:via-black/60 dark:to-bg" />
           {/* eslint-disable-next-line @next/next/no-img-element -- asset local chico */}
+          {/* Tamaño bajado 30% (2026-08-15, a pedido del usuario) — w-36/44/52 → ~101/123/146px. */}
           <img
             src="/mascot.png"
             alt=""
-            className="pointer-events-none absolute bottom-2 right-4 hidden w-36 sm:right-8 sm:w-44 md:block lg:w-52"
+            className="pointer-events-none absolute bottom-2 right-4 hidden w-[101px] sm:right-8 sm:w-[123px] md:block lg:w-[146px]"
           />
         </div>
 

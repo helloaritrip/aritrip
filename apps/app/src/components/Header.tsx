@@ -8,14 +8,14 @@ const MARKETING_URL = "https://aritrips.com";
 
 // Barra idéntica a la de apps/www (TopNav.astro) a propósito (2026-08-13,
 // a pedido del usuario: "esta barra de menu superior debe ser la misma
-// para el home como para el app") — 4 links estáticos, sin JS. El único
-// pedazo que sí depende de sesión es el botón de la derecha
-// (AccountMenu, 2026-08-15): "Join AriTrips" para un visitante sin
-// cuenta, o "My AriTrips" con un mini panel (foto, fecha de alta,
-// favoritos, borrar cuenta) para quien ya inició sesión — apps/www no
-// tiene noción de sesión, así que ese lado sigue siendo solo "Join
-// AriTrips" siempre, sin que las dos barras dejen de ser idénticas en
-// todo lo demás.
+// para el home como para el app") — 4 links estáticos, sin JS. El botón
+// de la derecha (AccountMenu, 2026-08-15) sí depende de sesión: "Join
+// AriTrips" para un visitante sin cuenta, o "My AriTrips" con un mini
+// panel (foto, fecha de alta, favoritos, borrar cuenta) para quien ya
+// inició sesión. apps/www tiene su PROPIA versión de este mismo
+// componente (misma UI, misma lógica) porque ahí es una isla React
+// aislada que llama cross-origin en vez de usar el AuthProvider/contexto
+// de acá — ver el comentario en TopNav.astro de apps/www.
 export function Header() {
   return (
     <header className="sticky top-0 z-30 rounded-b-3xl bg-surface shadow-sm">

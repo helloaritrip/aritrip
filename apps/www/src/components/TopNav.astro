@@ -9,10 +9,15 @@
 // uno, editar el otro para que no se desalineen.
 // "My Favorites" y "Join AriTrips" llevan a app.aritrips.com/favorites y
 // /join — cuentas de usuario vía Google Sign-In (ver AuthProvider.tsx en
-// apps/app). Deliberadamente estático (sin JS): no sabe si ya hay sesión
-// iniciada, mismo criterio ahora en los dos sitios (Header.tsx en
-// apps/app tampoco cambia según sesión, a propósito, para que las dos
-// barras se vean siempre iguales).
+// apps/app). El botón de la derecha (AccountMenu, 2026-08-15) SÍ sabe si
+// hay sesión iniciada — antes era estático a propósito, pero eso dejaba
+// a alguien ya logueado viendo "Join AriTrips" en cualquier página de
+// aritrips.com (reportado por el usuario). Es una isla React aislada
+// (client:only, mismo patrón que DealSaveButton.tsx en este archivo) que
+// llama cross-origin a app.aritrips.com con la cookie de sesión — ver
+// AccountMenu.tsx para el detalle.
+import { AccountMenu } from "./AccountMenu";
+
 const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
 ---
 
@@ -41,9 +46,7 @@ const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
       <img src="/ari/logo.webp" alt="AriTrips" class="h-7 w-auto" width="360" height="103" />
     </a>
 
-    <a href={`${APP_URL}/join`} class="shrink-0 rounded-full bg-muted/15 px-4 py-2 text-sm font-medium text-ink hover:bg-muted/25">
-      Join AriTrips
-    </a>
+    <AccountMenu client:only="react" />
 
     <label
       for="mobile-menu-toggle"
@@ -111,12 +114,7 @@ const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
         </svg>
       </button>
 
-      <a
-        href={`${APP_URL}/join`}
-        class="shrink-0 rounded-full bg-muted/15 px-4 py-2 text-sm font-medium text-ink hover:bg-muted/25"
-      >
-        Join AriTrips
-      </a>
+      <AccountMenu client:only="react" />
     </div>
   </div>
 
