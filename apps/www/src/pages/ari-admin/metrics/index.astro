@@ -28,6 +28,8 @@ type TrackedEventDoc = {
   isTest?: boolean;
   itemType?: string;
   itemId?: string;
+  startDate?: string;
+  endDate?: string;
 };
 
 const PAGE_SIZE = 20;
@@ -160,6 +162,23 @@ for (const e of realStatsEvents) {
     clicksBySearch.set(e.searchId, arr);
   }
 }
+
+// Qualified Trip Search (2026-08-16, North Star acordada con el head) —
+// una búsqueda que tiene origen + presupuesto + fechas, recibió
+// recomendaciones, y el usuario interactuó con al menos una: la señal de
+// alguien realmente intentando planear un viaje, no solo probando el
+// buscador. startDate/endDate recién se empezaron a guardar el
+// 2026-08-16 (ver trackEvent.ts) — las búsquedas de antes quedan afuera
+// por definición, no por un bug; se las cuenta aparte solo para que no
+// se lea como "el número bajó".
+const hasDates = (e: TrackedEventDoc) =>
+  typeof e.startDate === "string" && e.startDate.length > 0 && typeof e.endDate === "string" && e.endDate.length > 0;
+const qualifiedSearches = searches.filter(
+  (e) => hasDates(e) && !!e.searchId && shownBySearch.has(e.searchId) && clicksBySearch.has(e.searchId)
+);
+const searchesMissingDates = searches.filter((e) => !hasDates(e)).length;
+const QUALIFIED_GOAL = 1000;
+const qualifiedGoalPct = Math.min(100, Math.round((qualifiedSearches.length / QUALIFIED_GOAL) * 1000) / 10);
 
 type SearchOutcome = { firstClickRank: number; rank1Score: number; clickedScore: number };
 const outcomes: SearchOutcome[] = [];
@@ -329,6 +348,27 @@ const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
 
     {totalEvents > 0 && (
       <>
+        <div class="rounded-lg border-2 border-accent bg-accent/5 p-5">
+          <p class="text-xs font-semibold uppercase tracking-wide text-accent">North Star — Meta 1 acordada con el head</p>
+          <div class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <p class="text-4xl font-semibold text-ink">{qualifiedSearches.length}</p>
+            <p class="text-sm text-muted">de {QUALIFIED_GOAL} Qualified Trip Searches ({qualifiedGoalPct}%)</p>
+          </div>
+          <div class="mt-3 h-2 overflow-hidden rounded-full bg-bg">
+            <div class="h-full rounded-full bg-accent" style={`width: ${qualifiedGoalPct}%`}></div>
+          </div>
+          <p class="mt-3 text-xs text-muted">
+            Búsqueda con origen + presupuesto + fechas, que recibió recomendaciones y tuvo al menos un click — señal de
+            alguien realmente intentando planear un viaje, no solo probando el buscador.
+          </p>
+          {searchesMissingDates > 0 && (
+            <p class="mt-1 text-xs text-muted">
+              {searchesMissingDates} búsquedas de antes del 16 ago 2026 no tienen fechas guardadas y quedan afuera de
+              este número por definición.
+            </p>
+          )}
+        </div>
+
         <div class="grid grid-cols-2 gap-4 sm:grid-cols-5">
           <div class="rounded-lg border border-rule bg-surface p-4">
             <p class="text-2xl font-semibold text-ink">{searches.length}</p>
