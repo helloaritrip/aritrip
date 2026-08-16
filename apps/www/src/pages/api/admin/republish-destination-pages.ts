@@ -11,6 +11,17 @@ function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
+// Lotes, no las 48 de una (2026-08-16, bug real reportado por el
+// usuario: "no se pudo republicar") — cada destino gasta hasta 2
+// subrequests (getDocument + setDocument), 48×2=96 pasa largo el límite
+// de 50 subrequests/invocación de Cloudflare Workers (plan free) que ya
+// rompió esto mismo una vez en apps/price-sync, ver el comentario ahí.
+// republish-hub-pages.ts (24 hubs × 2 = 48) queda justo debajo del
+// límite por eso nunca falló — pero es el mismo riesgo, no una
+// diferencia real de diseño. El cliente (ari-admin/pages/index.astro)
+// llama esto en loop con `offset` creciente hasta agotar el catálogo.
+const BATCH_SIZE = 20;
+
 // Crea o actualiza la página /p/{id} de cada uno de los 48 destinos del
 // catálogo — reemplaza a publish-destination-pages.ts (que solo creaba
 // las que faltaban) ahora que también hace falta poder REGENERAR las 40
@@ -20,7 +31,7 @@ function json(body: unknown, status: number): Response {
 // ya existe, solo se pisa contentJson/updatedAt — el resto de los campos
 // (title/description/status/etc, editables a mano desde el editor) se
 // leen primero y se reescriben tal cual.
-export const POST: APIRoute = async ({ cookies }) => {
+export const POST: APIRoute = async ({ cookies, request }) => {
   const session = await getAdminSession(cookies, env);
   if (!session) return json({ error: "Not logged in." }, 401);
 
@@ -28,10 +39,13 @@ export const POST: APIRoute = async ({ cookies }) => {
   if (!FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) return json({ error: "Not configured." }, 503);
   const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
 
+  const offset = Math.max(0, Number(new URL(request.url).searchParams.get("offset")) || 0);
+  const batch = destinations.slice(offset, offset + BATCH_SIZE);
+
   const results: { slug: string; status: "created" | "updated" | "skipped_no_data" | "error" }[] = [];
   const indexEntries: PageIndexEntry[] = [];
 
-  for (const destination of destinations) {
+  for (const destination of batch) {
     const built = buildDestinationPageContent(destination);
     if (!built) {
       results.push({ slug: destination.id, status: "skipped_no_data" });
@@ -102,5 +116,6 @@ export const POST: APIRoute = async ({ cookies }) => {
 
   await upsertPageIndexEntries(credentials, indexEntries);
 
-  return json({ ok: true, results }, 200);
+  const nextOffset = offset + BATCH_SIZE;
+  return json({ ok: true, results, nextOffset, done: nextOffset >= destinations.length, total: destinations.length }, 200);
 };

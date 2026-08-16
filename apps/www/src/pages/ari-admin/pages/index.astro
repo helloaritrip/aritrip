@@ -197,24 +197,44 @@ for (const p of pages) categoryCounts[categoryOf(p)] += 1;
     const btn = e.currentTarget as HTMLButtonElement;
     const statusEl = document.getElementById("republish-destination-status")!;
     btn.disabled = true;
-    statusEl.textContent = "Republicando las 48 páginas de destino...";
+
+    // En lotes, no las 48 de una (2026-08-16, bug real: "no se pudo
+    // republicar") — 48 destinos × hasta 2 subrequests c/u pasa largo el
+    // límite de 50 subrequests/invocación de Cloudflare Workers. El
+    // servidor procesa BATCH_SIZE por llamada y devuelve nextOffset/done
+    // — este loop sigue pidiendo el próximo lote hasta terminar, sin que
+    // ninguna llamada individual se acerque al límite.
+    type BatchResponse = {
+      results?: { slug: string; status: string }[];
+      nextOffset?: number;
+      done?: boolean;
+      total?: number;
+      error?: string;
+    };
+    let offset = 0;
+    let total: number | undefined;
+    const allResults: { slug: string; status: string }[] = [];
     try {
-      const res = await fetch("/api/admin/republish-destination-pages", { method: "POST" });
-      const data = (await res.json().catch(() => ({}))) as {
-        results?: { slug: string; status: string }[];
-        error?: string;
-      };
-      if (res.ok && data.results) {
-        const created = data.results.filter((r) => r.status === "created").length;
-        const updated = data.results.filter((r) => r.status === "updated").length;
-        const problems = data.results.filter((r) => r.status !== "created" && r.status !== "updated");
-        statusEl.textContent =
-          problems.length === 0
-            ? `Listo — ${created} creadas, ${updated} actualizadas ✓`
-            : `${created} creadas, ${updated} actualizadas. Con problemas: ${problems.map((p) => `${p.slug} (${p.status})`).join(", ")}`;
-      } else {
-        statusEl.textContent = data.error || "No se pudo republicar.";
+      for (;;) {
+        statusEl.textContent = total ? `Republicando páginas de destino... (${offset}/${total})` : "Republicando páginas de destino...";
+        const res = await fetch(`/api/admin/republish-destination-pages?offset=${offset}`, { method: "POST" });
+        const data = (await res.json().catch(() => ({}))) as BatchResponse;
+        if (!res.ok || !data.results) {
+          statusEl.textContent = data.error || "No se pudo republicar.";
+          return;
+        }
+        allResults.push(...data.results);
+        total = data.total;
+        if (data.done || data.nextOffset === undefined) break;
+        offset = data.nextOffset;
       }
+      const created = allResults.filter((r) => r.status === "created").length;
+      const updated = allResults.filter((r) => r.status === "updated").length;
+      const problems = allResults.filter((r) => r.status !== "created" && r.status !== "updated");
+      statusEl.textContent =
+        problems.length === 0
+          ? `Listo — ${created} creadas, ${updated} actualizadas ✓`
+          : `${created} creadas, ${updated} actualizadas. Con problemas: ${problems.map((p) => `${p.slug} (${p.status})`).join(", ")}`;
     } catch {
       statusEl.textContent = "No se pudo republicar (error de red).";
     } finally {
