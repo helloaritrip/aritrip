@@ -51,6 +51,14 @@
       }
     },
     {
+      "type": "BudgetTierGrid",
+      "props": {
+        "id": "budget-1",
+        "heading": "Where can you travel from Montreal on a budget?",
+        "originAirportCode": "YUL"
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",

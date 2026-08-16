@@ -51,6 +51,14 @@
       }
     },
     {
+      "type": "BudgetTierGrid",
+      "props": {
+        "id": "budget-1",
+        "heading": "Where can you travel from Miami on a budget?",
+        "originAirportCode": "MIA"
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",

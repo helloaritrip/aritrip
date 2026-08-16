@@ -2,7 +2,14 @@ export * from "./types";
 export { destinations } from "./destinations";
 export { originBaseCosts, destinationBaseStayCosts } from "./destinations/originBaseCosts";
 export { destinationCoordinates } from "./destinations/coordinates";
-export { generatePriceSnapshotsForDestination, generateAllPriceSnapshots, COST_TIER_MULTIPLIER } from "./priceSnapshots";
+export {
+  generatePriceSnapshotsForDestination,
+  generateAllPriceSnapshots,
+  COST_TIER_MULTIPLIER,
+  estimateTripTotalUSD,
+  getBudgetTiers,
+} from "./priceSnapshots";
+export type { BudgetTierBucket } from "./priceSnapshots";
 export { getRecommendations } from "./recommend";
 export type { RecommendationInput, ScoredDestination, CostBreakdown } from "./recommend";
 export {
@@ -26,7 +33,7 @@ export {
   ORIGIN_OPTIONS,
   ORIGIN_IMAGE_QUERY,
 } from "./originGeo";
-export { getDiscoverPicks, getDiscoverDetail } from "./discover";
+export { getDiscoverPicks, getDiscoverDetail, DEFAULT_TRIP_DAYS, DEFAULT_ADULTS, defaultMonth } from "./discover";
 export type { DiscoverSlot, DiscoverPick, DiscoverDetail } from "./discover";
 export { writeFirestoreDocument, setDocument, getDocument, listDocuments, queryDocuments, countDocuments, deleteDocument } from "./firestore";
 export type { FirestoreCredentials } from "./firestore";

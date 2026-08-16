@@ -1,5 +1,15 @@
 import type { Config } from "@measured/puck";
-import { destinations, generatePriceSnapshotsForDestination, ORIGIN_OPTIONS } from "@aritrips/data";
+import {
+  destinations,
+  generatePriceSnapshotsForDestination,
+  generateAllPriceSnapshots,
+  estimateTripTotalUSD,
+  getBudgetTiers,
+  ORIGIN_OPTIONS,
+  DEFAULT_TRIP_DAYS,
+  DEFAULT_ADULTS,
+  defaultMonth,
+} from "@aritrips/data";
 
 // El proxy de imágenes vive en apps/app (no se duplica acá) — apuntar
 // cross-origin al mismo endpoint público, sin problema de CORS para <img>.
@@ -44,7 +54,6 @@ const destinationOptions = destinations.map((d) => ({
 // El propio FAQ del sitio ya es honesto sobre esto ("estimates based on
 // our own curated cost data... not a live quote") — mismo criterio acá.
 const priceOriginOptions = [{ label: "— (no price shown)", value: "" }, ...ORIGIN_OPTIONS];
-const TRIP_NIGHTS = 3;
 
 function priceInfoFor(destinationId: string, originAirportCode: string) {
   const destination = destinations.find((d) => d.id === destinationId);
@@ -60,19 +69,21 @@ function priceInfoFor(destinationId: string, originAirportCode: string) {
     return null;
   }
 
-  const month = new Date().getMonth() + 1;
+  // defaultMonth() (2026-08-16), no el mes calendario actual — mismo mes
+  // de referencia que ya usa getDiscoverPicks/getBudgetTiers para esta
+  // página. Con meses distintos, el mismo destino podía mostrar un total
+  // distinto acá que en la sección de presupuesto de la misma página (el
+  // multiplicador de temporada cambia por mes).
+  const month = defaultMonth();
   const snapshot = snapshots.find((s) => s.originAirportCode === originAirportCode && s.month === month);
   if (!snapshot) return null; // sin costo curado para ESE origen puntual
-
-  const hotelPerNightUSD = snapshot.avgHotelCostPerNightUSD.mid;
-  const estimatedTripTotalUSD = snapshot.avgFlightCostUSD + (hotelPerNightUSD + snapshot.avgActivityCostPerDayUSD) * TRIP_NIGHTS;
 
   return {
     flightCostUSD: snapshot.avgFlightCostUSD,
     flightDurationMinutes: snapshot.avgFlightDurationMinutes,
-    hotelPerNightUSD,
+    hotelPerNightUSD: snapshot.avgHotelCostPerNightUSD.mid,
     activityPerDayUSD: snapshot.avgActivityCostPerDayUSD,
-    estimatedTripTotalUSD,
+    estimatedTripTotalUSD: Math.round(estimateTripTotalUSD(snapshot)),
   };
 }
 
@@ -162,6 +173,11 @@ type DestinationGridProps = {
   destinationIds: { destinationId: string }[];
 };
 
+type BudgetTierGridProps = {
+  heading: string;
+  originAirportCode: string;
+};
+
 type ImageTextSplitProps = {
   imageQuery: string;
   heading: string;
@@ -181,6 +197,7 @@ export type Props = {
   TextBlock: TextBlockProps;
   CTAButton: CTAButtonProps;
   DestinationHighlight: DestinationHighlightProps;
+  BudgetTierGrid: BudgetTierGridProps;
   FeatureGrid: FeatureGridProps;
   StatsBanner: StatsBannerProps;
   Testimonials: TestimonialsProps;
@@ -397,7 +414,7 @@ export const config: Config<Props> = {
                       <span>🎟️ ~${priceInfo.activityPerDayUSD}/day</span>
                     </div>
                     <p className="text-sm font-semibold text-ink">
-                      Estimated {TRIP_NIGHTS}-night trip: ~${priceInfo.estimatedTripTotalUSD.toLocaleString()}
+                      Estimated {DEFAULT_TRIP_DAYS}-night trip for {DEFAULT_ADULTS}: ~${priceInfo.estimatedTripTotalUSD.toLocaleString()}
                     </p>
                   </div>
                 )}
@@ -412,6 +429,53 @@ export const config: Config<Props> = {
                 )}
               </div>
             </a>
+          </div>
+        );
+      },
+    },
+    // "You have $X — where can you go?" (2026-08-16, feedback del head:
+    // agrupar por presupuesto responde mejor la intención real de
+    // búsqueda — "best trips from Cancun on a budget" — que una lista de
+    // "destinos populares" sin más contexto). getBudgetTiers reusa el
+    // mismo estimateTripTotalUSD que DestinationHighlight, así que un
+    // destino no puede aparecer acá con un total distinto al de su propia
+    // card más arriba en la misma página.
+    BudgetTierGrid: {
+      fields: {
+        heading: { type: "text" },
+        originAirportCode: { type: "select", options: ORIGIN_OPTIONS },
+      },
+      defaultProps: { heading: "Where can you travel on a budget?", originAirportCode: ORIGIN_OPTIONS[0]?.value ?? "" },
+      render: ({ heading, originAirportCode }) => {
+        if (!originAirportCode) return <></>;
+        const snapshots = generateAllPriceSnapshots(destinations);
+        const tiers = getBudgetTiers(originAirportCode as (typeof ORIGIN_OPTIONS)[number]["value"], destinations, snapshots);
+        if (tiers.length === 0) return <></>;
+
+        return (
+          <div className="mx-auto mt-10 max-w-3xl px-6">
+            <h2 className="text-2xl font-semibold text-ink">{heading}</h2>
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {tiers.map((tier) => (
+                <div key={tier.label} className="rounded-lg border border-rule bg-surface p-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-highlight">{tier.label}</h3>
+                  <ul className="mt-2 flex flex-col gap-1.5">
+                    {tier.destinations.map((d) => (
+                      <li key={d.destinationId}>
+                        <a href={`/p/${d.destinationId}`} className="flex items-center justify-between gap-2 text-sm text-ink hover:text-accent">
+                          <span className="truncate">{d.name}</span>
+                          <span className="shrink-0 text-muted">~${d.estimatedTotalUSD.toLocaleString()}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-muted">
+              Estimated {DEFAULT_TRIP_DAYS}-night trip for {DEFAULT_ADULTS} — flight, hotel, and activities combined. Estimate based
+              on our own curated cost data, not a live quote.
+            </p>
           </div>
         );
       },

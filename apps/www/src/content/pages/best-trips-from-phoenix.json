@@ -51,6 +51,14 @@
       }
     },
     {
+      "type": "BudgetTierGrid",
+      "props": {
+        "id": "budget-1",
+        "heading": "Where can you travel from Phoenix on a budget?",
+        "originAirportCode": "PHX"
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",

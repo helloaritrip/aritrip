@@ -60,6 +60,16 @@ export function buildHubPageContent(hub: OriginHub, appUrl: string) {
         // elegirlo a mano por card.
         props: { id: `dest-${i + 1}`, destinationId: pick.destinationId, slot: pick.slot, originAirportCode: hub },
       })),
+      // "Where can you travel from {city} on a budget?" (2026-08-16,
+      // feedback del head) — responde directo la intención de búsqueda
+      // detrás de "on a budget" en vez de dejarla implícita en 3 destinos
+      // curados; también ayuda a que las 24 hub pages dejen de ser
+      // template idéntico (el agrupamiento depende de qué es realmente
+      // alcanzable en plata desde CADA hub).
+      {
+        type: "BudgetTierGrid",
+        props: { id: "budget-1", heading: `Where can you travel from ${city} on a budget?`, originAirportCode: hub },
+      },
       {
         type: "FAQAccordion",
         props: {

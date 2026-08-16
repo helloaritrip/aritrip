@@ -51,6 +51,14 @@
       }
     },
     {
+      "type": "BudgetTierGrid",
+      "props": {
+        "id": "budget-1",
+        "heading": "Where can you travel from San Francisco on a budget?",
+        "originAirportCode": "SFO"
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
