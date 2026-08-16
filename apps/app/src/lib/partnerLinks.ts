@@ -58,6 +58,24 @@ export interface PartnerLinkInput {
 
 export type PartnerLinks = Partial<Record<PartnerCategory, string>>;
 
+// PENDIENTE (2026-08-16, no construir todavía — decisión explícita con el
+// head/founder): todos los `config.*.value` de acá abajo son Travelpayouts
+// sub_ids, pero son FIJOS por categoría (uno para todos los vuelos, uno
+// para todas las actividades, etc.) — ver DEFAULT_PARTNER_CONFIG en
+// packages/data/src/partners.ts, los 5 comparten el marker 761476.
+// Travelpayouts expone una Statistics API real (reservas/comisiones, no
+// solo precios) consultable por sub_id — pero con un sub_id fijo por
+// categoría, esa API solo puede decir "cuánto generaron los vuelos en
+// total", nunca "qué búsqueda puntual generó esta reserva".
+// Para atribución real (la métrica "Revenue per Qualified Trip Search"
+// que pidió el head) haría falta generar un sub_id único por click acá
+// (embebiendo el searchId del evento search_performed/recommendation_
+// clicked, ver trackEvent.ts) y después cruzar contra la Statistics API
+// por ese sub_id. Se decidió NO construir esto todavía: pre-lanzamiento
+// no hay volumen de búsquedas suficiente para que la API devuelva datos
+// útiles, y hacerlo ahora violaría el feature freeze acordado (solo
+// bugs/seguridad/performance/SEO/conversión hasta validar el funnel con
+// tráfico real). Revisar cuando el tráfico orgánico suba.
 export function buildPartnerLinks(input: PartnerLinkInput, config: PartnerConfig): PartnerLinks {
   const { destinationName, startDate, endDate, adults } = input;
   const rooms = Math.ceil(adults / 2);
