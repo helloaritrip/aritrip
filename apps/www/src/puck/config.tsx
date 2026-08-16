@@ -213,6 +213,11 @@ type ExperienceGalleryProps = {
   destinationId: string;
 };
 
+type RelatedDestinationsProps = {
+  destinationId: string;
+  heading: string;
+};
+
 export type Props = {
   Hero: HeroProps;
   Heading: HeadingProps;
@@ -229,6 +234,7 @@ export type Props = {
   DestinationGrid: DestinationGridProps;
   ImageTextSplit: ImageTextSplitProps;
   ExperienceGallery: ExperienceGalleryProps;
+  RelatedDestinations: RelatedDestinationsProps;
 };
 
 export const config: Config<Props> = {
@@ -664,6 +670,66 @@ export const config: Config<Props> = {
                 ))}
               </div>
             )}
+          </div>
+        );
+      },
+    },
+    // "Destinos relacionados" (2026-08-16, auditoría de SEO — el enlazado
+    // interno entre páginas de destino era prácticamente inexistente
+    // hasta ahora, aparte de las 3 cards curadas por hub page). Puramente
+    // por catálogo curado (tags + país compartidos) — a diferencia de
+    // BudgetTierGrid/TripTypeGrid, una página de destino no tiene un
+    // origen de vuelo asociado (no es "best trips FROM X"), así que no
+    // hay con qué calcular un precio real de comparación acá.
+    RelatedDestinations: {
+      fields: {
+        destinationId: { type: "select", options: destinationOptions },
+        heading: { type: "text" },
+      },
+      defaultProps: { destinationId: destinations[0]?.id ?? "", heading: "You might also like" },
+      render: ({ destinationId, heading }) => {
+        const current = destinations.find((d) => d.id === destinationId);
+        if (!current) return <></>;
+
+        const related = destinations
+          .filter((d) => d.id !== destinationId && d.status === "active")
+          .map((d) => {
+            const sharedTags = d.tags.filter((t) => current.tags.includes(t)).length;
+            const sameCountry = d.country === current.country ? 1 : 0;
+            return { destination: d, score: sharedTags * 2 + sameCountry };
+          })
+          .filter((r) => r.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3)
+          .map((r) => r.destination);
+
+        if (related.length === 0) return <></>;
+
+        return (
+          <div className="mx-auto mt-10 max-w-3xl px-6">
+            <h2 className="text-2xl font-semibold text-ink">{heading}</h2>
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {related.map((d) => (
+                <a
+                  key={d.id}
+                  href={`/p/${d.id}`}
+                  className="flex flex-col overflow-hidden rounded-lg border border-rule bg-surface transition-shadow hover:shadow-md"
+                >
+                  <img
+                    src={imageProxyUrl(d.imageQuery, d.name, 400)}
+                    alt=""
+                    width="400"
+                    height="220"
+                    loading="lazy"
+                    className="h-28 w-full object-cover"
+                  />
+                  <div className="flex flex-col gap-0.5 p-3">
+                    <p className="text-sm font-semibold text-ink">{d.name}</p>
+                    <p className="text-xs text-muted">{d.country}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
           </div>
         );
       },

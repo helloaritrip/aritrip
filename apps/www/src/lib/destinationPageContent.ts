@@ -167,6 +167,10 @@ export function buildDestinationPageContent(destination: Destination) {
         text: `Hotels here run roughly $${stay.avgHotelCostPerNightUSD.budget}–${stay.avgHotelCostPerNightUSD.premium} a night depending on tier (budget/mid/premium), and activities average around $${stay.avgActivityCostPerDayUSD} a day per person. These are curated estimates, not live quotes — real prices shift by season and exact dates. The fastest way to see what a full trip actually costs from your city is to run it through AriTrips: real flight, hotel, and activity costs together, not just a flight price.`,
       },
     },
+    // "Destinos relacionados" (2026-08-16, auditoría de SEO — enlazado
+    // interno entre páginas de destino) — ver el comentario en
+    // RelatedDestinations en puck/config.tsx.
+    { type: "RelatedDestinations", props: { id: "related-1", destinationId: destination.id, heading: "You might also like" } },
     {
       type: "FAQAccordion",
       props: {
