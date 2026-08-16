@@ -20,7 +20,7 @@
       "type": "TextBlock",
       "props": {
         "id": "text-1",
-        "text": "Flying out of PTY, a trip to Medellín can start around $1,070 for flight, hotel, and activities together — not just the flight. Below: the most popular pick, our best-value pick, and one aspirational splurge — pulled from our own cost data, not guesses."
+        "text": "We compare the total cost of getting away from Panama City — not just the flight. Flight, hotel, and activity prices are combined to show which destinations actually fit your budget, flying out of PTY. Right now a trip to Medellín can start around $1,070 for 5 nights. Below: our top 3 picks, a full breakdown by budget, and our picks by trip type."
       }
     },
     {
@@ -67,6 +67,13 @@
       }
     },
     {
+      "type": "TextBlock",
+      "props": {
+        "id": "text-2",
+        "text": "If you're flying out of PTY on a tight budget, Medellín is hard to beat right now. Want sand and surf specifically? Cartagena is the best-value beach trip from Panama City. Traveling with kids? Cancún tends to work best for families flying from PTY. For something more active, Antigua Guatemala is currently the best-value adventure trip from PTY."
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",
@@ -79,6 +86,22 @@
           {
             "question": "Why these destinations from Panama City?",
             "answer": "Each one plays a different role: the most popular destination travelers from PTY actually book, our top pick for value (full package — flight, hotel, and activities — for the money), and one aspirational splurge if you want to treat yourself. Not all three are meant to be \"the best deal.\""
+          },
+          {
+            "question": "How does AriTrips calculate the trip cost?",
+            "answer": "Each estimate combines three real cost categories for a 5-night trip for 2: round-trip flights, a mid-range hotel, and a daily activities budget. We start from curated cost data for that route and season, checked periodically against real flight prices to keep it grounded — see \"Are these real-time prices?\" above for the caveat."
+          },
+          {
+            "question": "What's included in the estimated trip price?",
+            "answer": "Round-trip flights for 2, a mid-range hotel for 5 nights, and a daily activities budget. It doesn't include meals beyond that activities budget, travel insurance, or airport transfers."
+          },
+          {
+            "question": "What is the cheapest destination from Panama City right now?",
+            "answer": "Right now, Medellín is the most affordable pick from Panama City — an estimated $1,070 for 5 nights for 2. See the full budget breakdown above for more options."
+          },
+          {
+            "question": "Where can I travel from Panama City for under $1,600?",
+            "answer": "11 destinations from Panama City come in under $1,600 for a 5-night trip for 2 — see \"Where can you travel from Panama City on a budget?\" above for the full list."
           }
         ]
       }
