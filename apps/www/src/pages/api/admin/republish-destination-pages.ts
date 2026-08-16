@@ -4,6 +4,7 @@ import { getDocument, setDocument, destinations } from "@aritrips/data";
 import { getAdminSession } from "../../../lib/requireAdminSession";
 import { buildDestinationPageContent } from "../../../lib/destinationPageContent";
 import { upsertPageIndexEntries, type PageIndexEntry } from "../../../lib/pagesIndex";
+import { purgePageCache } from "../../../lib/purgePageCache";
 
 export const prerender = false;
 
@@ -64,6 +65,10 @@ export const POST: APIRoute = async ({ cookies, request }) => {
           { ...existing, ...(publishedAt ? { publishedAt } : {}), contentJson: JSON.stringify(built.data), updatedAt: now },
           credentials
         );
+        // Purga la caché de borde (2026-08-16, ver purgePageCache.ts) —
+        // no cuenta contra el límite de subrequests (no es fetch a un
+        // host externo), así que no afecta el batching de arriba.
+        await purgePageCache(built.slug);
         results.push({ slug: built.slug, status: "updated" });
         indexEntries.push({
           id: built.slug,
@@ -96,6 +101,9 @@ export const POST: APIRoute = async ({ cookies, request }) => {
           },
           credentials
         );
+        // Purga por si quedó cacheado un 404 de antes de que existiera
+        // esta página (middleware.ts también cachea 404s).
+        await purgePageCache(built.slug);
         results.push({ slug: built.slug, status: "created" });
         indexEntries.push({
           id: built.slug,

@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { getDocument, setDocument } from "@aritrips/data";
 import { getAdminSession } from "../../../../lib/requireAdminSession";
 import { upsertPageIndexEntries } from "../../../../lib/pagesIndex";
+import { purgePageCache } from "../../../../lib/purgePageCache";
 
 export const prerender = false;
 
@@ -105,6 +106,10 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
     },
     credentials
   );
+
+  // Purga la caché de borde de esta página (2026-08-16) — sin esto,
+  // "publicar" seguía sirviendo la copia vieja hasta 1h después.
+  await purgePageCache(slug);
 
   // Mantiene pagesIndex/current al día en el momento de publicar — ver
   // pagesIndex.ts para el porqué (evita que Home/blog/sitemap tengan que

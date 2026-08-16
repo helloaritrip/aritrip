@@ -4,6 +4,7 @@ import type { Data } from "@measured/puck";
 import { getDocument, setDocument, destinations } from "@aritrips/data";
 import { getAdminSession } from "../../../../../lib/requireAdminSession";
 import { upsertPageIndexEntries } from "../../../../../lib/pagesIndex";
+import { purgePageCache } from "../../../../../lib/purgePageCache";
 import type { Props } from "../../../../../puck/config";
 
 export const prerender = false;
@@ -101,6 +102,10 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
     },
     credentials
   );
+
+  // Purga la caché de borde de esta página (2026-08-16) — ver
+  // purgePageCache.ts.
+  await purgePageCache(slug);
 
   // Elegir una foto a mano es la revisión — se marca aprobada sola, sin
   // que haga falta un segundo clic en el grid de /ari-admin/images.

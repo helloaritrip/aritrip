@@ -4,6 +4,7 @@ import { getDocument, setDocument, ORIGIN_HUBS, type OriginHub } from "@aritrips
 import { getAdminSession } from "../../../lib/requireAdminSession";
 import { buildHubPageContent } from "../../../lib/hubPageContent";
 import { upsertPageIndexEntries, type PageIndexEntry } from "../../../lib/pagesIndex";
+import { purgePageCache } from "../../../lib/purgePageCache";
 
 export const prerender = false;
 
@@ -58,6 +59,12 @@ export const POST: APIRoute = async ({ cookies }) => {
         { ...existing, ...(publishedAt ? { publishedAt } : {}), contentJson: JSON.stringify(data), updatedAt: new Date() },
         credentials
       );
+      // Purga la caché de borde de esta página (2026-08-16) — ver
+      // purgePageCache.ts. La Cache API no cuenta contra el límite de
+      // subrequests salientes de Workers (no es un fetch a un host
+      // externo), así que no arriesga romper el batch de 24×2 que ya
+      // queda justo debajo del límite.
+      await purgePageCache(slug);
       results.push({ slug, status: "updated" });
       indexEntries.push({
         id: slug,
