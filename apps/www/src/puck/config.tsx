@@ -483,6 +483,27 @@ export const config: Config<Props> = {
               Estimated {DEFAULT_TRIP_DAYS}-night trip for {DEFAULT_ADULTS} — flight, hotel, and activities combined. Estimate based
               on our own curated cost data, not a live quote.
             </p>
+            {/* Puente SEO → producto (2026-08-16, feedback del head, punto 9)
+                — ?budget= ya lo lee el buscador (mismo patrón que ?origin=,
+                ver SearchForm.tsx), así que estos links no son solo texto:
+                llegan al formulario con el presupuesto de ESE tier ya
+                cargado, no como un número nuevo que el usuario tiene que
+                re-tipear. Solo los tiers con techo real (el último es
+                abierto, "$X+", sin un número que precargar). */}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted">Have a different budget?</span>
+              {tiers
+                .filter((tier) => Number.isFinite(tier.maxUSD))
+                .map((tier) => (
+                  <a
+                    key={tier.label}
+                    href={`${APP_URL}/?origin=${originAirportCode}&budget=${tier.maxUSD}`}
+                    className="rounded-full border border-rule px-3 py-1 text-xs font-medium text-ink hover:border-accent hover:text-accent"
+                  >
+                    Under ${tier.maxUSD.toLocaleString()}
+                  </a>
+                ))}
+            </div>
           </div>
         );
       },

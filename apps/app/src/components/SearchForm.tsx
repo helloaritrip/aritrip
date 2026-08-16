@@ -92,8 +92,19 @@ export function SearchForm() {
   // reusa la misma detección por IP que ya usa /api/discover (gratis, sin
   // permiso del navegador). Si ninguna de las dos aplica, se queda con
   // DEFAULT_ORIGIN_HUB del estado inicial.
+  //
+  // ?budget=XXX (2026-08-16, feedback del head, punto 9) — mismo criterio
+  // que origin: si viene en la URL (ej. desde un CTA de las hub pages tipo
+  // "Find trips under $750"), precarga el campo en vez de que el usuario
+  // tenga que re-tipear un número que ya dijo en la página de SEO. Set
+  // aparte del de origin porque no depende de si hubo geo-detección o no.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const budgetParam = Number(params.get("budget"));
+    if (Number.isFinite(budgetParam) && budgetParam > 0) {
+      setForm((f) => ({ ...f, budgetUSD: String(Math.round(budgetParam)) }));
+    }
+
     const originParam = params.get("origin");
     if (originParam && (ORIGIN_HUBS as readonly string[]).includes(originParam)) {
       setForm((f) => ({ ...f, originAirportCode: originParam as OriginHub }));
