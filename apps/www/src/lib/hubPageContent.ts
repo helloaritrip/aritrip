@@ -52,7 +52,13 @@ export function buildHubPageContent(hub: OriginHub, appUrl: string) {
       },
       ...picks.map((pick, i) => ({
         type: "DestinationHighlight",
-        props: { id: `dest-${i + 1}`, destinationId: pick.destinationId, slot: pick.slot },
+        // originAirportCode (2026-08-16, feedback del head: la página
+        // promete "real flight, hotel, and activity costs" pero las cards
+        // no mostraban ningún precio) — cada hub page ya sabe desde qué
+        // aeropuerto está armada (es literalmente el parámetro de esta
+        // función), así que puede pasarlo directo sin que nadie tenga que
+        // elegirlo a mano por card.
+        props: { id: `dest-${i + 1}`, destinationId: pick.destinationId, slot: pick.slot, originAirportCode: hub },
       })),
       {
         type: "FAQAccordion",

@@ -27,8 +27,9 @@
       "type": "DestinationHighlight",
       "props": {
         "id": "dest-1",
-        "destinationId": "cancun",
-        "slot": "popular"
+        "destinationId": "new-york",
+        "slot": "popular",
+        "originAirportCode": "IAD"
       }
     },
     {
@@ -36,7 +37,8 @@
       "props": {
         "id": "dest-2",
         "destinationId": "oaxaca",
-        "slot": "recommended"
+        "slot": "recommended",
+        "originAirportCode": "IAD"
       }
     },
     {
@@ -44,7 +46,8 @@
       "props": {
         "id": "dest-3",
         "destinationId": "aspen",
-        "slot": "dream"
+        "slot": "dream",
+        "originAirportCode": "IAD"
       }
     },
     {

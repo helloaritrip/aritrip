@@ -28,7 +28,8 @@
       "props": {
         "id": "dest-1",
         "destinationId": "cancun",
-        "slot": "popular"
+        "slot": "popular",
+        "originAirportCode": "MTY"
       }
     },
     {
@@ -36,7 +37,8 @@
       "props": {
         "id": "dest-2",
         "destinationId": "oaxaca",
-        "slot": "recommended"
+        "slot": "recommended",
+        "originAirportCode": "MTY"
       }
     },
     {
@@ -44,7 +46,8 @@
       "props": {
         "id": "dest-3",
         "destinationId": "cabo-san-lucas",
-        "slot": "dream"
+        "slot": "dream",
+        "originAirportCode": "MTY"
       }
     },
     {

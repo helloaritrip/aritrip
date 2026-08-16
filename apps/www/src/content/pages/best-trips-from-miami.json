@@ -28,7 +28,8 @@
       "props": {
         "id": "dest-1",
         "destinationId": "cancun",
-        "slot": "popular"
+        "slot": "popular",
+        "originAirportCode": "MIA"
       }
     },
     {
@@ -36,7 +37,8 @@
       "props": {
         "id": "dest-2",
         "destinationId": "oaxaca",
-        "slot": "recommended"
+        "slot": "recommended",
+        "originAirportCode": "MIA"
       }
     },
     {
@@ -44,7 +46,8 @@
       "props": {
         "id": "dest-3",
         "destinationId": "grand-cayman",
-        "slot": "dream"
+        "slot": "dream",
+        "originAirportCode": "MIA"
       }
     },
     {

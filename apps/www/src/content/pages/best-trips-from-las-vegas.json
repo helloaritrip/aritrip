@@ -27,8 +27,9 @@
       "type": "DestinationHighlight",
       "props": {
         "id": "dest-1",
-        "destinationId": "cancun",
-        "slot": "popular"
+        "destinationId": "los-angeles",
+        "slot": "popular",
+        "originAirportCode": "LAS"
       }
     },
     {
@@ -36,7 +37,8 @@
       "props": {
         "id": "dest-2",
         "destinationId": "oaxaca",
-        "slot": "recommended"
+        "slot": "recommended",
+        "originAirportCode": "LAS"
       }
     },
     {
@@ -44,7 +46,8 @@
       "props": {
         "id": "dest-3",
         "destinationId": "aspen",
-        "slot": "dream"
+        "slot": "dream",
+        "originAirportCode": "LAS"
       }
     },
     {

@@ -1,5 +1,5 @@
 import type { Config } from "@measured/puck";
-import { destinations } from "@aritrips/data";
+import { destinations, generatePriceSnapshotsForDestination, ORIGIN_OPTIONS } from "@aritrips/data";
 
 // El proxy de imágenes vive en apps/app (no se duplica acá) — apuntar
 // cross-origin al mismo endpoint público, sin problema de CORS para <img>.
@@ -30,6 +30,57 @@ const destinationOptions = destinations.map((d) => ({
   label: `${d.name}, ${d.country}`,
   value: d.id,
 }));
+
+// Precio real en DestinationHighlight (2026-08-16, feedback del head sobre
+// las páginas "Best trips from X": prometen "real flight, hotel, and
+// activity costs" arriba pero no mostraban ningún precio en las cards) —
+// reusa el mismo motor de PriceSnapshot que ya arma /deals y los
+// resultados del buscador, en vez de calcular nada nuevo. Curado, no
+// overlay en vivo: generatePriceSnapshotsForDestination es puro/síncrono
+// (sin fetch), a diferencia de applyLivePriceOverlay que necesita leer
+// `livePrices` de Firestore — meter eso acá implicaría o una lectura de
+// Firestore por card en cada visita (justo el problema que ya causó una
+// caída de cuota una vez) o replatear cómo Puck pasa datos a sus bloques.
+// El propio FAQ del sitio ya es honesto sobre esto ("estimates based on
+// our own curated cost data... not a live quote") — mismo criterio acá.
+const priceOriginOptions = [{ label: "— (no price shown)", value: "" }, ...ORIGIN_OPTIONS];
+const TRIP_NIGHTS = 3;
+
+function priceInfoFor(destinationId: string, originAirportCode: string) {
+  const destination = destinations.find((d) => d.id === destinationId);
+  if (!destination) return null;
+
+  let snapshots;
+  try {
+    snapshots = generatePriceSnapshotsForDestination(destination);
+  } catch {
+    // Faltan costos base curados para este destino (originBaseCosts.ts) —
+    // no debería pasar para un destino activo, pero un bloque de Puck no
+    // puede tirar un 500 por un dato de contenido faltante.
+    return null;
+  }
+
+  const month = new Date().getMonth() + 1;
+  const snapshot = snapshots.find((s) => s.originAirportCode === originAirportCode && s.month === month);
+  if (!snapshot) return null; // sin costo curado para ESE origen puntual
+
+  const hotelPerNightUSD = snapshot.avgHotelCostPerNightUSD.mid;
+  const estimatedTripTotalUSD = snapshot.avgFlightCostUSD + (hotelPerNightUSD + snapshot.avgActivityCostPerDayUSD) * TRIP_NIGHTS;
+
+  return {
+    flightCostUSD: snapshot.avgFlightCostUSD,
+    flightDurationMinutes: snapshot.avgFlightDurationMinutes,
+    hotelPerNightUSD,
+    activityPerDayUSD: snapshot.avgActivityCostPerDayUSD,
+    estimatedTripTotalUSD,
+  };
+}
+
+function formatFlightDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+}
 
 type HeroProps = {
   heading: string;
@@ -75,6 +126,9 @@ type DestinationHighlightProps = {
   // Vacío/undefined para páginas armadas a mano: se mantiene el
   // comportamiento anterior (solo Value score, sin badge).
   slot?: "popular" | "recommended" | "dream" | "";
+  // "" (default) = sin precio, mismo comportamiento que antes de este
+  // campo (2026-08-16) — ver priceInfoFor más abajo.
+  originAirportCode?: string;
 };
 
 type FeatureGridProps = {
@@ -279,15 +333,22 @@ export const config: Config<Props> = {
             { label: "Dream trip (splurge)", value: "dream" },
           ],
         },
+        // Origin airport (2026-08-16) — sin esto no hay forma de saber qué
+        // ruta usar para el precio: esta misma card se puede usar en
+        // páginas armadas desde cualquier origen. Dejar en "" (default)
+        // no muestra ningún precio — compatible con las páginas ya
+        // armadas antes de este campo, que van a seguir viéndose igual
+        // hasta que alguien elija un origen a propósito.
+        originAirportCode: { type: "select", options: priceOriginOptions },
       },
-      defaultProps: { destinationId: destinations[0]?.id ?? "", slot: "" },
+      defaultProps: { destinationId: destinations[0]?.id ?? "", slot: "", originAirportCode: "" },
       // Antes max-w-md (448px) apilado en columna — se veía como una card
       // de celular perdida en medio de una página de escritorio (2026-08-11,
       // bug real reportado por el usuario, con capturas). Ahora ocupa toda
       // la columna de lectura (max-w-3xl, igual que Heading/TextBlock) y es
       // horizontal en desktop (imagen a la izquierda, ficha a la derecha) —
       // mismo patrón ya probado en la card de ejemplo de la Home.
-      render: ({ destinationId, slot }) => {
+      render: ({ destinationId, slot, originAirportCode }) => {
         const destination = destinations.find((d) => d.id === destinationId);
         if (!destination) return <p className="mx-auto mt-4 max-w-3xl px-6 text-sm text-muted">Destination not found.</p>;
 
@@ -302,6 +363,7 @@ export const config: Config<Props> = {
           dream: { badge: "✨ Dream trip (splurge)", scoreLabel: "Luxury score", score: destination.luxuryScore },
         };
         const info = slot ? SLOT_INFO[slot] : undefined;
+        const priceInfo = originAirportCode ? priceInfoFor(destinationId, originAirportCode) : null;
 
         return (
           <div className="mx-auto mt-6 max-w-3xl px-6">
@@ -325,10 +387,29 @@ export const config: Config<Props> = {
                 <h3 className="text-lg font-semibold text-ink">
                   {destination.name}, {destination.country}
                 </h3>
+                {priceInfo && (
+                  <div className="flex flex-col gap-1 rounded-md bg-bg p-3">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink">
+                      <span>
+                        ✈️ ~${priceInfo.flightCostUSD.toLocaleString()} round trip · {formatFlightDuration(priceInfo.flightDurationMinutes)}
+                      </span>
+                      <span>🏨 ~${priceInfo.hotelPerNightUSD}/night</span>
+                      <span>🎟️ ~${priceInfo.activityPerDayUSD}/day</span>
+                    </div>
+                    <p className="text-sm font-semibold text-ink">
+                      Estimated {TRIP_NIGHTS}-night trip: ~${priceInfo.estimatedTripTotalUSD.toLocaleString()}
+                    </p>
+                  </div>
+                )}
                 <p className="text-sm text-muted">{destination.insiderNotes}</p>
                 <p className="text-xs uppercase tracking-wide text-highlight">
                   {info ? info.scoreLabel : "Value score"}: {info ? info.score : destination.valueRating}/100
                 </p>
+                {priceInfo && (
+                  <p className="text-[11px] text-muted">
+                    Estimate based on our own curated cost data, not a live quote.
+                  </p>
+                )}
               </div>
             </a>
           </div>

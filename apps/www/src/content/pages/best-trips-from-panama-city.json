@@ -28,7 +28,8 @@
       "props": {
         "id": "dest-1",
         "destinationId": "cancun",
-        "slot": "popular"
+        "slot": "popular",
+        "originAirportCode": "PTY"
       }
     },
     {
@@ -36,15 +37,17 @@
       "props": {
         "id": "dest-2",
         "destinationId": "medellin",
-        "slot": "recommended"
+        "slot": "recommended",
+        "originAirportCode": "PTY"
       }
     },
     {
       "type": "DestinationHighlight",
       "props": {
         "id": "dest-3",
-        "destinationId": "grand-cayman",
-        "slot": "dream"
+        "destinationId": "miami",
+        "slot": "dream",
+        "originAirportCode": "PTY"
       }
     },
     {

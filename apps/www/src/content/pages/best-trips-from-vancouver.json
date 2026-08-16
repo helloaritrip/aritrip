@@ -28,7 +28,8 @@
       "props": {
         "id": "dest-1",
         "destinationId": "las-vegas",
-        "slot": "popular"
+        "slot": "popular",
+        "originAirportCode": "YVR"
       }
     },
     {
@@ -36,7 +37,8 @@
       "props": {
         "id": "dest-2",
         "destinationId": "oaxaca",
-        "slot": "recommended"
+        "slot": "recommended",
+        "originAirportCode": "YVR"
       }
     },
     {
@@ -44,7 +46,8 @@
       "props": {
         "id": "dest-3",
         "destinationId": "aspen",
-        "slot": "dream"
+        "slot": "dream",
+        "originAirportCode": "YVR"
       }
     },
     {
