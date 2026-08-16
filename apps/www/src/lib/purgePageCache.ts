@@ -13,6 +13,14 @@
  * Best-effort a propósito — si la purga falla, la publicación en sí ya
  * se guardó bien en Firestore; el peor caso es volver al comportamiento
  * de antes (esperar el TTL), no perder el contenido publicado.
+ *
+ * Ojo si esto se llama en loop (ej. republish-hub-pages.ts,
+ * republish-destination-pages.ts): la llamada a `cache.delete()` SÍ
+ * cuenta contra el límite de 50 subrequests/invocación de Cloudflare
+ * Workers (plan free) — confirmado en logs en vivo con `wrangler tail`
+ * después de que agregar esto rompiera un batch que hasta entonces
+ * funcionaba bien. No es gratis solo por no ser un `fetch` a un host
+ * externo.
  */
 export async function purgePageCache(slug: string): Promise<void> {
   try {

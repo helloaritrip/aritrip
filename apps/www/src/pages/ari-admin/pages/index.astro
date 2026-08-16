@@ -246,23 +246,40 @@ for (const p of pages) categoryCounts[categoryOf(p)] += 1;
     const btn = e.currentTarget as HTMLButtonElement;
     const statusEl = document.getElementById("republish-status")!;
     btn.disabled = true;
-    statusEl.textContent = "Regenerando las 24 páginas de ciudad...";
+
+    // En lotes, no las 24 de una (2026-08-16, mismo bug que el botón de
+    // destinos — ver comentario en republish-hub-pages.ts sobre por qué
+    // la Cache API cuenta contra el límite de subrequests).
+    type BatchResponse = {
+      results?: { slug: string; status: string }[];
+      nextOffset?: number;
+      done?: boolean;
+      total?: number;
+      error?: string;
+    };
+    let offset = 0;
+    let total: number | undefined;
+    const allResults: { slug: string; status: string }[] = [];
     try {
-      const res = await fetch("/api/admin/republish-hub-pages", { method: "POST" });
-      const data = (await res.json().catch(() => ({}))) as {
-        results?: { slug: string; status: string }[];
-        error?: string;
-      };
-      if (res.ok && data.results) {
-        const updated = data.results.filter((r) => r.status === "updated").length;
-        const problems = data.results.filter((r) => r.status !== "updated");
-        statusEl.textContent =
-          problems.length === 0
-            ? `Listo — ${updated}/24 páginas republicadas ✓`
-            : `${updated}/24 republicadas. Con problemas: ${problems.map((p) => `${p.slug} (${p.status})`).join(", ")}`;
-      } else {
-        statusEl.textContent = data.error || "No se pudo republicar.";
+      for (;;) {
+        statusEl.textContent = total ? `Regenerando páginas de ciudad... (${offset}/${total})` : "Regenerando páginas de ciudad...";
+        const res = await fetch(`/api/admin/republish-hub-pages?offset=${offset}`, { method: "POST" });
+        const data = (await res.json().catch(() => ({}))) as BatchResponse;
+        if (!res.ok || !data.results) {
+          statusEl.textContent = data.error || "No se pudo republicar.";
+          return;
+        }
+        allResults.push(...data.results);
+        total = data.total;
+        if (data.done || data.nextOffset === undefined) break;
+        offset = data.nextOffset;
       }
+      const updated = allResults.filter((r) => r.status === "updated").length;
+      const problems = allResults.filter((r) => r.status !== "updated");
+      statusEl.textContent =
+        problems.length === 0
+          ? `Listo — ${updated}/${total ?? 24} páginas republicadas ✓`
+          : `${updated}/${total ?? 24} republicadas. Con problemas: ${problems.map((p) => `${p.slug} (${p.status})`).join(", ")}`;
     } catch {
       statusEl.textContent = "No se pudo republicar (error de red).";
     } finally {

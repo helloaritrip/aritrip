@@ -13,15 +13,18 @@ function json(body: unknown, status: number): Response {
 }
 
 // Lotes, no las 48 de una (2026-08-16, bug real reportado por el
-// usuario: "no se pudo republicar") — cada destino gasta hasta 2
-// subrequests (getDocument + setDocument), 48×2=96 pasa largo el límite
-// de 50 subrequests/invocación de Cloudflare Workers (plan free) que ya
-// rompió esto mismo una vez en apps/price-sync, ver el comentario ahí.
-// republish-hub-pages.ts (24 hubs × 2 = 48) queda justo debajo del
-// límite por eso nunca falló — pero es el mismo riesgo, no una
-// diferencia real de diseño. El cliente (ari-admin/pages/index.astro)
-// llama esto en loop con `offset` creciente hasta agotar el catálogo.
-const BATCH_SIZE = 20;
+// usuario: "no se pudo republicar") — cada destino gasta hasta 3
+// subrequests (getDocument + setDocument + purgePageCache — la Cache
+// API SÍ cuenta contra el límite, confirmado en logs en vivo con
+// `wrangler tail` después de que agregar la purga rompiera un
+// BATCH_SIZE de 20 que hasta entonces funcionaba bien; el comentario
+// anterior acá asumía que no contaba, estaba mal). 48×3=144 pasa largo
+// el límite de 50 subrequests/invocación de Cloudflare Workers (plan
+// free) que ya rompió esto mismo una vez en apps/price-sync, ver el
+// comentario ahí. 12×3=36 + ~2 del índice de páginas deja margen real.
+// El cliente (ari-admin/pages/index.astro) llama esto en loop con
+// `offset` creciente hasta agotar el catálogo.
+const BATCH_SIZE = 12;
 
 // Crea o actualiza la página /p/{id} de cada uno de los 48 destinos del
 // catálogo — reemplaza a publish-destination-pages.ts (que solo creaba
@@ -66,8 +69,8 @@ export const POST: APIRoute = async ({ cookies, request }) => {
           credentials
         );
         // Purga la caché de borde (2026-08-16, ver purgePageCache.ts) —
-        // no cuenta contra el límite de subrequests (no es fetch a un
-        // host externo), así que no afecta el batching de arriba.
+        // SÍ cuenta contra el límite de subrequests (ver BATCH_SIZE
+        // arriba).
         await purgePageCache(built.slug);
         results.push({ slug: built.slug, status: "updated" });
         indexEntries.push({
