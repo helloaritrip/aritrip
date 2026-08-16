@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { writeFirestoreDocument } from "@/lib/firestore";
 import { corsHeaders } from "@/lib/cors";
+import { getUserSession } from "@/lib/requireUserSession";
 
 // CORS (2026-08-15) — DealSaveButton.tsx en aritrips.com/deals necesita
 // llamar esto cross-origin para trackear favorite_saved/removed, mismo
@@ -37,7 +38,15 @@ function isValidSubScores(v: unknown): v is SubScores {
 }
 
 type ValidatedEvent =
-  | { name: "search_performed"; searchId: string; originAirportCode: string; budgetUSD: number; isTest: boolean }
+  | {
+      name: "search_performed";
+      searchId: string;
+      originAirportCode: string;
+      budgetUSD: number;
+      startDate: string;
+      endDate: string;
+      isTest: boolean;
+    }
   | {
       name: "recommendation_shown";
       searchId: string;
@@ -70,8 +79,22 @@ function validateEvent(body: Record<string, unknown>): ValidatedEvent | null {
   const isTest = readIsTest(body);
   switch (body.name) {
     case "search_performed":
-      if (isShortString(body.searchId, 64) && isShortString(body.originAirportCode, 8) && isFiniteNumberInRange(body.budgetUSD, 0, 1_000_000)) {
-        return { name: "search_performed", searchId: body.searchId, originAirportCode: body.originAirportCode, budgetUSD: body.budgetUSD, isTest };
+      if (
+        isShortString(body.searchId, 64) &&
+        isShortString(body.originAirportCode, 8) &&
+        isFiniteNumberInRange(body.budgetUSD, 0, 1_000_000) &&
+        isShortString(body.startDate, 10) &&
+        isShortString(body.endDate, 10)
+      ) {
+        return {
+          name: "search_performed",
+          searchId: body.searchId,
+          originAirportCode: body.originAirportCode,
+          budgetUSD: body.budgetUSD,
+          startDate: body.startDate,
+          endDate: body.endDate,
+          isTest,
+        };
       }
       return null;
     case "recommendation_shown":
@@ -212,10 +235,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ tracked: false, reason: "not_configured" }, { headers });
   }
 
+  // uid (2026-08-16, roadmap acordado con el head) — se resuelve server-side
+  // desde la cookie de sesión en vez de confiar en un campo mandado por el
+  // cliente: no hace falta tocar cada call site de trackEvent()/trackFavorite()
+  // para empezar a poder medir retención (usuarios que vuelven a buscar o
+  // guardar), y no es falsificable. Ambos call sites (mismo origen en
+  // apps/app, cross-origin con credentials:"include" desde DealSaveButton en
+  // aritrips.com) ya mandan la cookie sin cambios. Omitido cuando no hay
+  // sesión — la mayoría de las búsquedas siguen siendo anónimas.
+  const session = await getUserSession(request, env);
+
   try {
     await writeFirestoreDocument(
       "events",
-      { ...toFirestoreDoc(event), createdAt: new Date() },
+      { ...toFirestoreDoc(event), ...(session ? { uid: session.uid } : {}), createdAt: new Date() },
       { clientEmail, privateKey: privateKey.replace(/\\n/g, "\n") }
     );
     return NextResponse.json({ tracked: true }, { headers });

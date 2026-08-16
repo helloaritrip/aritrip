@@ -32,7 +32,19 @@ export type SubScoresPayload = {
 };
 
 export type TrackedEvent =
-  | { name: "search_performed"; searchId: string; originAirportCode: string; budgetUSD: number }
+  | {
+      // startDate/endDate (2026-08-16, roadmap acordado con el head) — sin
+      // esto no se puede calcular "Qualified Trip Search" (búsqueda con
+      // origen+presupuesto+fechas+interacción), la métrica North Star que
+      // el head eligió para medir intención real de viaje. Ya viajaban al
+      // form/API de recomendaciones, solo faltaba incluirlas acá.
+      name: "search_performed";
+      searchId: string;
+      originAirportCode: string;
+      budgetUSD: number;
+      startDate: string;
+      endDate: string;
+    }
   | {
       name: "recommendation_shown";
       searchId: string;

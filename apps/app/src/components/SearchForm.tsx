@@ -155,7 +155,14 @@ export function SearchForm() {
 
     setSearchState({ status: "loading" });
     const currentSearchId = newSearchId();
-    trackEvent({ name: "search_performed", searchId: currentSearchId, originAirportCode: form.originAirportCode, budgetUSD });
+    trackEvent({
+      name: "search_performed",
+      searchId: currentSearchId,
+      originAirportCode: form.originAirportCode,
+      budgetUSD,
+      startDate: form.startDate,
+      endDate: form.endDate,
+    });
     try {
       const res = await fetch("/api/recommendations", {
         method: "POST",
