@@ -56,7 +56,7 @@ type WikimediaSearchResponse = {
   };
 };
 
-async function searchWikimediaImageUrl(query: string): Promise<string | null> {
+async function searchWikimediaImageUrl(query: string, width: number): Promise<string | null> {
   const searchUrl = new URL("https://commons.wikimedia.org/w/api.php");
   searchUrl.searchParams.set("action", "query");
   searchUrl.searchParams.set("generator", "search");
@@ -65,7 +65,7 @@ async function searchWikimediaImageUrl(query: string): Promise<string | null> {
   searchUrl.searchParams.set("gsrlimit", "1");
   searchUrl.searchParams.set("prop", "imageinfo");
   searchUrl.searchParams.set("iiprop", "url");
-  searchUrl.searchParams.set("iiurlwidth", "1200");
+  searchUrl.searchParams.set("iiurlwidth", String(width));
   searchUrl.searchParams.set("format", "json");
   searchUrl.searchParams.set("origin", "*");
 
@@ -81,10 +81,15 @@ async function searchWikimediaImageUrl(query: string): Promise<string | null> {
 }
 
 type PexelsSearchResponse = {
-  photos?: { src?: { large2x?: string; large?: string } }[];
+  photos?: { src?: { large2x?: string; large?: string; medium?: string } }[];
 };
 
-async function searchPexelsImageUrl(query: string, apiKey: string): Promise<string | null> {
+// width (2026-08-16, auditoría SEO — srcset real para el Hero) — Pexels no
+// deja pedir un ancho exacto, solo presets fijos (~940px/~650px/~350px);
+// se elige el preset más cercano al ancho pedido en vez de servir siempre
+// el más grande, que es lo que hacía que un celular bajara la misma
+// imagen de 1200px que un desktop.
+async function searchPexelsImageUrl(query: string, apiKey: string, width: number): Promise<string | null> {
   const searchUrl = new URL("https://api.pexels.com/v1/search");
   searchUrl.searchParams.set("query", query);
   searchUrl.searchParams.set("per_page", "1");
@@ -94,26 +99,29 @@ async function searchPexelsImageUrl(query: string, apiKey: string): Promise<stri
   if (!searchRes.ok) return null;
 
   const searchData = (await searchRes.json()) as PexelsSearchResponse;
-  const photo = searchData.photos?.[0];
-  return photo?.src?.large2x ?? photo?.src?.large ?? null;
+  const src = searchData.photos?.[0]?.src;
+  if (!src) return null;
+  if (width <= 350) return src.medium ?? src.large ?? src.large2x ?? null;
+  if (width <= 650) return src.large ?? src.large2x ?? src.medium ?? null;
+  return src.large2x ?? src.large ?? src.medium ?? null;
 }
 
 // Pexels primero (mejor calidad pareja), Wikimedia como respaldo — cada
 // fuente reintenta con `fallback` antes de pasar a la siguiente, así una
 // query rara (nicho geográfico, evento histórico) todavía tiene 4 chances
 // antes de caer al SVG placeholder.
-async function resolveImageUrl(query: string, fallbackQuery: string | null, pexelsApiKey: string | null): Promise<string | null> {
+async function resolveImageUrl(query: string, fallbackQuery: string | null, pexelsApiKey: string | null, width: number): Promise<string | null> {
   if (pexelsApiKey) {
-    let url = await searchPexelsImageUrl(query, pexelsApiKey);
+    let url = await searchPexelsImageUrl(query, pexelsApiKey, width);
     if (!url && fallbackQuery && fallbackQuery !== query) {
-      url = await searchPexelsImageUrl(fallbackQuery, pexelsApiKey);
+      url = await searchPexelsImageUrl(fallbackQuery, pexelsApiKey, width);
     }
     if (url) return url;
   }
 
-  let url = await searchWikimediaImageUrl(query);
+  let url = await searchWikimediaImageUrl(query, width);
   if (!url && fallbackQuery && fallbackQuery !== query) {
-    url = await searchWikimediaImageUrl(fallbackQuery);
+    url = await searchWikimediaImageUrl(fallbackQuery, width);
   }
   return url;
 }
@@ -172,9 +180,15 @@ export async function GET(request: Request) {
   if (!query) {
     return fallbackResponse();
   }
+  // `w` (2026-08-16, auditoría SEO) — clamp 100-1600: ni un valor
+  // absurdamente chico (Wikimedia igual reescala del original) ni uno
+  // gigante (pedir un render más grande del que Wikimedia sirve por
+  // defecto sin necesidad real).
+  const requestedWidth = Number(searchParams.get("w"));
+  const width = Number.isFinite(requestedWidth) && requestedWidth > 0 ? Math.min(1600, Math.max(100, requestedWidth)) : 1200;
 
   try {
-    const imageUrl = await resolveImageUrl(query, fallbackQuery, pexelsApiKey);
+    const imageUrl = await resolveImageUrl(query, fallbackQuery, pexelsApiKey, width);
     if (!imageUrl) return fallbackResponse();
 
     const imageRes = await fetch(imageUrl, {

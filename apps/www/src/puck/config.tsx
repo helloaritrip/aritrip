@@ -17,8 +17,10 @@ import {
 // cross-origin al mismo endpoint público, sin problema de CORS para <img>.
 const APP_URL = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
 
-function imageProxyUrl(query: string, fallback: string): string {
-  return `${APP_URL}/api/image-proxy?q=${encodeURIComponent(query)}&fallback=${encodeURIComponent(fallback)}`;
+function imageProxyUrl(query: string, fallback: string, width?: number): string {
+  const params = new URLSearchParams({ q: query, fallback });
+  if (width) params.set("w", String(width));
+  return `${APP_URL}/api/image-proxy?${params.toString()}`;
 }
 
 /**
@@ -261,6 +263,16 @@ export const config: Config<Props> = {
         // HeroProps.backgroundImageUrl.
         const imgSrc = backgroundImageUrl || (bg ? imageProxyUrl(bg, heading || bg) : undefined);
         const hasImage = Boolean(imgSrc);
+        // srcset (2026-08-16, auditoría SEO) — solo cuando la imagen sale
+        // de nuestro proxy (bg): una URL fijada a mano (backgroundImageUrl,
+        // ver el comentario de arriba) es un archivo puntual de Wikimedia
+        // sin variantes de tamaño que podamos pedir. Sin esto, un celular
+        // descargaba la misma imagen de 1200px que un desktop — 60%+ del
+        // tráfico de viajes es mobile.
+        const imgSrcSet =
+          !backgroundImageUrl && bg
+            ? `${imageProxyUrl(bg, heading || bg, 640)} 640w, ${imageProxyUrl(bg, heading || bg, 1200)} 1200w`
+            : undefined;
         return (
           <section
             className={`relative flex flex-col items-center gap-6 overflow-hidden px-6 text-center ${
@@ -272,9 +284,17 @@ export const config: Config<Props> = {
                 {/* eslint-disable-next-line @next/next/no-img-element -- viene del proxy de imágenes propio, o de una URL fijada a mano */}
                 <img
                   src={imgSrc}
+                  srcSet={imgSrcSet}
+                  sizes={imgSrcSet ? "100vw" : undefined}
                   alt=""
                   width="1200"
                   height="800"
+                  // fetchPriority="high" (2026-08-16, auditoría SEO) — esta
+                  // imagen es casi siempre el elemento LCP de la página
+                  // (fondo a pantalla completa del Hero); sin esto el
+                  // navegador no la prioriza frente a otros recursos.
+                  fetchPriority="high"
+                  loading="eager"
                   className="absolute inset-0 h-full w-full object-cover"
                 />
                 {/* Degradado oscuro de abajo hacia arriba — más fuerte donde va el texto,
