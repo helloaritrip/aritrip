@@ -50,6 +50,7 @@ export async function getCachedPageIndex(credentials: FirestoreCredentials): Pro
       description: String(d.description ?? ""),
       featuredImageQuery: String(d.featuredImageQuery ?? ""),
       publishedAt: typeof d.publishedAt === "string" ? d.publishedAt : undefined,
+      updatedAt: typeof d.updatedAt === "string" ? d.updatedAt : undefined,
       status: String(d.status ?? "draft"),
       template: String(d.template ?? "custom"),
     }))

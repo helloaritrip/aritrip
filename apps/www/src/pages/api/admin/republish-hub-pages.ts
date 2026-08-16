@@ -65,6 +65,7 @@ export const POST: APIRoute = async ({ cookies }) => {
         description: String(existing.description ?? ""),
         featuredImageQuery: String(existing.featuredImageQuery ?? ""),
         publishedAt: publishedAt?.toISOString(),
+        updatedAt: new Date().toISOString(),
         status: String(existing.status ?? "published"),
         template: String(existing.template ?? "custom"),
       });

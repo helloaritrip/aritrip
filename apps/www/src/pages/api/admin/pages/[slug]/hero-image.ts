@@ -130,6 +130,7 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       description: String(doc.description ?? ""),
       featuredImageQuery: String(doc.featuredImageQuery ?? ""),
       publishedAt: publishedAt?.toISOString(),
+      updatedAt: now.toISOString(),
       status: String(doc.status ?? "draft"),
       template: String(doc.template ?? "custom"),
     },

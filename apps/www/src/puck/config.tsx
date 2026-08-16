@@ -586,6 +586,11 @@ export const config: Config<Props> = {
     // nativo en vez de useState). Cada foto sale de signatureExperiences,
     // no de un campo nuevo curado a mano — 48 destinos × hasta 3 fotos
     // habría sido demasiado para curar una por una.
+    // Rediseño (2026-08-16, a pedido del usuario con referencia visual:
+    // foto grande arriba, miniaturas clickeables abajo, en vez de la tira
+    // horizontal de antes) — hasta 6 fotos vía CSS puro (ver
+    // .ari-gallery-* en global.css), sin agregar el primer <script> del
+    // sitio a páginas públicas.
     ExperienceGallery: {
       fields: {
         destinationId: { type: "select", options: destinationOptions },
@@ -594,29 +599,51 @@ export const config: Config<Props> = {
       render: ({ destinationId }) => {
         const destination = destinations.find((d) => d.id === destinationId);
         if (!destination || destination.signatureExperiences.length === 0) return <></>;
-        const photos = destination.signatureExperiences.slice(0, 3).map((experience) => ({
+        const photos = destination.signatureExperiences.slice(0, 6).map((experience) => ({
           caption: experience,
           // Sin el paréntesis aclaratorio ("(the world's 2nd largest)") —
           // ruido para una búsqueda de imagen, útil solo como texto.
           query: experience.replace(/\s*\([^)]*\)/g, "").trim(),
         }));
+        const groupName = `gallery-${destinationId}`;
+
         return (
           <div className="mx-auto mt-6 max-w-3xl px-6">
-            <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
+            {photos.map((_, i) => (
+              <input
+                key={i}
+                type="radio"
+                name={groupName}
+                id={`${groupName}-${i}`}
+                defaultChecked={i === 0}
+                className="ari-gallery-radio"
+              />
+            ))}
+            <div className="ari-gallery-large overflow-hidden rounded-lg">
               {photos.map((photo, i) => (
-                <figure key={i} className="w-64 shrink-0 snap-start">
-                  <img
-                    src={imageProxyUrl(photo.query, destination.name)}
-                    alt={photo.caption}
-                    width="320"
-                    height="220"
-                    loading="lazy"
-                    className="h-44 w-full rounded-lg object-cover"
-                  />
-                  <figcaption className="mt-1.5 text-xs text-muted">{photo.caption}</figcaption>
-                </figure>
+                <img
+                  key={i}
+                  src={imageProxyUrl(photo.query, destination.name)}
+                  alt={photo.caption}
+                  loading={i === 0 ? "eager" : "lazy"}
+                  className="ari-gallery-large-img h-80 w-full object-cover"
+                />
               ))}
             </div>
+            {photos.length > 1 && (
+              <div className="ari-gallery-thumbs mt-2 flex gap-2">
+                {photos.map((photo, i) => (
+                  <label key={i} htmlFor={`${groupName}-${i}`} className="ari-gallery-thumb block w-1/4 shrink-0 cursor-pointer overflow-hidden rounded-md sm:w-24">
+                    <img
+                      src={imageProxyUrl(photo.query, destination.name)}
+                      alt=""
+                      loading="lazy"
+                      className="h-16 w-full object-cover sm:h-20"
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         );
       },

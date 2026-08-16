@@ -11,6 +11,11 @@ export interface PageIndexEntry {
   description: string;
   featuredImageQuery: string;
   publishedAt?: string;
+  // updatedAt (2026-08-16, auditoría SEO) — sitemap.xml.ts lo usa como
+  // <lastmod>, sin el cual Google trata las 79 URLs como igual de
+  // "frescas" y no prioriza re-rastrear las que de verdad cambiaron (ej.
+  // las 24 hub pages republicadas varias veces hoy).
+  updatedAt?: string;
   status: string;
   template: string;
 }

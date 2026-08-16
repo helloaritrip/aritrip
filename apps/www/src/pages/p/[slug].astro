@@ -108,6 +108,22 @@ if (isBlogPost) {
   });
 }
 
+// TouristDestination (2026-08-16, auditoría SEO) — las páginas de
+// destino puntuales (template "destination", ver
+// republish-destination-pages.ts) solo tenían FAQPage; TouristDestination
+// es el tipo real de schema.org para esto y puede habilitar rich results
+// específicos de viajes, no genéricos.
+if (doc.template === "destination") {
+  jsonLd.push({
+    "@context": "https://schema.org",
+    "@type": "TouristDestination",
+    name: pageTitle,
+    description: pageDescription,
+    ...(pageImage ? { image: pageImage } : {}),
+    ...(typeof doc.country === "string" && doc.country ? { containedInPlace: { "@type": "Country", name: doc.country } } : {}),
+  });
+}
+
 if (faqItems.length > 0) {
   jsonLd.push({
     "@context": "https://schema.org",

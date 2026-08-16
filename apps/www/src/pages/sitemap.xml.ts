@@ -19,7 +19,7 @@ const SITE_URL = "https://aritrips.com";
 export const GET: APIRoute = async () => {
   const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
 
-  const urls = [
+  const urls: { loc: string; priority: string; lastmod?: string }[] = [
     { loc: `${SITE_URL}/`, priority: "1.0" },
     { loc: `${SITE_URL}/blog`, priority: "0.7" },
     { loc: `${SITE_URL}/deals`, priority: "0.8" },
@@ -35,7 +35,11 @@ export const GET: APIRoute = async () => {
         if (page.status === "published") {
           // Sin barra final — coincide con la URL canónica que ahora
           // fuerza middleware.ts (auditoría SEO, 2026-08-09).
-          urls.push({ loc: `${SITE_URL}/p/${page.id}`, priority: "0.8" });
+          // lastmod (2026-08-16, auditoría SEO) — solo si el índice ya
+          // trae updatedAt; páginas publicadas antes de este campo no lo
+          // tienen todavía y se listan sin lastmod en vez de mentir con
+          // una fecha inventada.
+          urls.push({ loc: `${SITE_URL}/p/${page.id}`, priority: "0.8", lastmod: page.updatedAt?.slice(0, 10) });
         }
       }
     } catch {
@@ -46,7 +50,12 @@ export const GET: APIRoute = async () => {
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map((u) => `  <url>\n    <loc>${u.loc}</loc>\n    <priority>${u.priority}</priority>\n  </url>`).join("\n")}
+${urls
+  .map(
+    (u) =>
+      `  <url>\n    <loc>${u.loc}</loc>\n    <priority>${u.priority}</priority>${u.lastmod ? `\n    <lastmod>${u.lastmod}</lastmod>` : ""}\n  </url>`
+  )
+  .join("\n")}
 </urlset>
 `;
 

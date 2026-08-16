@@ -116,6 +116,7 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
       description,
       featuredImageQuery: body.featuredImageQuery ?? "",
       publishedAt: publishedAt?.toISOString(),
+      updatedAt: now.toISOString(),
       status,
       template: body.template || "custom",
     },

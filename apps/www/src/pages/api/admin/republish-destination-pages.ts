@@ -57,6 +57,7 @@ export const POST: APIRoute = async ({ cookies }) => {
           description: String(existing.description ?? built.description),
           featuredImageQuery: String(existing.featuredImageQuery ?? built.featuredImageQuery),
           publishedAt: publishedAt?.toISOString(),
+          updatedAt: now.toISOString(),
           status: String(existing.status ?? "published"),
           template: String(existing.template ?? "destination"),
         });
@@ -88,6 +89,7 @@ export const POST: APIRoute = async ({ cookies }) => {
           description: built.description,
           featuredImageQuery: built.featuredImageQuery,
           publishedAt: now.toISOString(),
+          updatedAt: now.toISOString(),
           status: "published",
           template: "destination",
         });
