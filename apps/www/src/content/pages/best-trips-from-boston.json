@@ -88,6 +88,10 @@
             "answer": "Each one plays a different role: the most popular destination travelers from BOS actually book, our top pick for value (full package — flight, hotel, and activities — for the money), and one aspirational splurge if you want to treat yourself. Not all three are meant to be \"the best deal.\""
           },
           {
+            "question": "What is the Ari Score?",
+            "answer": "A 0–100 score with 3 real parts: Value (how this destination's estimated cost compares to others from the same airport), Weather (temperature comfort for that time of year), and Safety (public safety advisory data). We don't feature any destination scoring below 50."
+          },
+          {
             "question": "How does AriTrips calculate the trip cost?",
             "answer": "Each estimate combines three real cost categories for a 5-night trip for 2: round-trip flights, a mid-range hotel, and a daily activities budget. We start from curated cost data for that route and season, checked periodically against real flight prices to keep it grounded — see \"Are these real-time prices?\" above for the caveat."
           },

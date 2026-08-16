@@ -6,6 +6,8 @@ import {
   getDiscoverPicks,
   getBudgetTiers,
   getDestinationsByTag,
+  getAriScores,
+  ARI_SCORE_MIN_RECOMMENDED,
   DEFAULT_TRIP_DAYS,
   DEFAULT_ADULTS,
   type OriginHub,
@@ -65,7 +67,21 @@ export function buildHubPageContent(hub: OriginHub, appUrl: string) {
   const slug = hubPageSlug(label);
 
   const priceSnapshots = generateAllPriceSnapshots(destinations);
-  const picks = getDiscoverPicks(hub, destinations, priceSnapshots);
+
+  // Ari Score (2026-08-16, feedback del head — reemplaza el
+  // popularityScore/valueRating/luxuryScore fijo) — a pedido del usuario,
+  // ningún destino con Ari Score por debajo de ARI_SCORE_MIN_RECOMMENDED
+  // (50) puede aparecer como "pick" (ni en los 3 curados de arriba, ni en
+  // "best by trip type"). Se filtra ACÁ, antes de llamar a
+  // getDiscoverPicks/getDestinationsByTag, en vez de adentro de esas
+  // funciones — evitaría un ciclo de imports (ariScore.ts ya depende de
+  // discover.ts para defaultMonth) y de paso deja bien visible dónde se
+  // aplica la regla. getBudgetTiers sigue viendo el catálogo completo a
+  // propósito: es un listado comparativo, no una recomendación curada.
+  const ariScores = getAriScores(hub, destinations, priceSnapshots);
+  const recommendableDestinations = destinations.filter((d) => (ariScores.get(d.id)?.total ?? 0) >= ARI_SCORE_MIN_RECOMMENDED);
+
+  const picks = getDiscoverPicks(hub, recommendableDestinations, priceSnapshots);
   if (picks.length === 0) return null;
 
   const cheapest = [...picks].sort((a, b) => a.estimatedFromUSD - b.estimatedFromUSD)[0];
@@ -76,7 +92,7 @@ export function buildHubPageContent(hub: OriginHub, appUrl: string) {
   // página, para que el texto no diga un número distinto al que muestra
   // el bloque de arriba.
   const tiers = getBudgetTiers(hub, destinations, priceSnapshots);
-  const tagPicks = getDestinationsByTag(hub, destinations, priceSnapshots);
+  const tagPicks = getDestinationsByTag(hub, recommendableDestinations, priceSnapshots);
   const cheapestTier = tiers[0];
   const cheapestOverall = cheapestTier?.destinations[0];
 
@@ -162,6 +178,11 @@ export function buildHubPageContent(hub: OriginHub, appUrl: string) {
             {
               question: `Why these destinations from ${city}?`,
               answer: `Each one plays a different role: the most popular destination travelers from ${hub} actually book, our top pick for value (full package — flight, hotel, and activities — for the money), and one aspirational splurge if you want to treat yourself. Not all three are meant to be "the best deal."`,
+            },
+            {
+              question: "What is the Ari Score?",
+              answer:
+                "A 0–100 score with 3 real parts: Value (how this destination's estimated cost compares to others from the same airport), Weather (temperature comfort for that time of year), and Safety (public safety advisory data). We don't feature any destination scoring below 50.",
             },
             {
               question: "How does AriTrips calculate the trip cost?",

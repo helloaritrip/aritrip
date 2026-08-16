@@ -36,6 +36,8 @@ export {
 } from "./originGeo";
 export { getDiscoverPicks, getDiscoverDetail, DEFAULT_TRIP_DAYS, DEFAULT_ADULTS, defaultMonth } from "./discover";
 export type { DiscoverSlot, DiscoverPick, DiscoverDetail } from "./discover";
+export { getAriScores, ARI_SCORE_MIN_RECOMMENDED } from "./ariScore";
+export type { AriScore } from "./ariScore";
 export { writeFirestoreDocument, setDocument, getDocument, listDocuments, queryDocuments, countDocuments, deleteDocument } from "./firestore";
 export type { FirestoreCredentials } from "./firestore";
 export { hashPassword, verifyPassword, signSession, verifySession, timingSafeEqual } from "./adminAuth";

@@ -6,6 +6,7 @@ import {
   estimateTripTotalUSD,
   getBudgetTiers,
   getDestinationsByTag,
+  getAriScores,
   ORIGIN_OPTIONS,
   DEFAULT_TRIP_DAYS,
   DEFAULT_ADULTS,
@@ -86,6 +87,19 @@ function priceInfoFor(destinationId: string, originAirportCode: string) {
     activityPerDayUSD: snapshot.avgActivityCostPerDayUSD,
     estimatedTripTotalUSD: Math.round(estimateTripTotalUSD(snapshot)),
   };
+}
+
+// Ari Score (2026-08-16, feedback del head — reemplaza el
+// popularityScore/valueRating/luxuryScore fijo, "88/100 según quién?").
+// getAriScores necesita el pool completo de destinos alcanzables desde
+// ESE origen para poder puntuar "value" en relación al resto (mismo
+// motivo que getBudgetTiers usa cuartiles en vez de un umbral fijo) —
+// por eso recibe `destinations` completo, no solo el destino de esta
+// card.
+function ariScoreFor(destinationId: string, originAirportCode: string) {
+  const snapshots = generateAllPriceSnapshots(destinations);
+  const scores = getAriScores(originAirportCode as (typeof ORIGIN_OPTIONS)[number]["value"], destinations, snapshots);
+  return scores.get(destinationId) ?? null;
 }
 
 function formatFlightDuration(minutes: number): string {
@@ -388,6 +402,11 @@ export const config: Config<Props> = {
         };
         const info = slot ? SLOT_INFO[slot] : undefined;
         const priceInfo = originAirportCode ? priceInfoFor(destinationId, originAirportCode) : null;
+        // Ari Score real (2026-08-16) reemplaza el popularityScore/
+        // valueRating/luxuryScore fijo cuando hay origen elegido — sin
+        // origen (páginas armadas a mano de antes de este campo) se
+        // mantiene el score curado de siempre, no hay con qué calcularlo.
+        const ariScore = originAirportCode ? ariScoreFor(destinationId, originAirportCode) : null;
 
         return (
           <div className="mx-auto mt-6 max-w-3xl px-6">
@@ -426,9 +445,18 @@ export const config: Config<Props> = {
                   </div>
                 )}
                 <p className="text-sm text-muted">{destination.insiderNotes}</p>
-                <p className="text-xs uppercase tracking-wide text-highlight">
-                  {info ? info.scoreLabel : "Value score"}: {info ? info.score : destination.valueRating}/100
-                </p>
+                {ariScore ? (
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-xs uppercase tracking-wide text-highlight">Ari Score: {ariScore.total}/100</p>
+                    <p className="text-[11px] text-muted">
+                      Value {ariScore.value} · Weather {ariScore.weather} · Safety {ariScore.safety}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs uppercase tracking-wide text-highlight">
+                    {info ? info.scoreLabel : "Value score"}: {info ? info.score : destination.valueRating}/100
+                  </p>
+                )}
                 {priceInfo && (
                   <p className="text-[11px] text-muted">
                     Estimate based on our own curated cost data, not a live quote.

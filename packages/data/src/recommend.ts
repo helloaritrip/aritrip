@@ -57,7 +57,7 @@ function seasonFitScore(rainfallLevel: "low" | "medium" | "high"): number {
 // para no contar la misma señal dos veces (rainfallLevel ya pesa en Season
 // Fit). Banda ideal 20-28°C sobre el punto medio de la temporada; penaliza
 // por grado de distancia hacia cualquiera de los dos extremos.
-function weatherComfortScore(avgTempC: { min: number; max: number }): number {
+export function weatherComfortScore(avgTempC: { min: number; max: number }): number {
   const mid = (avgTempC.min + avgTempC.max) / 2;
   const IDEAL_LOW = 20;
   const IDEAL_HIGH = 28;
@@ -69,7 +69,7 @@ function weatherComfortScore(avgTempC: { min: number; max: number }): number {
 // safetyIndex.value viene curado a mano desde advisories públicos (ver
 // destinations/index.ts). Fallback neutral solo por robustez de tipos —
 // los 40 destinos activos ya lo tienen curado.
-function safetyScore(destination: Destination): number {
+export function safetyScore(destination: Destination): number {
   return destination.safetyIndex?.value ?? 70;
 }
 
