@@ -53,6 +53,32 @@ export type Level = "low" | "medium" | "high";
 // final, y 6 chips entran en una sola línea del formulario. La comida
 // y la naturaleza siguen influyendo el score (ver VIBE_SCORE_BY_INTEREST
 // en recommend.ts), solo dejaron de ser una opción seleccionable aparte.
+//
+// PENDIENTE — no construir todavía (2026-08-16, investigación con el
+// usuario, sin cambios de código): auditamos por qué 8 destinos que
+// promocionamos activamente en el blog (turks-and-caicos, grand-cayman,
+// st-lucia, belize, buenos-aires, galapagos, iguazu-falls, rio-de-janeiro)
+// nunca aparecen en los resultados reales de "Find your trip" (getRecommendations)
+// en ~120 combinaciones realistas de origen/presupuesto/fechas probadas.
+// No es un bug: turks-and-caicos/grand-cayman/st-lucia tienen valueRating
+// muy bajo a propósito (curados como "splurge", luxuryScore 85-95) contra
+// un motor que pesa 16% valueRating — sí aparecen como pick "Dream trip"
+// en las hub pages (getDiscoverPicks usa luxuryScore para ese slot) y en
+// BudgetTierGrid/TripTypeGrid, pero nunca en el buscador genérico.
+// buenos-aires/rio-de-janeiro/iguazu-falls pierden por travelTime real
+// (35/100, el peor rango) desde los 5 hubs de EE.UU./Canadá probados —
+// geografía genuina, probarían mejor desde hubs más cercanos (Panamá,
+// Ciudad de México). belize no tiene una debilidad clara, solo queda
+// superado por demasiados destinos de playa parecidos.
+//
+// Idea a futuro (NO implementada): el usuario quiere revisar si estos 6
+// tags (beach/adventure/culture/nightlife/family/honeymoon) cubren bien
+// la distribución real del catálogo — "honeymoon" hoy solo cubre 11/48
+// destinos activos vs. 20-25 en el resto de las categorías, la más
+// desbalanceada del set. Antes de tocar nada acá, sería bueno decidir si
+// ese desbalance es real (pocos destinos son genuinamente "honeymoon") o
+// un artefacto de que solo cuenta como fuente de datos coupleScore (ver
+// VIBE_SCORE_BY_INTEREST en recommend.ts) sin una revisión dedicada.
 export type InterestTag = "beach" | "adventure" | "culture" | "nightlife" | "family" | "honeymoon";
 
 export interface Season {
