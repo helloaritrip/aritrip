@@ -62,7 +62,7 @@ export const destinations: Destination[] = [
     tags: ["beach", "culture", "family"],
     idealTripLengthDays: { min: 4, max: 8 },
     seasons: [
-      { name: "seca", months: [11, 12, 1, 2, 3, 4], avgTempC: { min: 21, max: 30 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
+      { name: "seca", months: [11, 12, 1, 2, 3, 4], avgTempC: { min: 18, max: 27 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
       { name: "lluviosa", months: [6, 7, 8, 9], avgTempC: { min: 24, max: 32 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
       { name: "transición", months: [5, 10], avgTempC: { min: 23, max: 31 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
     ],
@@ -101,7 +101,7 @@ export const destinations: Destination[] = [
     tags: ["beach", "family", "honeymoon"],
     idealTripLengthDays: { min: 5, max: 9 },
     seasons: [
-      { name: "seca", months: [12, 1, 2, 3, 4], avgTempC: { min: 23, max: 30 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
+      { name: "seca", months: [12, 1, 2, 3, 4], avgTempC: { min: 23, max: 27 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
       { name: "huracanes", months: [8, 9, 10], avgTempC: { min: 25, max: 31 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
       { name: "transición", months: [5, 6, 7, 11], avgTempC: { min: 24, max: 31 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
     ],
@@ -258,8 +258,8 @@ export const destinations: Destination[] = [
     idealTripLengthDays: { min: 4, max: 7 },
     seasons: [
       { name: "seca", months: [12, 1, 2, 3], avgTempC: { min: 25, max: 33 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
-      { name: "lluviosa", months: [9, 10, 11], avgTempC: { min: 25, max: 32 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
-      { name: "transición", months: [4, 5, 6, 7, 8], avgTempC: { min: 25, max: 33 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
+      { name: "lluviosa", months: [9, 10, 11], avgTempC: { min: 25, max: 29 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
+      { name: "transición", months: [4, 5, 6, 7, 8], avgTempC: { min: 25, max: 31 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
     popularityScore: 72,
@@ -334,8 +334,8 @@ export const destinations: Destination[] = [
     idealTripLengthDays: { min: 6, max: 10 },
     seasons: [
       { name: "seca", months: [5, 6, 7, 8, 9], avgTempC: { min: 4, max: 20 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
-      { name: "lluviosa", months: [12, 1, 2, 3], avgTempC: { min: 6, max: 19 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
-      { name: "transición", months: [4, 10, 11], avgTempC: { min: 5, max: 19 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
+      { name: "lluviosa", months: [12, 1, 2, 3], avgTempC: { min: 8, max: 17 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
+      { name: "transición", months: [4, 10, 11], avgTempC: { min: 8, max: 19 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
     popularityScore: 75,
@@ -373,8 +373,8 @@ export const destinations: Destination[] = [
     idealTripLengthDays: { min: 5, max: 9 },
     seasons: [
       { name: "verano austral", months: [12, 1, 2], avgTempC: { min: 20, max: 30 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
-      { name: "invierno austral", months: [6, 7, 8], avgTempC: { min: 6, max: 15 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "low" },
-      { name: "otoño/primavera", months: [3, 4, 5, 9, 10, 11], avgTempC: { min: 12, max: 24 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
+      { name: "invierno austral", months: [6, 7, 8], avgTempC: { min: 8, max: 15 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "low" },
+      { name: "otoño/primavera", months: [3, 4, 5, 9, 10, 11], avgTempC: { min: 14, max: 22 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
     popularityScore: 65,
@@ -450,7 +450,7 @@ export const destinations: Destination[] = [
     tags: ["beach", "family", "honeymoon"],
     idealTripLengthDays: { min: 3, max: 6 },
     seasons: [
-      { name: "seca", months: [12, 1, 2, 3, 4], avgTempC: { min: 20, max: 27 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
+      { name: "seca", months: [12, 1, 2, 3, 4], avgTempC: { min: 22, max: 26 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
       { name: "huracanes", months: [8, 9, 10], avgTempC: { min: 26, max: 32 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
       { name: "transición", months: [5, 6, 7, 11], avgTempC: { min: 24, max: 31 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
     ],
@@ -532,8 +532,8 @@ export const destinations: Destination[] = [
     tags: ["adventure", "beach"],
     idealTripLengthDays: { min: 3, max: 6 },
     seasons: [
-      { name: "seca (mejor visibilidad de buceo)", months: [3, 4, 5, 6, 7, 8, 9], avgTempC: { min: 25, max: 31 }, rainfallLevel: "low", costTier: "high", crowdLevel: "medium" },
-      { name: "lluviosa", months: [10, 11, 12, 1, 2], avgTempC: { min: 24, max: 30 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
+      { name: "seca (mejor visibilidad de buceo)", months: [3, 4, 5, 6, 7, 8, 9], avgTempC: { min: 27, max: 28 }, rainfallLevel: "low", costTier: "high", crowdLevel: "medium" },
+      { name: "lluviosa", months: [10, 11, 12, 1, 2], avgTempC: { min: 25, max: 27 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
     popularityScore: 48,
@@ -607,7 +607,7 @@ export const destinations: Destination[] = [
     tags: ["culture", "nightlife"],
     idealTripLengthDays: { min: 3, max: 6 },
     seasons: [
-      { name: "invierno templado", months: [11, 12, 1, 2, 3], avgTempC: { min: 10, max: 20 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
+      { name: "invierno templado", months: [11, 12, 1, 2, 3], avgTempC: { min: 13, max: 20 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
       { name: "verano húmedo", months: [6, 7, 8, 9], avgTempC: { min: 24, max: 33 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
       { name: "transición", months: [4, 5, 10], avgTempC: { min: 18, max: 28 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
     ],
@@ -646,7 +646,7 @@ export const destinations: Destination[] = [
     tags: ["beach", "family", "culture"],
     idealTripLengthDays: { min: 3, max: 7 },
     seasons: [
-      { name: "templado todo el año", months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], avgTempC: { min: 14, max: 24 }, rainfallLevel: "low", costTier: "medium", crowdLevel: "medium" },
+      { name: "templado todo el año", months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], avgTempC: { min: 13, max: 21 }, rainfallLevel: "low", costTier: "medium", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
     popularityScore: 65,
@@ -685,7 +685,7 @@ export const destinations: Destination[] = [
     seasons: [
       { name: "temporada de esquí", months: [12, 1, 2, 3], avgTempC: { min: -12, max: -1 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
       { name: "temporada de senderismo", months: [6, 7, 8, 9], avgTempC: { min: 8, max: 22 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
-      { name: "transición", months: [4, 5, 10, 11], avgTempC: { min: -2, max: 12 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "low" },
+      { name: "transición", months: [4, 5, 10, 11], avgTempC: { min: -5, max: 7 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "low" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "eta" },
     popularityScore: 70,
@@ -760,7 +760,7 @@ export const destinations: Destination[] = [
     tags: ["beach", "honeymoon"],
     idealTripLengthDays: { min: 4, max: 8 },
     seasons: [
-      { name: "seca", months: [12, 1, 2, 3, 4], avgTempC: { min: 23, max: 29 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
+      { name: "seca", months: [12, 1, 2, 3, 4], avgTempC: { min: 24, max: 26 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
       { name: "huracanes", months: [8, 9, 10], avgTempC: { min: 26, max: 31 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
       { name: "transición", months: [5, 6, 7, 11], avgTempC: { min: 25, max: 30 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
     ],
@@ -846,7 +846,7 @@ export const destinations: Destination[] = [
     seasons: [
       { name: "temporada alta", months: [11, 12, 1, 2, 3], avgTempC: { min: 5, max: 18 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
       { name: "calor extremo", months: [6, 7, 8], avgTempC: { min: 27, max: 41 }, rainfallLevel: "low", costTier: "low", crowdLevel: "low" },
-      { name: "transición", months: [4, 5, 9, 10], avgTempC: { min: 15, max: 30 }, rainfallLevel: "low", costTier: "medium", crowdLevel: "medium" },
+      { name: "transición", months: [4, 5, 9, 10], avgTempC: { min: 18, max: 32 }, rainfallLevel: "low", costTier: "medium", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
     popularityScore: 85,
@@ -883,8 +883,8 @@ export const destinations: Destination[] = [
     tags: ["family", "adventure"],
     idealTripLengthDays: { min: 3, max: 7 },
     seasons: [
-      { name: "alta (verano y fin de año)", months: [6, 7, 8, 12], avgTempC: { min: 22, max: 33 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
-      { name: "huracanes", months: [9, 10], avgTempC: { min: 21, max: 31 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
+      { name: "alta (verano y fin de año)", months: [6, 7, 8, 12], avgTempC: { min: 21, max: 30 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
+      { name: "huracanes", months: [9, 10], avgTempC: { min: 21, max: 29 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
       { name: "transición", months: [1, 2, 3, 4, 5, 11], avgTempC: { min: 15, max: 28 }, rainfallLevel: "low", costTier: "medium", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
@@ -922,7 +922,7 @@ export const destinations: Destination[] = [
     tags: ["beach", "honeymoon", "family", "adventure"],
     idealTripLengthDays: { min: 5, max: 10 },
     seasons: [
-      { name: "seca", months: [4, 5, 6, 7, 8, 9, 10], avgTempC: { min: 22, max: 31 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
+      { name: "seca", months: [4, 5, 6, 7, 8, 9, 10], avgTempC: { min: 22, max: 28 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
       { name: "lluviosa", months: [11, 12, 1, 2, 3], avgTempC: { min: 19, max: 27 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
@@ -962,7 +962,7 @@ export const destinations: Destination[] = [
     seasons: [
       { name: "invierno/Carnaval", months: [12, 1, 2, 3], avgTempC: { min: -12, max: -2 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
       { name: "verano", months: [6, 7, 8], avgTempC: { min: 14, max: 25 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
-      { name: "transición", months: [4, 5, 9, 10, 11], avgTempC: { min: 2, max: 16 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "low" },
+      { name: "transición", months: [4, 5, 9, 10, 11], avgTempC: { min: 4, max: 14 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "low" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "eta" },
     popularityScore: 55,
@@ -999,7 +999,7 @@ export const destinations: Destination[] = [
     tags: ["adventure"],
     idealTripLengthDays: { min: 3, max: 7 },
     seasons: [
-      { name: "temporada de esquí", months: [12, 1, 2, 3], avgTempC: { min: -8, max: 2 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
+      { name: "temporada de esquí", months: [12, 1, 2, 3], avgTempC: { min: -3, max: 4 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
       { name: "senderismo/bici de verano", months: [6, 7, 8, 9], avgTempC: { min: 10, max: 22 }, rainfallLevel: "low", costTier: "medium", crowdLevel: "medium" },
       { name: "transición", months: [4, 5, 10, 11], avgTempC: { min: 2, max: 12 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "low" },
     ],
@@ -1075,7 +1075,7 @@ export const destinations: Destination[] = [
     tags: ["beach", "family"],
     idealTripLengthDays: { min: 4, max: 8 },
     seasons: [
-      { name: "seca", months: [11, 12, 1, 2, 3, 4], avgTempC: { min: 18, max: 29 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
+      { name: "seca", months: [11, 12, 1, 2, 3, 4], avgTempC: { min: 16, max: 26 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
       { name: "lluviosa", months: [6, 7, 8, 9], avgTempC: { min: 24, max: 32 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
       { name: "transición", months: [5, 10], avgTempC: { min: 22, max: 31 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
     ],
@@ -1114,8 +1114,8 @@ export const destinations: Destination[] = [
     tags: ["adventure", "beach"],
     idealTripLengthDays: { min: 4, max: 8 },
     seasons: [
-      { name: "seca", months: [12, 1, 2, 3, 4, 5], avgTempC: { min: 22, max: 30 }, rainfallLevel: "low", costTier: "high", crowdLevel: "medium" },
-      { name: "lluviosa", months: [6, 7, 8, 9, 10, 11], avgTempC: { min: 24, max: 32 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
+      { name: "seca", months: [12, 1, 2, 3, 4, 5], avgTempC: { min: 26, max: 27 }, rainfallLevel: "low", costTier: "high", crowdLevel: "medium" },
+      { name: "lluviosa", months: [6, 7, 8, 9, 10, 11], avgTempC: { min: 27, max: 29 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
     popularityScore: 45,
@@ -1153,8 +1153,8 @@ export const destinations: Destination[] = [
     idealTripLengthDays: { min: 3, max: 7 },
     seasons: [
       { name: "temporada de esquí", months: [12, 1, 2, 3], avgTempC: { min: -10, max: 2 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
-      { name: "verano", months: [6, 7, 8, 9], avgTempC: { min: 8, max: 24 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
-      { name: "transición", months: [4, 5, 10, 11], avgTempC: { min: -2, max: 14 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "low" },
+      { name: "verano", months: [6, 7, 8, 9], avgTempC: { min: 6, max: 24 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
+      { name: "transición", months: [4, 5, 10, 11], avgTempC: { min: -5, max: 10 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "low" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
     popularityScore: 48,
@@ -1200,7 +1200,7 @@ export const destinations: Destination[] = [
     tags: ["beach", "nightlife", "culture", "adventure"],
     idealTripLengthDays: { min: 4, max: 8 },
     seasons: [
-      { name: "verano/Carnaval", months: [12, 1, 2, 3], avgTempC: { min: 23, max: 32 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
+      { name: "verano/Carnaval", months: [12, 1, 2, 3], avgTempC: { min: 23, max: 29 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
       { name: "invierno seco", months: [6, 7, 8, 9], avgTempC: { min: 18, max: 26 }, rainfallLevel: "low", costTier: "low", crowdLevel: "low" },
       { name: "transición", months: [4, 5, 10, 11], avgTempC: { min: 20, max: 28 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
     ],
@@ -1278,8 +1278,8 @@ export const destinations: Destination[] = [
     tags: ["adventure"],
     idealTripLengthDays: { min: 5, max: 9 },
     seasons: [
-      { name: "garúa (mejor buceo)", months: [6, 7, 8, 9, 10, 11], avgTempC: { min: 19, max: 25 }, rainfallLevel: "low", costTier: "high", crowdLevel: "medium" },
-      { name: "cálida (mejor visibilidad)", months: [12, 1, 2, 3, 4, 5], avgTempC: { min: 22, max: 29 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
+      { name: "garúa (mejor buceo)", months: [6, 7, 8, 9, 10, 11], avgTempC: { min: 19, max: 25 }, rainfallLevel: "high", costTier: "high", crowdLevel: "medium" },
+      { name: "cálida (mejor visibilidad)", months: [12, 1, 2, 3, 4, 5], avgTempC: { min: 23, max: 27 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
     popularityScore: 55,
@@ -1470,7 +1470,7 @@ export const destinations: Destination[] = [
     idealTripLengthDays: { min: 3, max: 5 },
     seasons: [
       { name: "invierno templado", months: [11, 12, 1, 2, 3], avgTempC: { min: 2, max: 12 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
-      { name: "verano húmedo", months: [6, 7, 8], avgTempC: { min: 21, max: 32 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
+      { name: "verano húmedo", months: [6, 7, 8], avgTempC: { min: 21, max: 32 }, rainfallLevel: "high", costTier: "high", crowdLevel: "high" },
       { name: "transición", months: [4, 5, 9, 10], avgTempC: { min: 13, max: 24 }, rainfallLevel: "low", costTier: "medium", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
@@ -1510,7 +1510,7 @@ export const destinations: Destination[] = [
     seasons: [
       { name: "seca/templada", months: [11, 12, 1, 2, 3, 4], avgTempC: { min: 13, max: 27 }, rainfallLevel: "low", costTier: "medium", crowdLevel: "medium" },
       { name: "lluviosa", months: [6, 7, 8, 9], avgTempC: { min: 16, max: 27 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
-      { name: "transición", months: [5, 10], avgTempC: { min: 15, max: 28 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
+      { name: "transición", months: [5, 10], avgTempC: { min: 17, max: 31 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
     popularityScore: 48,
@@ -1548,8 +1548,8 @@ export const destinations: Destination[] = [
     idealTripLengthDays: { min: 3, max: 5 },
     seasons: [
       { name: "cálida", months: [11, 12, 1, 2, 3], avgTempC: { min: 20, max: 32 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
-      { name: "fresca", months: [6, 7, 8], avgTempC: { min: 12, max: 22 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "low" },
-      { name: "transición", months: [4, 5, 9, 10], avgTempC: { min: 15, max: 26 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
+      { name: "fresca", months: [6, 7, 8], avgTempC: { min: 14, max: 24 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "low" },
+      { name: "transición", months: [4, 5, 9, 10], avgTempC: { min: 17, max: 26 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
     popularityScore: 45,
@@ -1593,7 +1593,7 @@ export const destinations: Destination[] = [
     idealTripLengthDays: { min: 3, max: 6 },
     seasons: [
       { name: "invierno", months: [12, 1, 2, 3], avgTempC: { min: 0, max: 8 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "high" },
-      { name: "verano", months: [6, 7, 8], avgTempC: { min: 21, max: 30 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
+      { name: "verano", months: [6, 7, 8], avgTempC: { min: 19, max: 27 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
       { name: "transición", months: [4, 5, 9, 10, 11], avgTempC: { min: 10, max: 20 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
@@ -1631,7 +1631,7 @@ export const destinations: Destination[] = [
     tags: ["culture", "adventure", "nightlife"],
     idealTripLengthDays: { min: 3, max: 5 },
     seasons: [
-      { name: "verano con niebla", months: [6, 7, 8, 9], avgTempC: { min: 13, max: 19 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
+      { name: "verano con niebla", months: [6, 7, 8, 9], avgTempC: { min: 13, max: 23 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
       { name: "invierno lluvioso", months: [11, 12, 1, 2, 3], avgTempC: { min: 8, max: 15 }, rainfallLevel: "high", costTier: "medium", crowdLevel: "medium" },
       { name: "primavera/otoño templado", months: [4, 5, 10], avgTempC: { min: 11, max: 19 }, rainfallLevel: "low", costTier: "medium", crowdLevel: "medium" },
     ],
@@ -1670,8 +1670,8 @@ export const destinations: Destination[] = [
     tags: ["beach", "nightlife", "family"],
     idealTripLengthDays: { min: 3, max: 7 },
     seasons: [
-      { name: "temporada seca", months: [12, 1, 2, 3, 4], avgTempC: { min: 20, max: 27 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
-      { name: "temporada de huracanes", months: [6, 7, 8, 9, 10], avgTempC: { min: 26, max: 32 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
+      { name: "temporada seca", months: [12, 1, 2, 3, 4], avgTempC: { min: 18, max: 26 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
+      { name: "temporada de huracanes", months: [6, 7, 8, 9, 10], avgTempC: { min: 23, max: 31 }, rainfallLevel: "high", costTier: "low", crowdLevel: "low" },
       { name: "transición", months: [5, 11], avgTempC: { min: 23, max: 29 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
@@ -1709,9 +1709,9 @@ export const destinations: Destination[] = [
     tags: ["beach", "culture", "family"],
     idealTripLengthDays: { min: 4, max: 7 },
     seasons: [
-      { name: "verano seco", months: [6, 7, 8, 9], avgTempC: { min: 18, max: 29 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
+      { name: "verano seco", months: [6, 7, 8, 9], avgTempC: { min: 17, max: 24 }, rainfallLevel: "low", costTier: "high", crowdLevel: "high" },
       { name: "invierno templado", months: [12, 1, 2, 3], avgTempC: { min: 10, max: 19 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
-      { name: "primavera/otoño", months: [4, 5, 10, 11], avgTempC: { min: 14, max: 23 }, rainfallLevel: "low", costTier: "medium", crowdLevel: "medium" },
+      { name: "primavera/otoño", months: [4, 5, 10, 11], avgTempC: { min: 12, max: 20 }, rainfallLevel: "low", costTier: "medium", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
     popularityScore: 85,
@@ -1748,9 +1748,9 @@ export const destinations: Destination[] = [
     tags: ["culture", "family", "nightlife"],
     idealTripLengthDays: { min: 3, max: 5 },
     seasons: [
-      { name: "invierno", months: [12, 1, 2, 3], avgTempC: { min: -6, max: 2 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "low" },
+      { name: "invierno", months: [12, 1, 2, 3], avgTempC: { min: -4, max: 5 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "low" },
       { name: "verano", months: [6, 7, 8], avgTempC: { min: 19, max: 29 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
-      { name: "transición", months: [4, 5, 9, 10, 11], avgTempC: { min: 5, max: 18 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "medium" },
+      { name: "transición", months: [4, 5, 9, 10, 11], avgTempC: { min: 8, max: 18 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
     popularityScore: 72,
@@ -1789,7 +1789,7 @@ export const destinations: Destination[] = [
     seasons: [
       { name: "verano", months: [6, 7, 8, 9], avgTempC: { min: 24, max: 36 }, rainfallLevel: "low", costTier: "medium", crowdLevel: "medium" },
       { name: "invierno templado", months: [12, 1, 2], avgTempC: { min: 4, max: 15 }, rainfallLevel: "low", costTier: "low", crowdLevel: "low" },
-      { name: "transición", months: [3, 4, 5, 10, 11], avgTempC: { min: 12, max: 24 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
+      { name: "transición", months: [3, 4, 5, 10, 11], avgTempC: { min: 14, max: 25 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "visa_free" },
     popularityScore: 55,
@@ -1826,8 +1826,8 @@ export const destinations: Destination[] = [
     tags: ["culture", "family", "nightlife"],
     idealTripLengthDays: { min: 3, max: 5 },
     seasons: [
-      { name: "invierno", months: [12, 1, 2, 3], avgTempC: { min: -7, max: 1 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "low" },
-      { name: "verano", months: [6, 7, 8], avgTempC: { min: 18, max: 27 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
+      { name: "invierno", months: [12, 1, 2, 3], avgTempC: { min: -5, max: 3 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "low" },
+      { name: "verano", months: [6, 7, 8], avgTempC: { min: 16, max: 26 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
       { name: "transición", months: [4, 5, 9, 10, 11], avgTempC: { min: 6, max: 17 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "eta" },
@@ -1865,9 +1865,9 @@ export const destinations: Destination[] = [
     tags: ["culture", "nightlife", "family"],
     idealTripLengthDays: { min: 3, max: 5 },
     seasons: [
-      { name: "invierno", months: [12, 1, 2, 3], avgTempC: { min: -11, max: -2 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "low" },
+      { name: "invierno", months: [12, 1, 2, 3], avgTempC: { min: -7, max: 0 }, rainfallLevel: "medium", costTier: "medium", crowdLevel: "low" },
       { name: "verano", months: [6, 7, 8], avgTempC: { min: 17, max: 26 }, rainfallLevel: "medium", costTier: "high", crowdLevel: "high" },
-      { name: "transición", months: [4, 5, 9, 10, 11], avgTempC: { min: 4, max: 16 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "medium" },
+      { name: "transición", months: [4, 5, 9, 10, 11], avgTempC: { min: 7, max: 15 }, rainfallLevel: "medium", costTier: "low", crowdLevel: "medium" },
     ],
     visaPolicy: { US: "visa_free", CA: "visa_free", MX: "eta" },
     popularityScore: 55,

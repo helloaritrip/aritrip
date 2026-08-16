@@ -4,7 +4,7 @@
  * (apps/app/src/app/api/recommendations) importan de acá — evita que la
  * "prueba" y la "implementación real" diverjan silenciosamente.
  */
-import type { Destination, InterestTag, OriginHub, PriceSnapshot, Recommendation } from "./types";
+import type { Destination, InterestTag, OriginHub, PriceSnapshot, Recommendation, Season } from "./types";
 import { SCORING_WEIGHTS_V1 } from "./scoringWeights";
 import { estimateFlightPrice, daysUntil, type PriceEstimate } from "./priceEstimation";
 
@@ -171,7 +171,23 @@ export function getRecommendations(
   const rooms = Math.ceil(input.adults / 2);
   const totalTravelers = input.adults + input.children;
 
-  const results: ScoredDestination[] = [];
+  const daysToDeparture = daysUntil(input.startDate);
+
+  // Primera pasada: solo junta candidatos elegibles + su costo real —
+  // necesaria para poder puntuar "valor" real en la segunda pasada (ver
+  // abajo), no un valueRating fijo tipeado a mano sin relación con el
+  // presupuesto ni el origen de ESTA búsqueda puntual.
+  interface Candidate {
+    destination: Destination;
+    snapshot: PriceSnapshot;
+    season: Season;
+    costBreakdown: CostBreakdown;
+    totalEstimatedCostUSD: number;
+    flightPriceRange: { minUSD: number; maxUSD: number; confidence: number };
+    ratio: number;
+  }
+
+  const candidates: Candidate[] = [];
 
   for (const destination of destinations) {
     if (destination.status !== "active") continue;
@@ -182,13 +198,15 @@ export function getRecommendations(
     );
     if (!snapshot) continue;
 
+    const season = destination.seasons.find((s) => s.months.includes(month));
+    if (!season) continue;
+
     // Motor de estimación de precios (2026-08-10) — el snapshot ya trae
     // un precio curado/recalibrado con datos en vivo, pero ese número
     // asume implícitamente una reserva con ~60-89 días de anticipación
     // (ver priceEstimation.ts). Ajustarlo según cuán cerca está la
     // fecha real que pidió el usuario es lo que evita mostrar $220
     // cuando reservar mañana mismo cuesta $1.300 de verdad.
-    const daysToDeparture = daysUntil(input.startDate);
     const flightEstimate: PriceEstimate = estimateFlightPrice(
       snapshot.avgFlightCostUSD,
       daysToDeparture,
@@ -210,8 +228,32 @@ export function getRecommendations(
     const ratio = totalEstimatedCostUSD / input.budgetUSD;
     if (ratio > 1.05) continue;
 
-    const season = destination.seasons.find((s) => s.months.includes(month));
-    if (!season) continue;
+    candidates.push({ destination, snapshot, season, costBreakdown, totalEstimatedCostUSD, flightPriceRange, ratio });
+  }
+
+  if (candidates.length === 0) return [];
+
+  // Value real (2026-08-16, auditoría de recomendación con el usuario) —
+  // reemplaza destination.valueRating (tipeado a mano, sin relación con
+  // el presupuesto/origen real) por qué tan barato es ESTE destino
+  // contra el resto de los que de verdad compiten en ESTA búsqueda
+  // puntual — mismo criterio de min-max normalizado que ya usa
+  // ariScore.ts para las páginas de contenido, ahora también en el motor
+  // real. destination.valueRating sigue existiendo y se sigue usando tal
+  // cual en getDiscoverPicks (el pick curado "Best value" de las hub
+  // pages es una decisión editorial distinta, no una búsqueda real) — no
+  // se toca ese uso.
+  const costs = candidates.map((c) => c.totalEstimatedCostUSD);
+  const minCost = Math.min(...costs);
+  const maxCost = Math.max(...costs);
+
+  const results: ScoredDestination[] = [];
+  const w = SCORING_WEIGHTS_V1.weights;
+
+  for (const c of candidates) {
+    const { destination, snapshot, season, costBreakdown, totalEstimatedCostUSD, flightPriceRange, ratio } = c;
+
+    const realValueScore = maxCost === minCost ? 100 : Math.round((100 * (maxCost - totalEstimatedCostUSD)) / (maxCost - minCost));
 
     const subScores: Recommendation["subScores"] = {
       budgetFit: Math.round(budgetFit(ratio) * 10) / 10,
@@ -219,11 +261,10 @@ export function getRecommendations(
       seasonFit: seasonFitScore(season.rainfallLevel),
       weatherComfort: weatherComfortScore(season.avgTempC),
       travelTime: travelTimeScore(snapshot.avgFlightDurationMinutes, tripDays),
-      valueRating: destination.valueRating,
+      valueRating: realValueScore,
       safety: safetyScore(destination),
     };
 
-    const w = SCORING_WEIGHTS_V1.weights;
     const finalScore =
       w.budgetFit * subScores.budgetFit +
       w.activitiesMatch * subScores.activitiesMatch +

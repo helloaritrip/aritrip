@@ -81,6 +81,29 @@ export type Level = "low" | "medium" | "high";
 // VIBE_SCORE_BY_INTEREST en recommend.ts) sin una revisión dedicada.
 export type InterestTag = "beach" | "adventure" | "culture" | "nightlife" | "family" | "honeymoon";
 
+// avgTempC (2026-08-16, curación con datos reales) — antes tipeado a
+// mano por destino/temporada, ahora recalibrado contra clima histórico
+// real de Open-Meteo (archivo abierto, sin API key, gratis — promedio de
+// 2022-2024 por coordenada, agregado por mes según los mismos meses que
+// ya definía cada temporada). Sin dependencia en vivo en el código: fue
+// una sola pasada de investigación + curación, igual que ya se hace con
+// otros datos del catálogo. De paso encontró un bug real: la coordenada
+// de Cusco tenía el signo de latitud invertido (13.53 en vez de -13.53,
+// lo ubicaba cerca del Caribe en vez de los Andes peruanos) — corregido
+// en destinations/coordinates.ts.
+//
+// rainfallLevel — SOLO se recalibraron 3 casos donde el propio nombre de
+// la temporada contradecía el dato real de forma obvia (galapagos
+// "garúa" que decía "low" siendo literalmente la temporada de neblina;
+// su complemento "cálida (mejor visibilidad)"; nashville "verano
+// húmedo" en "medium"). El resto del catálogo tiene ~39 temporadas más
+// donde una clasificación relativa por terciles (mes más lluvioso del
+// AÑO DE ESE DESTINO = "high", más seco = "low") no coincide con el
+// valor curado — quedan sin tocar a propósito: son casos límite sin una
+// contradicción narrativa clara (nombres neutros como "transición"/
+// "invierno"/"verano"), y aplicar los 39 de una sin revisión humana
+// arriesgaba más que ayudaba. Lista completa disponible si se retoma
+// esto — quedó en el historial de esta sesión, no en el repo.
 export interface Season {
   name: string;
   months: number[]; // 1-12

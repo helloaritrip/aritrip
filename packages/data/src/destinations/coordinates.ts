@@ -14,7 +14,13 @@ export const destinationCoordinates: Record<string, { lat: number; lng: number }
   "costa-rica-guanacaste": { lat: 10.6247, lng: -85.44 },
   cartagena: { lat: 10.391, lng: -75.4794 },
   medellin: { lat: 6.2442, lng: -75.5812 },
-  cusco: { lat: 13.5319, lng: -71.9675 },
+  // Signo de latitud corregido (2026-08-16, encontrado cruzando contra
+  // clima real de Open-Meteo: el valor viejo, 13.5319 sin signo, ubicaba
+  // a Cusco en el hemisferio norte — cerca del Caribe, no en los Andes
+  // peruanos — lo que hacía que el clima real consultado diera ~28°C
+  // todo el año para una ciudad genuinamente fría a 3,400m de altura.
+  // Cusco está en Perú, hemisferio sur.
+  cusco: { lat: -13.5319, lng: -71.9675 },
   "buenos-aires": { lat: -34.6037, lng: -58.3816 },
   "mexico-city": { lat: 19.4326, lng: -99.1332 },
   nassau: { lat: 25.048, lng: -77.3554 },
