@@ -59,6 +59,14 @@
       }
     },
     {
+      "type": "TripTypeGrid",
+      "props": {
+        "id": "trip-type-1",
+        "heading": "Best destinations from Miami by trip type",
+        "originAirportCode": "MIA"
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",

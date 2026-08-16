@@ -1,4 +1,4 @@
-import type { Destination, OriginHub, PriceSnapshot } from "./types";
+import type { Destination, InterestTag, OriginHub, PriceSnapshot } from "./types";
 import { originBaseCosts, destinationBaseStayCosts } from "./destinations/originBaseCosts";
 import { DEFAULT_TRIP_DAYS, DEFAULT_ADULTS, defaultMonth } from "./discover";
 
@@ -103,13 +103,23 @@ export interface BudgetTierBucket {
 const TARGET_TIER_COUNT = 4;
 const NICE_ROUNDING_USD = 50;
 
-export function getBudgetTiers(
+interface ReachableDestination {
+  destination: Destination;
+  estimatedTotalUSD: number;
+}
+
+// Compartido por getBudgetTiers y getDestinationsByTag — mismo filtro de
+// encaje de duración que ya usa getDiscoverPicks (destinos cuyo rango
+// ideal de noches cubre DEFAULT_TRIP_DAYS) y el mismo estimateTripTotalUSD
+// que ya usa DestinationHighlight, para que un destino nunca muestre dos
+// totales distintos según qué sección de la página lo calculó.
+function getReachableDestinations(
   originAirportCode: OriginHub,
   destinations: Destination[],
   priceSnapshots: PriceSnapshot[],
-  month: number = defaultMonth()
-): BudgetTierBucket[] {
-  const candidates: { destinationId: string; name: string; country: string; estimatedTotalUSD: number }[] = [];
+  month: number
+): ReachableDestination[] {
+  const reachable: ReachableDestination[] = [];
 
   for (const destination of destinations) {
     if (destination.status !== "active") continue;
@@ -121,13 +131,24 @@ export function getBudgetTiers(
     );
     if (!snapshot) continue;
 
-    candidates.push({
-      destinationId: destination.id,
-      name: destination.name,
-      country: destination.country,
-      estimatedTotalUSD: Math.round(estimateTripTotalUSD(snapshot)),
-    });
+    reachable.push({ destination, estimatedTotalUSD: Math.round(estimateTripTotalUSD(snapshot)) });
   }
+
+  return reachable;
+}
+
+export function getBudgetTiers(
+  originAirportCode: OriginHub,
+  destinations: Destination[],
+  priceSnapshots: PriceSnapshot[],
+  month: number = defaultMonth()
+): BudgetTierBucket[] {
+  const candidates = getReachableDestinations(originAirportCode, destinations, priceSnapshots, month).map((r) => ({
+    destinationId: r.destination.id,
+    name: r.destination.name,
+    country: r.destination.country,
+    estimatedTotalUSD: r.estimatedTotalUSD,
+  }));
 
   if (candidates.length === 0) return [];
   candidates.sort((a, b) => a.estimatedTotalUSD - b.estimatedTotalUSD);
@@ -155,4 +176,56 @@ export function getBudgetTiers(
   }
 
   return buckets;
+}
+
+export interface TagPick {
+  tag: InterestTag;
+  tagLabel: string;
+  destinationId: string;
+  name: string;
+  country: string;
+  estimatedTotalUSD: number;
+}
+
+// "Best destinations by trip type" (2026-08-16, feedback del head, punto
+// 11) — mismo espíritu que BudgetTierGrid: cada destino ya trae `tags`
+// reales (ver types.ts, "solo filtros rápidos / SEO"), así que agrupar
+// por tipo de viaje es leer un campo que ya existe, no inventar una
+// taxonomía nueva. Un destino por tag, el más barato entre los que
+// tienen ese tag y son alcanzables desde el origen — coherente con la
+// propuesta de valor del sitio ("find trips you can actually afford"),
+// no "el más popular" otra vez.
+const TAG_LABELS: Record<InterestTag, string> = {
+  beach: "Best beach trip",
+  adventure: "Best adventure trip",
+  culture: "Best culture trip",
+  nightlife: "Best nightlife trip",
+  family: "Best family trip",
+  honeymoon: "Best honeymoon trip",
+};
+
+export function getDestinationsByTag(
+  originAirportCode: OriginHub,
+  destinations: Destination[],
+  priceSnapshots: PriceSnapshot[],
+  month: number = defaultMonth()
+): TagPick[] {
+  const reachable = getReachableDestinations(originAirportCode, destinations, priceSnapshots, month);
+  const picks: TagPick[] = [];
+
+  for (const tag of Object.keys(TAG_LABELS) as InterestTag[]) {
+    const matches = reachable.filter((r) => r.destination.tags.includes(tag));
+    if (matches.length === 0) continue;
+    const cheapest = matches.reduce((a, b) => (b.estimatedTotalUSD < a.estimatedTotalUSD ? b : a));
+    picks.push({
+      tag,
+      tagLabel: TAG_LABELS[tag],
+      destinationId: cheapest.destination.id,
+      name: cheapest.destination.name,
+      country: cheapest.destination.country,
+      estimatedTotalUSD: cheapest.estimatedTotalUSD,
+    });
+  }
+
+  return picks;
 }

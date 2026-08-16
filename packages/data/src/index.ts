@@ -8,8 +8,9 @@ export {
   COST_TIER_MULTIPLIER,
   estimateTripTotalUSD,
   getBudgetTiers,
+  getDestinationsByTag,
 } from "./priceSnapshots";
-export type { BudgetTierBucket } from "./priceSnapshots";
+export type { BudgetTierBucket, TagPick } from "./priceSnapshots";
 export { getRecommendations } from "./recommend";
 export type { RecommendationInput, ScoredDestination, CostBreakdown } from "./recommend";
 export {

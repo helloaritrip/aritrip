@@ -70,6 +70,15 @@ export function buildHubPageContent(hub: OriginHub, appUrl: string) {
         type: "BudgetTierGrid",
         props: { id: "budget-1", heading: `Where can you travel from ${city} on a budget?`, originAirportCode: hub },
       },
+      // "Best destinations by trip type" (2026-08-16, feedback del head,
+      // punto 11) — agrega variedad de keywords/intención de búsqueda a
+      // cada hub page sin copy artificial, y ayuda a que las 24 páginas
+      // dejen de ser el mismo template (qué tags "ganan" depende de
+      // verdad de qué es alcanzable en plata desde ESE hub).
+      {
+        type: "TripTypeGrid",
+        props: { id: "trip-type-1", heading: `Best destinations from ${city} by trip type`, originAirportCode: hub },
+      },
       {
         type: "FAQAccordion",
         props: {

@@ -59,6 +59,14 @@
       }
     },
     {
+      "type": "TripTypeGrid",
+      "props": {
+        "id": "trip-type-1",
+        "heading": "Best destinations from Vancouver by trip type",
+        "originAirportCode": "YVR"
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",

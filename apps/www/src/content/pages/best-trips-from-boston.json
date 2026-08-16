@@ -59,6 +59,14 @@
       }
     },
     {
+      "type": "TripTypeGrid",
+      "props": {
+        "id": "trip-type-1",
+        "heading": "Best destinations from Boston by trip type",
+        "originAirportCode": "BOS"
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",

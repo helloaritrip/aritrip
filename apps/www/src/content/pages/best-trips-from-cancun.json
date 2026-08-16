@@ -59,6 +59,14 @@
       }
     },
     {
+      "type": "TripTypeGrid",
+      "props": {
+        "id": "trip-type-1",
+        "heading": "Best destinations from Cancún by trip type",
+        "originAirportCode": "CUN"
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",

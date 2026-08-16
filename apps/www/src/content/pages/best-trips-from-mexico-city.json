@@ -59,6 +59,14 @@
       }
     },
     {
+      "type": "TripTypeGrid",
+      "props": {
+        "id": "trip-type-1",
+        "heading": "Best destinations from Mexico City by trip type",
+        "originAirportCode": "MEX"
+      }
+    },
+    {
       "type": "FAQAccordion",
       "props": {
         "id": "faq-1",

@@ -5,6 +5,7 @@ import {
   generateAllPriceSnapshots,
   estimateTripTotalUSD,
   getBudgetTiers,
+  getDestinationsByTag,
   ORIGIN_OPTIONS,
   DEFAULT_TRIP_DAYS,
   DEFAULT_ADULTS,
@@ -178,6 +179,11 @@ type BudgetTierGridProps = {
   originAirportCode: string;
 };
 
+type TripTypeGridProps = {
+  heading: string;
+  originAirportCode: string;
+};
+
 type ImageTextSplitProps = {
   imageQuery: string;
   heading: string;
@@ -198,6 +204,7 @@ export type Props = {
   CTAButton: CTAButtonProps;
   DestinationHighlight: DestinationHighlightProps;
   BudgetTierGrid: BudgetTierGridProps;
+  TripTypeGrid: TripTypeGridProps;
   FeatureGrid: FeatureGridProps;
   StatsBanner: StatsBannerProps;
   Testimonials: TestimonialsProps;
@@ -476,6 +483,48 @@ export const config: Config<Props> = {
               Estimated {DEFAULT_TRIP_DAYS}-night trip for {DEFAULT_ADULTS} — flight, hotel, and activities combined. Estimate based
               on our own curated cost data, not a live quote.
             </p>
+          </div>
+        );
+      },
+    },
+    // "Best destinations by trip type" (2026-08-16, feedback del head,
+    // punto 11) — cada destino ya trae `tags` reales (beach/culture/
+    // family/etc, ver types.ts), así que esto agrupa un campo que ya
+    // existe en vez de armar una taxonomía nueva. El más barato de los
+    // que tienen ese tag y son alcanzables desde el origen, no "el más
+    // popular" — coherente con la propuesta de valor del sitio.
+    TripTypeGrid: {
+      fields: {
+        heading: { type: "text" },
+        originAirportCode: { type: "select", options: ORIGIN_OPTIONS },
+      },
+      defaultProps: { heading: "Best destinations by trip type", originAirportCode: ORIGIN_OPTIONS[0]?.value ?? "" },
+      render: ({ heading, originAirportCode }) => {
+        if (!originAirportCode) return <></>;
+        const snapshots = generateAllPriceSnapshots(destinations);
+        const picks = getDestinationsByTag(originAirportCode as (typeof ORIGIN_OPTIONS)[number]["value"], destinations, snapshots);
+        if (picks.length === 0) return <></>;
+
+        return (
+          <div className="mx-auto mt-10 max-w-3xl px-6">
+            <h2 className="text-2xl font-semibold text-ink">{heading}</h2>
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {picks.map((p) => (
+                <a
+                  key={p.tag}
+                  href={`/p/${p.destinationId}`}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-rule bg-surface p-4 transition-shadow hover:shadow-md"
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-highlight">{p.tagLabel}</p>
+                    <p className="truncate text-sm font-semibold text-ink">
+                      {p.name}, {p.country}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-sm text-muted">~${p.estimatedTotalUSD.toLocaleString()}</span>
+                </a>
+              ))}
+            </div>
           </div>
         );
       },
