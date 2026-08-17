@@ -7,6 +7,7 @@
 import type { Destination, InterestTag, OriginHub, PriceSnapshot, Recommendation, Season } from "./types";
 import { SCORING_WEIGHTS_V1 } from "./scoringWeights";
 import { estimateFlightPrice, daysUntil, type PriceEstimate } from "./priceEstimation";
+import { getFlightClassPrices, type FlightClassPrices } from "./flightClassMultipliers";
 
 export interface RecommendationInput {
   originAirportCode: OriginHub;
@@ -32,6 +33,12 @@ export interface ScoredDestination {
   // cantidad de viajeros (mismo total que costBreakdown.flightUSD) —
   // motor de estimación de precios, 2026-08-10. Ver priceEstimation.ts.
   flightPriceRange: { minUSD: number; maxUSD: number; confidence: number };
+  // Economic/standard/premium — 2026-08-17, ver flightClassMultipliers.ts.
+  // `economic` es el mismo precio de siempre (la tarifa más barata real).
+  // `standard` (premium economy) solo aparece en rutas largas (7h+),
+  // donde es un producto real — en corto/medio no existe en el mercado,
+  // así que no se muestra en vez de inventar un número.
+  flightClassPrices: FlightClassPrices;
   // Solo presentes cuando hay un precio en vivo real para esta ruta
   // (undefined con el estimado curado) — Travelpayouts ya incluye vuelos
   // con escala, no solo directos, 2026-08-10 a pedido del usuario.
@@ -184,6 +191,7 @@ export function getRecommendations(
     costBreakdown: CostBreakdown;
     totalEstimatedCostUSD: number;
     flightPriceRange: { minUSD: number; maxUSD: number; confidence: number };
+    flightClassPrices: FlightClassPrices;
     ratio: number;
   }
 
@@ -224,11 +232,12 @@ export function getRecommendations(
       maxUSD: flightEstimate.maxPriceUSD * totalTravelers,
       confidence: flightEstimate.confidence,
     };
+    const flightClassPrices = getFlightClassPrices(costBreakdown.flightUSD, snapshot.avgFlightDurationMinutes);
 
     const ratio = totalEstimatedCostUSD / input.budgetUSD;
     if (ratio > 1.05) continue;
 
-    candidates.push({ destination, snapshot, season, costBreakdown, totalEstimatedCostUSD, flightPriceRange, ratio });
+    candidates.push({ destination, snapshot, season, costBreakdown, totalEstimatedCostUSD, flightPriceRange, flightClassPrices, ratio });
   }
 
   if (candidates.length === 0) return [];
@@ -251,7 +260,7 @@ export function getRecommendations(
   const w = SCORING_WEIGHTS_V1.weights;
 
   for (const c of candidates) {
-    const { destination, snapshot, season, costBreakdown, totalEstimatedCostUSD, flightPriceRange, ratio } = c;
+    const { destination, snapshot, season, costBreakdown, totalEstimatedCostUSD, flightPriceRange, flightClassPrices, ratio } = c;
 
     const realValueScore = maxCost === minCost ? 100 : Math.round((100 * (maxCost - totalEstimatedCostUSD)) / (maxCost - minCost));
 
@@ -279,6 +288,7 @@ export function getRecommendations(
       totalEstimatedCostUSD,
       costBreakdown,
       flightPriceRange,
+      flightClassPrices,
       flightTransfers: snapshot.transfers,
       flightAirline: snapshot.airline,
       finalScore: Math.round(finalScore * 10) / 10,

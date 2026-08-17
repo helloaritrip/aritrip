@@ -49,6 +49,7 @@ export type { LiveFlightPrice, LiveHotelPrice } from "./livePrices";
 export { applyImageOverlay } from "./liveImages";
 export type { LiveDestinationImage } from "./liveImages";
 export { HOTEL_KEYS } from "./hotelKeys";
+export { getFlightClassPrices, classifyHaulLength, FLIGHT_CLASS_MULTIPLIERS, type HaulLength, type FlightClassPrices } from "./flightClassMultipliers";
 export { detectFlightDeals, evaluateFlightDeal, toStoredFlightDeal, fromStoredFlightDeal, MIN_DEAL_DISCOUNT_PERCENT } from "./deals";
 export type { FlightDeal, StoredFlightDeal } from "./deals";
 export { verifyGoogleIdToken } from "./googleAuth";
