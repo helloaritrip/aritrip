@@ -71,14 +71,17 @@ export type Level = "low" | "medium" | "high";
 // Ciudad de México). belize no tiene una debilidad clara, solo queda
 // superado por demasiados destinos de playa parecidos.
 //
-// Idea a futuro (NO implementada): el usuario quiere revisar si estos 6
-// tags (beach/adventure/culture/nightlife/family/honeymoon) cubren bien
-// la distribución real del catálogo — "honeymoon" hoy solo cubre 11/48
-// destinos activos vs. 20-25 en el resto de las categorías, la más
-// desbalanceada del set. Antes de tocar nada acá, sería bueno decidir si
-// ese desbalance es real (pocos destinos son genuinamente "honeymoon") o
-// un artefacto de que solo cuenta como fuente de datos coupleScore (ver
-// VIBE_SCORE_BY_INTEREST en recommend.ts) sin una revisión dedicada.
+// DESCARTADO (2026-08-17): se evaluó fundamentar los 7 vibe scores
+// (beachScore/adventureScore/natureScore/foodScore/nightlifeScore/
+// familyScore/coupleScore) en datos reales de POIs (Foursquare Places API
+// cubre los 7 en una sola fuente, incl. spa/winery/vineyard/resort como
+// proxy de coupleScore — investigado a fondo, factible y gratis dentro
+// del catálogo actual). Se descartó a propósito: son 48 destinos
+// populares que el fundador conoce bien, el sesgo que sí importaba
+// (destinos que nunca aparecían en resultados, ver arriba) resultó ser
+// de valueRating/travelTime, no de estos scores — el esfuerzo de
+// fundamentarlos externamente no se justifica hoy. Revisar si el
+// catálogo crece mucho más allá de lo que se puede curar de memoria.
 export type InterestTag = "beach" | "adventure" | "culture" | "nightlife" | "family" | "honeymoon";
 
 // avgTempC (2026-08-16, curación con datos reales) — antes tipeado a
