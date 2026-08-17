@@ -185,19 +185,26 @@ function buildReasons(
 // reportado por el usuario: $3000 de presupuesto, 5 resultados, ninguno
 // pasaba de 50% de uso.
 //
-// La regla nueva arma 5 bandas por % de presupuesto usado y toma el
-// mejor finalScore DENTRO de cada banda — así el resultado siempre
-// cuenta una historia completa (barato → usa casi todo el presupuesto)
-// en vez de 5 variaciones del mismo rango de precio.
-const BUDGET_BAND_MAX_RATIOS = [0.35, 0.55, 0.75, 0.9, Infinity];
+// La regla arma 4 bandas por % de presupuesto usado (50-65/65-80/80-90/
+// 90-105) y toma el mejor finalScore DENTRO de cada banda — así el
+// resultado siempre cuenta una historia completa (usa poco más de la
+// mitad → usa casi todo el presupuesto) en vez de 5 variaciones del
+// mismo rango de precio. Piso duro en 50% (2026-08-17, ajustado a pedido
+// del usuario tras ver el primer resultado — el mínimo original no tenía
+// piso y seguía sintiéndose bajo): nada por debajo de 50% de uso del
+// presupuesto entra al set final, ni siquiera como relleno.
+const BUDGET_MIN_RATIO = 0.5;
+const BUDGET_BAND_MAX_RATIOS = [0.65, 0.8, 0.9, 1.05];
 
 function selectWithBudgetSpread(results: ScoredDestination[], budgetUSD: number, limit: number): ScoredDestination[] {
+  const eligible = results.filter((r) => r.totalEstimatedCostUSD / budgetUSD >= BUDGET_MIN_RATIO);
+
   const selected: ScoredDestination[] = [];
   const usedIds = new Set<string>();
 
-  let bandMin = -Infinity;
+  let bandMin = BUDGET_MIN_RATIO - 0.0001; // epsilon para que ratio === 0.5 exacto entre en la primera banda
   for (const bandMax of BUDGET_BAND_MAX_RATIOS) {
-    const best = results
+    const best = eligible
       .filter((r) => !usedIds.has(r.destination.id))
       .filter((r) => {
         const ratio = r.totalEstimatedCostUSD / budgetUSD;
@@ -213,9 +220,12 @@ function selectWithBudgetSpread(results: ScoredDestination[], budgetUSD: number,
 
   // Relleno si alguna banda quedó vacía (ej. presupuesto muy ajustado, no
   // hay ningún candidato usando 90%+) — completa con lo mejor que quede
-  // disponible en vez de devolver menos de `limit` sin necesidad.
+  // disponible (siempre >= 50%, ver `eligible`) en vez de devolver menos
+  // de `limit` sin necesidad. Con 4 bandas y hasta 5 resultados, el
+  // relleno también es lo que naturalmente deja 2 opciones en la banda
+  // con más candidatos reales cuando hace falta.
   if (selected.length < limit) {
-    const remaining = results.filter((r) => !usedIds.has(r.destination.id)).sort((a, b) => b.finalScore - a.finalScore);
+    const remaining = eligible.filter((r) => !usedIds.has(r.destination.id)).sort((a, b) => b.finalScore - a.finalScore);
     for (const r of remaining) {
       if (selected.length >= limit) break;
       selected.push(r);
