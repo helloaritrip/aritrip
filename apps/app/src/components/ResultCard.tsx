@@ -31,6 +31,11 @@ export type RecommendationResult = {
   subScores: SubScores;
   reasons: string[];
   rank: number;
+  // Variedad de presupuesto (2026-08-17) — reemplaza el "#N match"
+  // genérico: dice explícitamente qué rol cumple esta opción dentro del
+  // set de 5 (barata, uso completo del presupuesto, etc.), ver
+  // selectWithBudgetSpread en recommend.ts.
+  dealLabel?: "Great deal" | "Best value" | "Worth the upgrade" | "Best use of your budget";
   imageQuery: string;
   imageUrl?: string | null;
   weather: { avgTempMinC: number; avgTempMaxC: number; rainfallLevel: "low" | "medium" | "high" } | null;
@@ -171,7 +176,7 @@ export function ResultCard({
                 lejos del número; ahora va pegado al precio mismo. */}
             <p className="text-xs text-muted">Estimate — confirm at booking</p>
           </div>
-          <p className="text-xs text-muted">#{result.rank} match</p>
+          <p className="text-xs font-medium text-muted">{result.dealLabel ?? `#${result.rank} match`}</p>
         </div>
 
         {topReason && (

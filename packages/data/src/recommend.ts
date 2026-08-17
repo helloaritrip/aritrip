@@ -48,7 +48,12 @@ export interface ScoredDestination {
   subScores: Recommendation["subScores"];
   reasons: string[];
   rank: number;
+  // Etiqueta de variedad de presupuesto (2026-08-17) — ver el comentario
+  // sobre BUDGET_BAND_MAX_RATIOS más abajo para el porqué.
+  dealLabel: DealLabel;
 }
+
+export type DealLabel = "Great deal" | "Best value" | "Worth the upgrade" | "Best use of your budget";
 
 function budgetFit(ratio: number): number {
   if (ratio > 1.0) return Math.max(0, 100 - (ratio - 1.0) * 400);
@@ -165,6 +170,73 @@ function buildReasons(
     .sort((a, b) => b.weight - a.weight)
     .slice(0, 3)
     .map((c) => c.text);
+}
+
+// Selección con variedad real de presupuesto (2026-08-17) — a pedido del
+// usuario: tomar el top-N por finalScore clusterizaba en destinos baratos.
+// Causa raíz real, no solo percepción: budgetFit() da 100 a CUALQUIER
+// ratio <= 0.95 (usar 20% o 90% del presupuesto puntúa igual), y
+// valueRating (ver el bloque de "Value real" más arriba) normaliza
+// min-max contra el resto de candidatos de ESTA búsqueda — el más barato
+// del set siempre saca 100 ahí, y todo lo demás se penaliza en relación a
+// él. Ninguno de los 7 sub-scores premia gastar más, así que un
+// ranking puro por finalScore casi nunca deja subir del 40-50% del
+// presupuesto aunque haya opciones mejores más caras. Ejemplo real
+// reportado por el usuario: $3000 de presupuesto, 5 resultados, ninguno
+// pasaba de 50% de uso.
+//
+// La regla nueva arma 5 bandas por % de presupuesto usado y toma el
+// mejor finalScore DENTRO de cada banda — así el resultado siempre
+// cuenta una historia completa (barato → usa casi todo el presupuesto)
+// en vez de 5 variaciones del mismo rango de precio.
+const BUDGET_BAND_MAX_RATIOS = [0.35, 0.55, 0.75, 0.9, Infinity];
+
+function selectWithBudgetSpread(results: ScoredDestination[], budgetUSD: number, limit: number): ScoredDestination[] {
+  const selected: ScoredDestination[] = [];
+  const usedIds = new Set<string>();
+
+  let bandMin = -Infinity;
+  for (const bandMax of BUDGET_BAND_MAX_RATIOS) {
+    const best = results
+      .filter((r) => !usedIds.has(r.destination.id))
+      .filter((r) => {
+        const ratio = r.totalEstimatedCostUSD / budgetUSD;
+        return ratio > bandMin && ratio <= bandMax;
+      })
+      .sort((a, b) => b.finalScore - a.finalScore)[0];
+    if (best) {
+      selected.push(best);
+      usedIds.add(best.destination.id);
+    }
+    bandMin = bandMax;
+  }
+
+  // Relleno si alguna banda quedó vacía (ej. presupuesto muy ajustado, no
+  // hay ningún candidato usando 90%+) — completa con lo mejor que quede
+  // disponible en vez de devolver menos de `limit` sin necesidad.
+  if (selected.length < limit) {
+    const remaining = results.filter((r) => !usedIds.has(r.destination.id)).sort((a, b) => b.finalScore - a.finalScore);
+    for (const r of remaining) {
+      if (selected.length >= limit) break;
+      selected.push(r);
+      usedIds.add(r.destination.id);
+    }
+  }
+
+  selected.sort((a, b) => a.totalEstimatedCostUSD - b.totalEstimatedCostUSD);
+  return selected.slice(0, limit).map((r, i, arr) => ({ ...r, rank: i + 1, dealLabel: assignDealLabel(i, arr.length) }));
+}
+
+// Etiqueta por posición relativa en el set final entregado, no por la
+// banda de origen — así queda consistente incluso cuando el relleno de
+// arriba tuvo que completar una banda vacía con otra opción.
+function assignDealLabel(index: number, total: number): DealLabel {
+  if (total <= 1) return "Best value";
+  const frac = index / (total - 1);
+  if (frac === 0) return "Great deal";
+  if (frac === 1) return "Best use of your budget";
+  if (frac >= 0.75) return "Worth the upgrade";
+  return "Best value";
 }
 
 export function getRecommendations(
@@ -294,10 +366,10 @@ export function getRecommendations(
       finalScore: Math.round(finalScore * 10) / 10,
       subScores,
       reasons: buildReasons(destination, subScores, ratio, input.interests),
-      rank: 0, // se asigna abajo, tras ordenar
+      rank: 0, // se asigna abajo
+      dealLabel: "Best value", // placeholder — se recalcula abajo, ver assignDealLabel
     });
   }
 
-  results.sort((a, b) => b.finalScore - a.finalScore);
-  return results.slice(0, limit).map((r, i) => ({ ...r, rank: i + 1 }));
+  return selectWithBudgetSpread(results, input.budgetUSD, limit);
 }

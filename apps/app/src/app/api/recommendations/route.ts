@@ -111,6 +111,7 @@ export async function POST(request: Request) {
           confidence: r.flightPriceRange.confidence,
         },
         flightClassPrices: r.flightClassPrices,
+        dealLabel: r.dealLabel,
         flightTransfers: r.flightTransfers ?? null,
         flightAirline: r.flightAirline ?? null,
         finalScore: r.finalScore,
