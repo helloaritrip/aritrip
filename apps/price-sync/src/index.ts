@@ -619,6 +619,40 @@ export default {
       return new Response("Not found", { status: 404 });
     }
     const mode = url.searchParams.get("mode");
+    // ?mode=gaps — diagnóstico de solo lectura (no gasta cupo de SerpApi
+    // ni escribe nada), para ver qué rutas elegiría el próximo lote y
+    // cuántos destinos siguen en 0 cobertura total.
+    if (mode === "gaps") {
+      const credentials = credentialsFrom(env);
+      const liveDocs = await listDocuments("livePrices", credentials);
+      const liveEntries = liveDocs.filter((d) => d.id !== "_cursor");
+      const liveCountByDest = new Map<string, number>();
+      for (const doc of liveEntries) {
+        const id = doc.destinationId as string;
+        liveCountByDest.set(id, (liveCountByDest.get(id) ?? 0) + 1);
+      }
+      const zeroCoverage = destinations.filter((d) => (liveCountByDest.get(d.id) ?? 0) === 0).map((d) => d.id);
+      const nextBatch = await getLeastCoveredGapRoutes(credentials, SERPAPI_BATCH_SIZE);
+      const inspectId = url.searchParams.get("destinationId");
+      const inspectRoutes = inspectId
+        ? liveEntries
+            .filter((d) => d.destinationId === inspectId)
+            .map((d) => ({ origin: d.originAirportCode, price: d.avgFlightCostUSD, source: d.source ?? "provider_api", capturedAt: d.capturedAt }))
+        : undefined;
+      return new Response(
+        JSON.stringify(
+          {
+            totalLiveRoutes: liveEntries.length,
+            destinationsWithZeroCoverage: zeroCoverage,
+            nextBatchWouldPick: nextBatch.map((p) => `${p.destinationId} from ${p.originAirportCode}`),
+            ...(inspectRoutes ? { [`${inspectId}LiveRoutes`]: inspectRoutes } : {}),
+          },
+          null,
+          2
+        ),
+        { headers: { "Content-Type": "application/json" } }
+      );
+    }
     const summary = mode === "hotels" ? await runHotelBatch(env) : mode === "serpapi" ? await runSerpApiBatch(env) : await runFlightBatch(env);
     return new Response(JSON.stringify(summary, null, 2), { headers: { "Content-Type": "application/json" } });
   },
