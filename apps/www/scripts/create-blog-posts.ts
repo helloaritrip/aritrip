@@ -92,8 +92,12 @@ function buildPost(opts: {
 const caribbean = buildPost({
   slug: "best-caribbean-destinations-for-us-travelers",
   title: "The 12 Most-Searched Caribbean Destinations for US Travelers",
+  // Año quitado a propósito (2026-08-19, auditoría de SEO) — decía
+  // "2024-2025 visitor data" pese a haberse publicado en agosto 2026, se
+  // leía desactualizado. Sin un año fijo, la descripción no vuelve a
+  // quedar vieja sola con el tiempo.
   description:
-    "Ranked with real 2024-2025 visitor data — the 12 Caribbean destinations Americans are actually searching for and booking right now, from Cancún to Turks and Caicos.",
+    "Ranked with real visitor data — the 12 Caribbean destinations Americans are actually searching for and booking right now, from Cancún to Turks and Caicos.",
   featuredImageQuery: "caribbean turquoise beach aerial palm trees",
   heroSubheading: "Ranked with real visitor and search data, not guesses — see which of these actually fits your budget.",
   intro:
