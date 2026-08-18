@@ -53,6 +53,16 @@ function percentile(sorted: number[], p: number): number {
 
 const pricesByRoute = new Map<string, number[]>();
 const pricesByRouteBucket = new Map<string, Map<number, number[]>>();
+// Capturas individuales por ruta (2026-08-18, a pedido del usuario: "que
+// me muestre en una tabla los datos") — la tabla de detalle en el cliente
+// necesita las filas crudas, no solo los agregados. Tope de 60 por ruta
+// (más recientes primero) para que una ruta con mucho historial no infle
+// el JSON de la página — el resumen (min/max/mediana/por ventana) igual
+// se calcula sobre TODAS las capturas, no solo las 60 mostradas.
+const capturesByRoute = new Map<
+  string,
+  { capturedAt: string; price: number; source: string; advanceMonthsBucket: number | null }[]
+>();
 for (const doc of priceHistoryDocs) {
   if (doc.type !== "flight") continue;
   const price = doc.avgFlightCostUSD as number;
@@ -71,11 +81,31 @@ for (const doc of priceHistoryDocs) {
     byBucket.set(bucket, bucketList);
     pricesByRouteBucket.set(key, byBucket);
   }
+
+  const captures = capturesByRoute.get(key) ?? [];
+  captures.push({
+    capturedAt: doc.capturedAt as string,
+    price,
+    source: (doc.source as string) ?? "provider_api",
+    advanceMonthsBucket: typeof bucket === "number" ? bucket : null,
+  });
+  capturesByRoute.set(key, captures);
+}
+for (const [key, captures] of capturesByRoute) {
+  captures.sort((a, b) => (a.capturedAt < b.capturedAt ? 1 : -1));
+  capturesByRoute.set(key, captures.slice(0, 60));
 }
 
 const priceRangeByRoute = new Map<
   string,
-  { min: number; max: number; count: number; p50: number; byBucket: { monthsAhead: number; min: number; max: number; count: number }[] }
+  {
+    min: number;
+    max: number;
+    count: number;
+    p50: number;
+    byBucket: { monthsAhead: number; min: number; max: number; count: number }[];
+    captures: { capturedAt: string; price: number; source: string; advanceMonthsBucket: number | null }[];
+  }
 >();
 for (const [key, prices] of pricesByRoute) {
   const sorted = [...prices].sort((a, b) => a - b);
@@ -93,6 +123,7 @@ for (const [key, prices] of pricesByRoute) {
     count: sorted.length,
     p50: percentile(sorted, 50),
     byBucket,
+    captures: capturesByRoute.get(key) ?? [],
   });
 }
 
@@ -212,6 +243,7 @@ const pageData = {
       count: number;
       p50: number;
       byBucket: { monthsAhead: number; min: number; max: number; count: number }[];
+      captures: { capturedAt: string; price: number; source: string; advanceMonthsBucket: number | null }[];
     } | null;
   };
   type LiveHotel = { destinationId: string; budget: number | null; mid: number; premium: number | null; capturedAt: string };
@@ -350,34 +382,83 @@ const pageData = {
     if (flights.length === 0 && routesWithoutLiveData.length === 0) {
       flightsResult.innerHTML = `<p class="p-4 text-sm text-muted">No flight routes tracked for this destination.</p>`;
     } else {
+      const sourceLabel = (s: string) => (s === "serpapi" ? "SerpApi" : s === "manual" ? "Manual" : "Travelpayouts");
+      const bucketLabel = (b: number | null) => (b === null ? "—" : `~${b * 30}d`);
+      const formatCapturedAt = (iso: string) => new Date(iso).toISOString().slice(0, 16).replace("T", " ");
+
+      // Cada ruta es un <details> (2026-08-18, a pedido del usuario: "haga
+      // clic en atlanta y me muestre en una tabla los datos") — clic
+      // expande una tabla con cada captura individual de priceHistory
+      // (fecha, fuente, ventana de anticipación, precio), no solo el
+      // resumen que ya se ve en la fila. Nativo, sin JS extra para el
+      // toggle en sí (mismo patrón que FAQAccordion en el resto del sitio).
       const liveRows = flights
-        .map(
-          (f) => `
-        <div class="flex items-center justify-between gap-3 p-4">
-          <div>
-            <p class="text-sm font-medium text-ink">${f.originLabel}</p>
-            <p class="text-xs text-muted">${f.airline ? f.airline + " · " : ""}${Math.round(f.avgFlightDurationMinutes)} min${
-              f.transfers === null ? "" : f.transfers === 0 ? " · Nonstop" : ` · ${f.transfers} stop${f.transfers > 1 ? "s" : ""}`
-            }</p>
-          </div>
-          <div class="text-right">
-            <p class="text-sm font-semibold text-accent">$${f.avgFlightCostUSD}</p>
-            ${
-              f.range && f.range.count >= 2
-                ? `<p class="text-xs text-muted">Observed $${f.range.min}–$${f.range.max}, median $${f.range.p50} (${f.range.count} captures)</p>`
-                : ""
-            }
-            ${
-              f.range && f.range.byBucket.length >= 2
-                ? `<p class="text-xs text-muted">${f.range.byBucket
-                    .map((b) => `~${b.monthsAhead * 30}d: $${b.min}${b.max !== b.min ? `–$${b.max}` : ""}`)
-                    .join(" · ")}</p>`
-                : ""
-            }
-            <p class="text-xs text-muted">Refreshed ${timeAgo(f.capturedAt)}</p>
-          </div>
-        </div>`
-        )
+        .map((f) => {
+          const summaryRow = `
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-4 [&::-webkit-details-marker]:hidden">
+            <div>
+              <p class="text-sm font-medium text-ink">${f.originLabel}</p>
+              <p class="text-xs text-muted">${f.airline ? f.airline + " · " : ""}${Math.round(f.avgFlightDurationMinutes)} min${
+                f.transfers === null ? "" : f.transfers === 0 ? " · Nonstop" : ` · ${f.transfers} stop${f.transfers > 1 ? "s" : ""}`
+              }</p>
+            </div>
+            <div class="text-right">
+              <p class="text-sm font-semibold text-accent">$${f.avgFlightCostUSD}</p>
+              ${
+                f.range && f.range.count >= 2
+                  ? `<p class="text-xs text-muted">Observed $${f.range.min}–$${f.range.max}, median $${f.range.p50} (${f.range.count} captures)</p>`
+                  : ""
+              }
+              ${
+                f.range && f.range.byBucket.length >= 2
+                  ? `<p class="text-xs text-muted">${f.range.byBucket
+                      .map((b) => `~${b.monthsAhead * 30}d: $${b.min}${b.max !== b.min ? `–$${b.max}` : ""}`)
+                      .join(" · ")}</p>`
+                  : ""
+              }
+              <p class="text-xs text-muted">Refreshed ${timeAgo(f.capturedAt)}</p>
+            </div>
+          </summary>`;
+
+          if (!f.range || f.range.captures.length === 0) {
+            return `<details class="group">${summaryRow}</details>`;
+          }
+
+          const tableRows = f.range.captures
+            .map(
+              (c) => `
+              <tr class="border-t border-rule">
+                <td class="py-1.5 pr-3 text-xs text-muted">${formatCapturedAt(c.capturedAt)}</td>
+                <td class="py-1.5 pr-3 text-xs text-muted">${sourceLabel(c.source)}</td>
+                <td class="py-1.5 pr-3 text-xs text-muted">${bucketLabel(c.advanceMonthsBucket)}</td>
+                <td class="py-1.5 text-xs font-medium text-ink">$${c.price}</td>
+              </tr>`
+            )
+            .join("");
+
+          return `
+          <details class="group">
+            ${summaryRow}
+            <div class="border-t border-rule bg-bg/50 px-4 pb-4 pt-3">
+              <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                ${f.originLabel} → ${resultName.textContent} — min $${f.range.min} · median $${f.range.p50} · max $${f.range.max} (${f.range.count} captures)
+              </p>
+              <div class="overflow-x-auto">
+                <table class="w-full min-w-[400px] border-collapse text-left">
+                  <thead>
+                    <tr>
+                      <th class="pb-1.5 pr-3 text-xs font-semibold uppercase tracking-wide text-muted">Captured</th>
+                      <th class="pb-1.5 pr-3 text-xs font-semibold uppercase tracking-wide text-muted">Source</th>
+                      <th class="pb-1.5 pr-3 text-xs font-semibold uppercase tracking-wide text-muted">Window</th>
+                      <th class="pb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>${tableRows}</tbody>
+                </table>
+              </div>
+            </div>
+          </details>`;
+        })
         .join("");
       const pendingRows = routesWithoutLiveData
         .sort((a, b) => (data.originLabels[a] || a).localeCompare(data.originLabels[b] || b))

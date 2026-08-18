@@ -34,6 +34,7 @@ import {
   getDocument,
   setDocument,
   listDocuments,
+  queryDocuments,
   writeFirestoreDocument,
   livePriceDocId,
   HOTEL_KEYS,
@@ -61,6 +62,12 @@ export interface Env {
 // el dispatcher de abajo sepa cuál corrida le toca a cada uno.
 const HOTEL_CRON = "5-59/20 * * * *";
 const SERPAPI_CRON = "30 6 * * *";
+// Corre cada 15 min igual que el cron principal de vuelos, corrido 8 min
+// (nunca coincide con :00/:15/:30/:45 ni con el de hoteles en :05/:25/:45)
+// para que las dos corridas de Travelpayouts no le peguen encima al mismo
+// segundo — cada invocación termina bien dentro del minuto (20 rutas ×
+// ~1.1s ≈ 22s), así que alcanza con no arrancar al mismo tiempo.
+const PRIORITY_CRON = "8-59/15 * * * *";
 
 // Encontrado en producción (2026-08-07): con 40 tiraba "Too many
 // subrequests by single Worker invocation" — el plan free de Workers
@@ -344,9 +351,16 @@ async function runFlightBatch(env: Env): Promise<{ processed: number; written: n
   const curatedSnapshots = generateAllPriceSnapshots(destinations);
   const dealUpdates: { destinationId: string; originAirportCode: string; deal: ReturnType<typeof evaluateFlightDeal> }[] = [];
 
-  // Ver advanceMonthsForCycle — TODO el lote de esta corrida usa la misma
-  // ventana de anticipación (rota día a día, no ruta a ruta).
-  const monthsAhead = advanceMonthsForCycle();
+  // Ancla FIJA en ~30 días (2026-08-18, corregido tras darme cuenta del
+  // problema en el camino) — esta corrida escribe `livePrices`, el precio
+  // que el usuario ve en el sitio. Si acá rotara la ventana día a día
+  // (como se intentó primero), el mismo destino mostraría un precio
+  // distinto solo por casualidad de qué ventana tocaba ese día, sin que el
+  // mercado se haya movido — ruido que el usuario no debería ver. La
+  // rotación de ventanas (30/60/90) vive SOLO en runPriorityBatch, que
+  // alimenta `priceHistory` (investigación) y no toca `livePrices` salvo
+  // cuando cae justo en la ventana de 30 días.
+  const monthsAhead = 1;
   const period = periodForMonthsAhead(monthsAhead);
 
   for (const pair of batch) {
@@ -620,7 +634,9 @@ async function runTravelpayoutsGapBatch(env: Env): Promise<{ processed: number; 
 
   let written = 0;
   let skipped = 0;
-  const monthsAhead = advanceMonthsForCycle();
+  // Ancla fija en ~30 días, mismo motivo que en runFlightBatch — esta
+  // corrida también escribe `livePrices`.
+  const monthsAhead = 1;
   const period = periodForMonthsAhead(monthsAhead);
 
   for (const pair of gapPairs) {
@@ -658,6 +674,135 @@ async function runTravelpayoutsGapBatch(env: Env): Promise<{ processed: number; 
   await updateDealsIndex(credentials, dealUpdates);
 
   return { processed: gapPairs.length, written, skipped };
+}
+
+// ---------- Muestreo profundo de rutas prioritarias (2026-08-18) ----------
+//
+// A pedido del usuario ("seamos recursivos... exprimir al máximo las
+// herramientas gratis"), tras adaptar el consejo del head (agrupar por
+// anticipación 7/14/30/60/90, sacar percentiles) a lo que Travelpayouts
+// permite de forma confiable (caché pasivo, granularidad de mes). En vez
+// de esperar ~3 días a que la rotación día-a-día del cron principal
+// (runFlightBatch) pase por las 3 ventanas para CADA una de las 952 rutas,
+// esta corrida aparte barre solo un subconjunto chico y prioritario, una
+// combinación (ruta × ventana) por vez, así ese subconjunto junta las 3
+// ventanas en ~1 día en vez de ~3.
+//
+// Prioridad = tráfico REAL, no una lista inventada (a pedido explícito del
+// usuario): salió de `?mode=top-routes` el 2026-08-18, cruzando los
+// orígenes más buscados (search_performed) con los destinos más
+// clickeados (recommendation_clicked) de los últimos ~1000 eventos reales.
+// OJO — esa lectura NO filtra tráfico propio de pruebas de sesiones
+// anteriores que no llevaban isTest:true (el filtro isTest solo excluye
+// eventos marcados explícitamente); PTY dominando el conteo casi seguro
+// reflejaba en parte uso del propio fundador, no solo visitantes. Es la
+// mejor señal real disponible hoy, no dato perfecto — conviene volver a
+// correr `?mode=top-routes` dentro de unas semanas (cuando haya más
+// tráfico orgánico post-SEO) y reemplazar las 2 listas de abajo a mano.
+const PRIORITY_ORIGIN_HUBS = ["PTY", "DFW", "MIA", "ATL", "JFK", "LAX", "GDL", "DEN", "PHX", "YUL"];
+const PRIORITY_DESTINATION_IDS = [
+  "las-vegas",
+  "medellin",
+  "cancun",
+  "curacao",
+  "miami",
+  "grand-cayman",
+  "whistler",
+  "cabo-san-lucas",
+  "banff",
+  "oaxaca",
+  "aspen",
+  "aruba",
+  "mazatlan",
+  "puerto-vallarta",
+  "montego-bay",
+  "orlando",
+  "san-diego",
+  "panama-city",
+  "costa-rica-guanacaste",
+  "guadalajara",
+];
+
+function buildPriorityRoutes(): RoutePair[] {
+  return buildAllRoutePairs().filter(
+    (p) => PRIORITY_ORIGIN_HUBS.includes(p.originAirportCode) && PRIORITY_DESTINATION_IDS.includes(p.destinationId)
+  );
+}
+
+// 197 rutas × 3 ventanas = 591 combinaciones. A 20/lote cada 15 min
+// (PRIORITY_CRON), un lote completo tarda ~7.5h — dentro de 1 día se
+// completan más de 2 vueltas enteras a las 3 ventanas para todo el
+// subconjunto prioritario.
+const PRIORITY_BATCH_SIZE = 20;
+
+async function runPriorityBatch(env: Env): Promise<{ processed: number; written: number; skipped: number; nextOffset: number; total: number }> {
+  const credentials = credentialsFrom(env);
+  const priorityRoutes = buildPriorityRoutes();
+
+  const sequence: { pair: RoutePair; monthsAhead: number }[] = [];
+  for (const monthsAhead of ADVANCE_MONTHS_BUCKETS) {
+    for (const pair of priorityRoutes) sequence.push({ pair, monthsAhead });
+  }
+
+  const cursorDoc = await getDocument("livePrices", "_priorityCursor", credentials);
+  const offset = typeof cursorDoc?.offset === "number" ? cursorDoc.offset : 0;
+
+  const batch: { pair: RoutePair; monthsAhead: number }[] = [];
+  for (let i = 0; i < PRIORITY_BATCH_SIZE && i < sequence.length; i++) {
+    batch.push(sequence[(offset + i) % sequence.length]);
+  }
+
+  let written = 0;
+  let skipped = 0;
+  const destById = new Map(destinations.map((d) => [d.id, d]));
+  const curatedSnapshots = generateAllPriceSnapshots(destinations);
+  const dealUpdates: { destinationId: string; originAirportCode: string; deal: ReturnType<typeof evaluateFlightDeal> }[] = [];
+
+  for (const { pair, monthsAhead } of batch) {
+    try {
+      const period = periodForMonthsAhead(monthsAhead);
+      const fare = await fetchCheapestFare(pair, env.TRAVELPAYOUTS_TOKEN, period);
+      if (!fare) {
+        skipped += 1;
+      } else {
+        const capturedAt = new Date().toISOString();
+        const liveEntry = {
+          destinationId: pair.destinationId,
+          originAirportCode: pair.originAirportCode,
+          avgFlightCostUSD: Math.round(fare.price),
+          avgFlightDurationMinutes: Math.round(fare.durationOneWay),
+          transfers: fare.transfers,
+          airline: fare.airline,
+          searchPeriod: period,
+          capturedAt,
+          advanceMonthsBucket: monthsAhead,
+        };
+        // Siempre alimenta priceHistory (el objetivo real de este cron).
+        // Solo pisa `livePrices`/dealsCache cuando cae en la ventana de
+        // ~30 días — la misma que ya usan runFlightBatch/GapBatch — para
+        // no hacerle ver al usuario un precio que saltó de anticipación
+        // sin que el mercado se haya movido.
+        await recordFlightPriceHistory(liveEntry, "provider_api", credentials);
+        if (monthsAhead === 1) {
+          await setDocument("livePrices", livePriceDocId(pair.destinationId, pair.originAirportCode), liveEntry, credentials);
+          const deal = evaluateFlightDeal(liveEntry, destById.get(pair.destinationId), curatedSnapshots);
+          dealUpdates.push({ destinationId: pair.destinationId, originAirportCode: pair.originAirportCode, deal });
+        }
+        written += 1;
+      }
+    } catch (err) {
+      console.error(`[price-sync] priority ${pair.destinationId} from ${pair.originAirportCode} (${monthsAhead}mo): failed`, err);
+      skipped += 1;
+    }
+    await delay(DELAY_BETWEEN_REQUESTS_MS);
+  }
+
+  if (dealUpdates.length > 0) await updateDealsIndex(credentials, dealUpdates);
+
+  const nextOffset = (offset + PRIORITY_BATCH_SIZE) % sequence.length;
+  await setDocument("livePrices", "_priorityCursor", { offset: nextOffset }, credentials);
+
+  return { processed: batch.length, written, skipped, nextOffset, total: sequence.length };
 }
 
 // ---------- Hoteles (Xotelo, un hotel ancla curado por destino) ----------
@@ -760,8 +905,21 @@ async function runHotelBatch(env: Env): Promise<{ processed: number; written: nu
 export default {
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     const job =
-      controller.cron === HOTEL_CRON ? runHotelBatch(env) : controller.cron === SERPAPI_CRON ? runSerpApiBatch(env) : runFlightBatch(env);
-    const label = controller.cron === HOTEL_CRON ? "hotels" : controller.cron === SERPAPI_CRON ? "serpapi" : "flights";
+      controller.cron === HOTEL_CRON
+        ? runHotelBatch(env)
+        : controller.cron === SERPAPI_CRON
+          ? runSerpApiBatch(env)
+          : controller.cron === PRIORITY_CRON
+            ? runPriorityBatch(env)
+            : runFlightBatch(env);
+    const label =
+      controller.cron === HOTEL_CRON
+        ? "hotels"
+        : controller.cron === SERPAPI_CRON
+          ? "serpapi"
+          : controller.cron === PRIORITY_CRON
+            ? "priority"
+            : "flights";
     ctx.waitUntil(
       job
         .then((summary) => console.log(`[price-sync] ${label} batch done`, summary))
@@ -877,8 +1035,73 @@ export default {
             interpretation:
               avgRatio === null
                 ? "Todavía no hay rutas con ambas fuentes en priceHistory — falta acumular más días."
-                : `En promedio Travelpayouts muestra ${Math.round((1 - avgRatio) * 100)}% menos que SerpApi en estas rutas.`,
+                : avgRatio < 1
+                  ? `En promedio Travelpayouts muestra ${Math.round((1 - avgRatio) * 100)}% menos que SerpApi en estas rutas.`
+                  : `En promedio Travelpayouts muestra ${Math.round((avgRatio - 1) * 100)}% más que SerpApi en estas rutas.`,
             comparisons,
+          },
+          null,
+          2
+        ),
+        { headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // ?mode=top-routes — diagnóstico de solo lectura (2026-08-18, para
+    // priorizar el muestreo profundo de PRIORITY_ROUTES con datos de
+    // tráfico REAL en vez de adivinar una lista — a pedido explícito del
+    // usuario de no inventar rutas fuera de lo que ya manejamos). Cuenta
+    // origen (de search_performed) y destino (de recommendation_clicked,
+    // señal más fuerte que "shown" — es interés real, no solo que se le
+    // mostró) sobre los últimos eventos reales, cruza contra las rutas que
+    // el catálogo ya soporta (buildAllRoutePairs) y devuelve las que más
+    // aparecen de cada lado. No se llama en el cron — es manual, para
+    // recalcular PRIORITY_ROUTES cada tanto a mano, no en cada corrida
+    // (leer `events` completo sería caro hacerlo seguido).
+    if (mode === "top-routes") {
+      const credentials = credentialsFrom(env);
+      const recentEvents = await queryDocuments("events", credentials, {
+        orderByField: "createdAt",
+        direction: "DESCENDING",
+        limit: 2000,
+      });
+
+      const originCounts = new Map<string, number>();
+      const destinationCounts = new Map<string, number>();
+      for (const ev of recentEvents) {
+        if (ev.isTest === true) continue; // no contar tráfico de QA propio
+        if (ev.name === "search_performed" && typeof ev.originAirportCode === "string") {
+          originCounts.set(ev.originAirportCode, (originCounts.get(ev.originAirportCode) ?? 0) + 1);
+        }
+        if (ev.name === "recommendation_clicked" && typeof ev.destinationId === "string") {
+          destinationCounts.set(ev.destinationId, (destinationCounts.get(ev.destinationId) ?? 0) + 1);
+        }
+      }
+
+      const topN = (counts: Map<string, number>, n: number) =>
+        [...counts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, n)
+          .map(([id, count]) => ({ id, count }));
+
+      const topOrigins = topN(originCounts, 10);
+      const topDestinations = topN(destinationCounts, 40);
+      const topOriginIds = new Set(topOrigins.map((o) => o.id));
+      const topDestinationIds = new Set(topDestinations.map((d) => d.id));
+
+      const allPairs = buildAllRoutePairs();
+      const priorityCandidates = allPairs.filter(
+        (p) => topOriginIds.has(p.originAirportCode) && topDestinationIds.has(p.destinationId)
+      );
+
+      return new Response(
+        JSON.stringify(
+          {
+            eventsScanned: recentEvents.length,
+            topOrigins,
+            topDestinations,
+            priorityCandidateCount: priorityCandidates.length,
+            priorityCandidates: priorityCandidates.map((p) => `${p.destinationId} from ${p.originAirportCode}`),
           },
           null,
           2
@@ -896,7 +1119,9 @@ export default {
             ? await runSerpApiBatch(env)
             : mode === "travelpayouts-gaps"
               ? await runTravelpayoutsGapBatch(env)
-              : await runFlightBatch(env);
+              : mode === "priority"
+                ? await runPriorityBatch(env)
+                : await runFlightBatch(env);
     return new Response(JSON.stringify(summary, null, 2), { headers: { "Content-Type": "application/json" } });
   },
 } satisfies ExportedHandler<Env>;
