@@ -790,6 +790,66 @@ export default {
         { headers: { "Content-Type": "application/json" } }
       );
     }
+    // ?mode=bias-check — diagnóstico de solo lectura (2026-08-18, a pedido
+    // del usuario: "buscar el gap real contra Kiwi"). Compara, ruta por
+    // ruta, la tarifa que trajo Travelpayouts (ancla = más barata de TODO
+    // el mes, ver fetchCheapestFare) contra la que trajo SerpApi (ancla =
+    // una fecha puntual ~70 días adelante, metodológicamente más parecida
+    // a lo que un usuario ve en Kiwi) para las rutas donde `priceHistory`
+    // ya tiene AMBAS fuentes — mide con datos propios reales cuánto sesgo
+    // a la baja mete el "mínimo del mes" de Travelpayouts, en vez de
+    // asumir un número de memoria.
+    if (mode === "bias-check") {
+      const credentials = credentialsFrom(env);
+      const historyDocs = await listDocuments("priceHistory", credentials);
+      const flightDocs = historyDocs.filter((d) => d.type === "flight");
+
+      type HistoryEntry = { price: number; capturedAt: string };
+      const bySource = new Map<string, { provider_api: HistoryEntry[]; serpapi: HistoryEntry[] }>();
+      for (const doc of flightDocs) {
+        const key = livePriceDocId(doc.destinationId as string, doc.originAirportCode as string);
+        const entry = bySource.get(key) ?? { provider_api: [], serpapi: [] };
+        const price = doc.avgFlightCostUSD as number;
+        const capturedAt = doc.capturedAt as string;
+        if (doc.source === "provider_api") entry.provider_api.push({ price, capturedAt });
+        else if (doc.source === "serpapi") entry.serpapi.push({ price, capturedAt });
+        bySource.set(key, entry);
+      }
+
+      // Más reciente de cada fuente por ruta — no promedio de todo el
+      // historial, para no mezclar capturas de meses/temporadas distintas.
+      const latest = (entries: HistoryEntry[]): HistoryEntry | undefined =>
+        entries.length === 0 ? undefined : entries.reduce((a, b) => (a.capturedAt > b.capturedAt ? a : b));
+
+      const comparisons: { route: string; travelpayoutsPrice: number; serpApiPrice: number; ratio: number }[] = [];
+      for (const [route, entry] of bySource) {
+        const tp = latest(entry.provider_api);
+        const sa = latest(entry.serpapi);
+        if (!tp || !sa || sa.price <= 0) continue;
+        comparisons.push({ route, travelpayoutsPrice: tp.price, serpApiPrice: sa.price, ratio: tp.price / sa.price });
+      }
+
+      const avgRatio = comparisons.length > 0 ? comparisons.reduce((sum, c) => sum + c.ratio, 0) / comparisons.length : null;
+
+      return new Response(
+        JSON.stringify(
+          {
+            totalPriceHistoryDocs: historyDocs.length,
+            flightHistoryDocs: flightDocs.length,
+            routesWithBothSources: comparisons.length,
+            avgTravelpayoutsToSerpApiRatio: avgRatio,
+            interpretation:
+              avgRatio === null
+                ? "Todavía no hay rutas con ambas fuentes en priceHistory — falta acumular más días."
+                : `En promedio Travelpayouts muestra ${Math.round((1 - avgRatio) * 100)}% menos que SerpApi en estas rutas.`,
+            comparisons,
+          },
+          null,
+          2
+        ),
+        { headers: { "Content-Type": "application/json" } }
+      );
+    }
     const refreshDestinationId = url.searchParams.get("destinationId");
     const summary =
       mode === "hotels"

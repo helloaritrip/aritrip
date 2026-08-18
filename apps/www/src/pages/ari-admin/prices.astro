@@ -2,7 +2,7 @@
 import { env } from "cloudflare:workers";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../lib/requireAdminSession";
-import { destinations, originBaseCosts, destinationBaseStayCosts, ORIGIN_LABELS, type OriginHub } from "@aritrips/data";
+import { destinations, originBaseCosts, destinationBaseStayCosts, ORIGIN_LABELS, livePriceDocId, type OriginHub } from "@aritrips/data";
 import { getCachedCollection } from "../../lib/adminReadCache";
 
 export const prerender = false;
@@ -16,22 +16,47 @@ const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
 
 let liveFlightDocs: Record<string, unknown>[] = [];
 let liveHotelDocs: Record<string, unknown>[] = [];
+let priceHistoryDocs: Record<string, unknown>[] = [];
 let loadError: string | null = null;
 
 if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
   try {
     const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
-    const [flightDocs, hotelDocs] = await Promise.all([
+    const [flightDocs, hotelDocs, historyDocs] = await Promise.all([
       getCachedCollection("livePrices", credentials),
       getCachedCollection("liveHotelPrices", credentials),
+      getCachedCollection("priceHistory", credentials),
     ]);
     liveFlightDocs = flightDocs.filter((d) => d.id !== "_cursor");
     liveHotelDocs = hotelDocs.filter((d) => d.id !== "_cursor");
+    priceHistoryDocs = historyDocs;
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Failed to load live prices.";
   }
 } else {
   loadError = "Firestore isn't configured yet (missing secrets).";
+}
+
+// Rango real observado por ruta (2026-08-18, a pedido del usuario: "ya
+// sabemos el mínimo... sería interesante manejar el máximo que puede
+// valer") — no es un techo teórico, es el mín/máx que efectivamente
+// capturamos en `priceHistory` (Travelpayouts + SerpApi combinados) desde
+// que esa colección existe. Con 1 sola observación no hay "rango" real
+// todavía, así que el cliente solo lo muestra desde 2 capturas.
+const priceRangeByRoute = new Map<string, { min: number; max: number; count: number }>();
+for (const doc of priceHistoryDocs) {
+  if (doc.type !== "flight") continue;
+  const price = doc.avgFlightCostUSD as number;
+  if (typeof price !== "number" || price <= 0) continue;
+  const key = livePriceDocId(doc.destinationId as string, doc.originAirportCode as string);
+  const existing = priceRangeByRoute.get(key);
+  if (!existing) {
+    priceRangeByRoute.set(key, { min: price, max: price, count: 1 });
+  } else {
+    existing.min = Math.min(existing.min, price);
+    existing.max = Math.max(existing.max, price);
+    existing.count += 1;
+  }
 }
 
 // Solo los destinos que tienen datos curados (vuelo + hotel) son los que
@@ -57,6 +82,7 @@ const pageData = {
     airline: (d.airline as string) ?? "",
     transfers: typeof d.transfers === "number" ? d.transfers : null,
     capturedAt: d.capturedAt as string,
+    range: priceRangeByRoute.get(livePriceDocId(d.destinationId as string, d.originAirportCode as string)) ?? null,
   })),
   liveHotels: liveHotelDocs.map((d) => ({
     destinationId: d.destinationId as string,
@@ -143,6 +169,7 @@ const pageData = {
     airline: string;
     transfers: number | null;
     capturedAt: string;
+    range: { min: number; max: number; count: number } | null;
   };
   type LiveHotel = { destinationId: string; budget: number | null; mid: number; premium: number | null; capturedAt: string };
   type PageData = {
@@ -292,6 +319,11 @@ const pageData = {
           </div>
           <div class="text-right">
             <p class="text-sm font-semibold text-accent">$${f.avgFlightCostUSD}</p>
+            ${
+              f.range && f.range.count >= 2
+                ? `<p class="text-xs text-muted">Observed $${f.range.min}–$${f.range.max} (${f.range.count} captures)</p>`
+                : ""
+            }
             <p class="text-xs text-muted">Refreshed ${timeAgo(f.capturedAt)}</p>
           </div>
         </div>`
