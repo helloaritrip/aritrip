@@ -425,7 +425,27 @@ async function fetchSerpApiFare(pair: RoutePair, apiKey: string): Promise<Travel
     return null;
   }
 
-  const cheapest = options.reduce((min, o) => (o.price < min.price ? o : min));
+  // Guardrail de sensatez (2026-08-18, bug real encontrado en auditoría):
+  // "la más barata" a veces resulta ser una escala pésima de verdad — visto
+  // en vivo con datos reales, Cusco desde ATL quedó con total_duration=2975
+  // (49.6h) y Turks and Caicos con varias de 18-24h, todas vía Air Canada
+  // por Toronto (aeropuertos chicos, poca frecuencia). El campo se lee
+  // bien (confirmado contra la respuesta cruda: incluye la espera real de
+  // la escala) — el problema es no filtrar por duración antes de elegir
+  // "la más barata", igual que ya se protege el precio con
+  // MAX_TOTAL_MULTIPLIER en priceEstimation.ts. Se prefiere la más barata
+  // CON duración razonable; si ninguna la tiene, se cae a la más barata
+  // igual (mejor un dato real raro que ningún dato).
+  const MAX_REASONABLE_DURATION_MINUTES = 20 * 60; // 20h
+  const reasonable = options.filter((o) => (o.total_duration ?? 0) <= MAX_REASONABLE_DURATION_MINUTES);
+  const pool = reasonable.length > 0 ? reasonable : options;
+  if (reasonable.length === 0) {
+    console.warn(
+      `[price-sync] serpapi ${pair.destinationId} from ${pair.originAirportCode}: every option has an unreasonable duration, using cheapest anyway`
+    );
+  }
+
+  const cheapest = pool.reduce((min, o) => (o.price < min.price ? o : min));
   return {
     price: cheapest.price,
     durationOneWay: cheapest.total_duration ?? 0,
@@ -729,12 +749,22 @@ export default {
       const inspectRoutes = inspectId
         ? liveEntries
             .filter((d) => d.destinationId === inspectId)
-            .map((d) => ({ origin: d.originAirportCode, price: d.avgFlightCostUSD, source: d.source ?? "provider_api", capturedAt: d.capturedAt }))
+            .map((d) => ({
+              origin: d.originAirportCode,
+              price: d.avgFlightCostUSD,
+              durationMin: d.avgFlightDurationMinutes,
+              transfers: d.transfers,
+              airline: d.airline,
+              source: d.source ?? "provider_api",
+              capturedAt: d.capturedAt,
+            }))
         : undefined;
+      const historyDocs = await listDocuments("priceHistory", credentials);
       return new Response(
         JSON.stringify(
           {
             totalLiveRoutes: liveEntries.length,
+            priceHistoryDocsSoFar: historyDocs.length,
             destinationsWithZeroCoverage: zeroCoverage,
             nextBatchWouldPick: nextBatch.map((p) => `${p.destinationId} from ${p.originAirportCode}`),
             ...(inspectRoutes ? { [`${inspectId}LiveRoutes`]: inspectRoutes } : {}),
