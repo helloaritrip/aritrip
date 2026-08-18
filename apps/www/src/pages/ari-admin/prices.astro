@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../lib/requireAdminSession";
 import { destinations, originBaseCosts, destinationBaseStayCosts, ORIGIN_LABELS, livePriceDocId, type OriginHub } from "@aritrips/data";
-import { getCachedCollection } from "../../lib/adminReadCache";
+import { getCachedCollection, getCachedQuery } from "../../lib/adminReadCache";
 
 export const prerender = false;
 
@@ -25,7 +25,16 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
     const [flightDocs, hotelDocs, historyDocs] = await Promise.all([
       getCachedCollection("livePrices", credentials),
       getCachedCollection("liveHotelPrices", credentials),
-      getCachedCollection("priceHistory", credentials),
+      // Acotado, no la colección entera (2026-08-19, tras un 429 real de
+      // Firestore por agotar la cuota gratis) — priceHistory solo crece,
+      // así que un listDocuments sin límite se pone más caro con el
+      // tiempo. 3000 más recientes alcanza de sobra para el resumen por
+      // ruta que muestra esta página.
+      getCachedQuery("priceHistory:recent", "priceHistory", credentials, {
+        orderByField: "capturedAt",
+        direction: "DESCENDING",
+        limit: 3000,
+      }),
     ]);
     liveFlightDocs = flightDocs.filter((d) => d.id !== "_cursor");
     liveHotelDocs = hotelDocs.filter((d) => d.id !== "_cursor");

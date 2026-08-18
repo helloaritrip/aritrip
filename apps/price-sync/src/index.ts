@@ -1092,7 +1092,21 @@ export default {
     // asumir un número de memoria.
     if (mode === "bias-check") {
       const credentials = credentialsFrom(env);
-      const historyDocs = await listDocuments("priceHistory", credentials);
+      // Acotado (2026-08-19, tras un 429 real de Firestore por agotar la
+      // cuota gratis de 50k lecturas/día) — antes era listDocuments SIN
+      // límite, es decir TODA `priceHistory` de punta a punta. Esa
+      // colección solo crece (nunca se pisa nada), así que ese costo iba
+      // a subir solo con el tiempo — y esto lo llama la rutina automática
+      // semanal, no solo yo a mano. La comparación de abajo solo usa la
+      // captura MÁS RECIENTE de cada fuente por ruta de todos modos, así
+      // que ordenar por fecha y cortar en un número generoso (~1 semana
+      // de las 4 crons combinadas) da el mismo resultado real sin releer
+      // meses de historial cada vez que crezca la colección.
+      const historyDocs = await queryDocuments("priceHistory", credentials, {
+        orderByField: "capturedAt",
+        direction: "DESCENDING",
+        limit: 3000,
+      });
       const flightDocs = historyDocs.filter((d) => d.type === "flight");
 
       type HistoryEntry = { price: number; capturedAt: string };
