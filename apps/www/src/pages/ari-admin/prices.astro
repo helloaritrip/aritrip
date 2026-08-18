@@ -41,22 +41,59 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
 // sabemos el mínimo... sería interesante manejar el máximo que puede
 // valer") — no es un techo teórico, es el mín/máx que efectivamente
 // capturamos en `priceHistory` (Travelpayouts + SerpApi combinados) desde
-// que esa colección existe. Con 1 sola observación no hay "rango" real
-// todavía, así que el cliente solo lo muestra desde 2 capturas.
-const priceRangeByRoute = new Map<string, { min: number; max: number; count: number }>();
+// que esa colección existe. También se agrupa por ventana de anticipación
+// (`advanceMonthsBucket`, ver apps/price-sync — sugerencia del "head" del
+// usuario de sacar percentiles por 30/60/90 días en vez de un solo ancla).
+// Ese campo solo existe en capturas nuevas — capturas viejas quedan sin
+// bucket, se cuentan en el total pero no en ningún desglose por ventana.
+function percentile(sorted: number[], p: number): number {
+  const idx = Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length));
+  return sorted[idx];
+}
+
+const pricesByRoute = new Map<string, number[]>();
+const pricesByRouteBucket = new Map<string, Map<number, number[]>>();
 for (const doc of priceHistoryDocs) {
   if (doc.type !== "flight") continue;
   const price = doc.avgFlightCostUSD as number;
   if (typeof price !== "number" || price <= 0) continue;
   const key = livePriceDocId(doc.destinationId as string, doc.originAirportCode as string);
-  const existing = priceRangeByRoute.get(key);
-  if (!existing) {
-    priceRangeByRoute.set(key, { min: price, max: price, count: 1 });
-  } else {
-    existing.min = Math.min(existing.min, price);
-    existing.max = Math.max(existing.max, price);
-    existing.count += 1;
+
+  const list = pricesByRoute.get(key) ?? [];
+  list.push(price);
+  pricesByRoute.set(key, list);
+
+  const bucket = doc.advanceMonthsBucket as number | undefined;
+  if (typeof bucket === "number") {
+    const byBucket = pricesByRouteBucket.get(key) ?? new Map<number, number[]>();
+    const bucketList = byBucket.get(bucket) ?? [];
+    bucketList.push(price);
+    byBucket.set(bucket, bucketList);
+    pricesByRouteBucket.set(key, byBucket);
   }
+}
+
+const priceRangeByRoute = new Map<
+  string,
+  { min: number; max: number; count: number; p50: number; byBucket: { monthsAhead: number; min: number; max: number; count: number }[] }
+>();
+for (const [key, prices] of pricesByRoute) {
+  const sorted = [...prices].sort((a, b) => a - b);
+  const byBucket = [...(pricesByRouteBucket.get(key) ?? new Map())]
+    .map(([monthsAhead, bucketPrices]) => ({
+      monthsAhead,
+      min: Math.min(...bucketPrices),
+      max: Math.max(...bucketPrices),
+      count: bucketPrices.length,
+    }))
+    .sort((a, b) => a.monthsAhead - b.monthsAhead);
+  priceRangeByRoute.set(key, {
+    min: sorted[0],
+    max: sorted[sorted.length - 1],
+    count: sorted.length,
+    p50: percentile(sorted, 50),
+    byBucket,
+  });
 }
 
 // Solo los destinos que tienen datos curados (vuelo + hotel) son los que
@@ -169,7 +206,13 @@ const pageData = {
     airline: string;
     transfers: number | null;
     capturedAt: string;
-    range: { min: number; max: number; count: number } | null;
+    range: {
+      min: number;
+      max: number;
+      count: number;
+      p50: number;
+      byBucket: { monthsAhead: number; min: number; max: number; count: number }[];
+    } | null;
   };
   type LiveHotel = { destinationId: string; budget: number | null; mid: number; premium: number | null; capturedAt: string };
   type PageData = {
@@ -321,7 +364,14 @@ const pageData = {
             <p class="text-sm font-semibold text-accent">$${f.avgFlightCostUSD}</p>
             ${
               f.range && f.range.count >= 2
-                ? `<p class="text-xs text-muted">Observed $${f.range.min}–$${f.range.max} (${f.range.count} captures)</p>`
+                ? `<p class="text-xs text-muted">Observed $${f.range.min}–$${f.range.max}, median $${f.range.p50} (${f.range.count} captures)</p>`
+                : ""
+            }
+            ${
+              f.range && f.range.byBucket.length >= 2
+                ? `<p class="text-xs text-muted">${f.range.byBucket
+                    .map((b) => `~${b.monthsAhead * 30}d: $${b.min}${b.max !== b.min ? `–$${b.max}` : ""}`)
+                    .join(" · ")}</p>`
                 : ""
             }
             <p class="text-xs text-muted">Refreshed ${timeAgo(f.capturedAt)}</p>

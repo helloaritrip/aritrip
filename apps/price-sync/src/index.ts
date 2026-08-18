@@ -89,10 +89,30 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function nextMonthPeriod(): string {
+function periodForMonthsAhead(monthsAhead: number): string {
   const now = new Date();
-  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const next = new Date(now.getFullYear(), now.getMonth() + monthsAhead, 1);
   return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// Rotación de ventana de anticipación (2026-08-18, a partir de una sugerencia
+// del "head" del usuario: agrupar precios por anticipación — 7/14/30/60/90
+// días — y sacar percentiles en vez de un solo ancla). Travelpayouts es un
+// CACHÉ PASIVO (solo devuelve algo si un viajero real ya buscó esa fecha
+// exacta) — pedirle un día puntual a 7-14 días vista para una ruta de nicho
+// devuelve vacío la mayoría de las veces (ya confirmado en vivo, ver
+// fetchCheapestFare). Con granularidad de MES sí se puede rotar de forma
+// confiable entre ~30/~60/~90 días de anticipación sin perder cobertura —
+// no es tan fino como pediría el head, pero es lo que da esta fuente gratis
+// sin arriesgar los datos que ya tenemos. Cada corrida de cron completa usa
+// UNA sola ventana (no una por ruta) para que decenas de rutas no queden
+// mezclando ventanas en el mismo lote; la rotación día a día (no por lote)
+// es lo que con el tiempo arma las 3 canastas por ruta.
+const ADVANCE_MONTHS_BUCKETS = [1, 2, 3] as const;
+
+function advanceMonthsForCycle(): number {
+  const epochDay = Math.floor(Date.now() / 86_400_000);
+  return ADVANCE_MONTHS_BUCKETS[epochDay % ADVANCE_MONTHS_BUCKETS.length];
 }
 
 // Registro histórico (2026-08-18, a pedido del usuario: "quiero que
@@ -116,6 +136,11 @@ async function recordFlightPriceHistory(
     airline?: string;
     searchPeriod: string;
     capturedAt: string;
+    // Ver advanceMonthsForCycle — cuántos meses de anticipación tenía la
+    // fecha consultada, para poder agrupar priceHistory por ventana
+    // (30/60/90 días aprox.) más adelante. SerpApi usa una constante fija
+    // (ver serpApiDateWindow, ~70 días ≈ 2 meses) en vez de rotar.
+    advanceMonthsBucket: number;
   },
   source: "provider_api" | "serpapi",
   credentials: FirestoreCredentials
@@ -197,8 +222,7 @@ interface TravelpayoutsFare {
   airline: string;
 }
 
-async function fetchCheapestFare(pair: RoutePair, token: string): Promise<TravelpayoutsFare | null> {
-  const period = nextMonthPeriod();
+async function fetchCheapestFare(pair: RoutePair, token: string, period: string): Promise<TravelpayoutsFare | null> {
   const url = new URL("https://api.travelpayouts.com/aviasales/v3/prices_for_dates");
   url.searchParams.set("origin", pair.originAirportCode);
   url.searchParams.set("destination", pair.destinationAirportCode);
@@ -320,9 +344,14 @@ async function runFlightBatch(env: Env): Promise<{ processed: number; written: n
   const curatedSnapshots = generateAllPriceSnapshots(destinations);
   const dealUpdates: { destinationId: string; originAirportCode: string; deal: ReturnType<typeof evaluateFlightDeal> }[] = [];
 
+  // Ver advanceMonthsForCycle — TODO el lote de esta corrida usa la misma
+  // ventana de anticipación (rota día a día, no ruta a ruta).
+  const monthsAhead = advanceMonthsForCycle();
+  const period = periodForMonthsAhead(monthsAhead);
+
   for (const pair of batch) {
     try {
-      const fare = await fetchCheapestFare(pair, env.TRAVELPAYOUTS_TOKEN);
+      const fare = await fetchCheapestFare(pair, env.TRAVELPAYOUTS_TOKEN, period);
       if (!fare) {
         skipped += 1;
       } else {
@@ -331,7 +360,6 @@ async function runFlightBatch(env: Env): Promise<{ processed: number; written: n
         // más adelante si nuestro ancla "medio plazo" (ver
         // priceEstimation.ts) sigue siendo razonable.
         const capturedAt = new Date().toISOString();
-        const searchPeriod = nextMonthPeriod();
         const liveEntry = {
           destinationId: pair.destinationId,
           originAirportCode: pair.originAirportCode,
@@ -339,8 +367,9 @@ async function runFlightBatch(env: Env): Promise<{ processed: number; written: n
           avgFlightDurationMinutes: Math.round(fare.durationOneWay),
           transfers: fare.transfers,
           airline: fare.airline,
-          searchPeriod,
+          searchPeriod: period,
           capturedAt,
+          advanceMonthsBucket: monthsAhead,
         };
         await setDocument("livePrices", livePriceDocId(pair.destinationId, pair.originAirportCode), liveEntry, credentials);
         written += 1;
@@ -530,6 +559,11 @@ async function runSerpApiOnPairs(pairs: RoutePair[], env: Env): Promise<{ proces
           searchPeriod,
           source: "serpapi", // distingue de Travelpayouts en el panel de admin, no cambia cómo se usa el dato
           capturedAt,
+          // serpApiDateWindow() es fija (~70 días), no rota como
+          // advanceMonthsForCycle — 70/30≈2, mismo bucket que la ventana
+          // "media" de Travelpayouts, para que ambas fuentes queden
+          // comparables al agrupar priceHistory por anticipación.
+          advanceMonthsBucket: 2,
         };
         await setDocument("livePrices", livePriceDocId(pair.destinationId, pair.originAirportCode), liveEntry, credentials);
         written += 1;
@@ -586,15 +620,16 @@ async function runTravelpayoutsGapBatch(env: Env): Promise<{ processed: number; 
 
   let written = 0;
   let skipped = 0;
+  const monthsAhead = advanceMonthsForCycle();
+  const period = periodForMonthsAhead(monthsAhead);
 
   for (const pair of gapPairs) {
     try {
-      const fare = await fetchCheapestFare(pair, env.TRAVELPAYOUTS_TOKEN);
+      const fare = await fetchCheapestFare(pair, env.TRAVELPAYOUTS_TOKEN, period);
       if (!fare) {
         skipped += 1;
       } else {
         const capturedAt = new Date().toISOString();
-        const searchPeriod = nextMonthPeriod();
         const liveEntry = {
           destinationId: pair.destinationId,
           originAirportCode: pair.originAirportCode,
@@ -602,8 +637,9 @@ async function runTravelpayoutsGapBatch(env: Env): Promise<{ processed: number; 
           avgFlightDurationMinutes: Math.round(fare.durationOneWay),
           transfers: fare.transfers,
           airline: fare.airline,
-          searchPeriod,
+          searchPeriod: period,
           capturedAt,
+          advanceMonthsBucket: monthsAhead,
         };
         await setDocument("livePrices", livePriceDocId(pair.destinationId, pair.originAirportCode), liveEntry, credentials);
         written += 1;
