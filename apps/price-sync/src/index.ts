@@ -502,9 +502,9 @@ async function getLeastCoveredGapRoutes(credentials: FirestoreCredentials, limit
   return selected;
 }
 
-async function runSerpApiBatch(env: Env): Promise<{ processed: number; written: number; skipped: number }> {
+/** Núcleo compartido: consulta SerpApi para una lista de rutas YA elegida y las guarda. */
+async function runSerpApiOnPairs(pairs: RoutePair[], env: Env): Promise<{ processed: number; written: number; skipped: number }> {
   const credentials = credentialsFrom(env);
-  const gapPairs = await getLeastCoveredGapRoutes(credentials, SERPAPI_BATCH_SIZE);
   const destById = new Map(destinations.map((d) => [d.id, d]));
   const curatedSnapshots = generateAllPriceSnapshots(destinations);
   const dealUpdates: { destinationId: string; originAirportCode: string; deal: ReturnType<typeof evaluateFlightDeal> }[] = [];
@@ -512,7 +512,7 @@ async function runSerpApiBatch(env: Env): Promise<{ processed: number; written: 
   let written = 0;
   let skipped = 0;
 
-  for (const pair of gapPairs) {
+  for (const pair of pairs) {
     try {
       const fare = await fetchSerpApiFare(pair, env.SERPAPI_KEY);
       if (!fare) {
@@ -547,7 +547,22 @@ async function runSerpApiBatch(env: Env): Promise<{ processed: number; written: 
 
   await updateDealsIndex(credentials, dealUpdates);
 
-  return { processed: gapPairs.length, written, skipped };
+  return { processed: pairs.length, written, skipped };
+}
+
+async function runSerpApiBatch(env: Env): Promise<{ processed: number; written: number; skipped: number }> {
+  const gapPairs = await getLeastCoveredGapRoutes(credentialsFrom(env), SERPAPI_BATCH_SIZE);
+  return runSerpApiOnPairs(gapPairs, env);
+}
+
+// Disparo manual (2026-08-18, auditoría del día: recapturar rutas puntuales
+// que quedaron con datos malos — ver el guardrail de duración en
+// fetchSerpApiFare) — a diferencia de runSerpApiBatch, esto NO usa
+// prioridad por cobertura, refresca TODAS las rutas de un destino
+// puntual sin importar cuántas ya tenga. Uso: ?mode=serpapi-refresh&destinationId=X.
+async function runSerpApiRefreshForDestination(destinationId: string, env: Env): Promise<{ processed: number; written: number; skipped: number }> {
+  const pairs = buildAllRoutePairs().filter((p) => p.destinationId === destinationId);
+  return runSerpApiOnPairs(pairs, env);
 }
 
 // Disparo manual (2026-08-17, a pedido del usuario: "forcemos más
@@ -775,14 +790,17 @@ export default {
         { headers: { "Content-Type": "application/json" } }
       );
     }
+    const refreshDestinationId = url.searchParams.get("destinationId");
     const summary =
       mode === "hotels"
         ? await runHotelBatch(env)
-        : mode === "serpapi"
-          ? await runSerpApiBatch(env)
-          : mode === "travelpayouts-gaps"
-            ? await runTravelpayoutsGapBatch(env)
-            : await runFlightBatch(env);
+        : mode === "serpapi-refresh" && refreshDestinationId
+          ? await runSerpApiRefreshForDestination(refreshDestinationId, env)
+          : mode === "serpapi"
+            ? await runSerpApiBatch(env)
+            : mode === "travelpayouts-gaps"
+              ? await runTravelpayoutsGapBatch(env)
+              : await runFlightBatch(env);
     return new Response(JSON.stringify(summary, null, 2), { headers: { "Content-Type": "application/json" } });
   },
 } satisfies ExportedHandler<Env>;
