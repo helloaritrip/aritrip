@@ -114,12 +114,16 @@ interface RoutePair {
 //  - galapagos (GPS/SCY): sin vuelo comercial internacional directo a
 //    agosto 2026 desde ningún origen — se llega vía Quito/Guayaquil.
 //    Investigado y confirmado por el usuario (2026-08-10).
-//  - cusco (CUZ): mismo patrón de 100% sin tarifa en los logs, y el
-//    curado ya luce "conectado" (JFK $780, 8h — no un salto corto) —
-//    se llega vía Lima. Inferido por el mismo patrón, no confirmado con
-//    la misma investigación puntual que Galápagos; revisar si aparece
-//    evidencia de que sí hay vuelos directos a algún origen.
-const NO_DIRECT_INTERNATIONAL_SERVICE = new Set(["galapagos", "cusco"]);
+//
+// cusco (CUZ) SACADO de esta lista (2026-08-17, a pedido del usuario:
+// "incorporemos a cusco a pesar de la escala") — mismo motivo original
+// (se llega vía Lima, sin vuelo directo) pero ya no es razón para
+// excluirlo: SerpApi (Google Flights, ver más abajo) SÍ resuelve
+// itinerarios con conexión de verdad, a diferencia de Travelpayouts
+// (que solo devuelve algo si un viajero real ya buscó exactamente ese
+// par origen-destino, y nadie busca "JFK a Cusco" directo). Se acepta
+// mostrar precio con escala en vez de no mostrar nada.
+const NO_DIRECT_INTERNATIONAL_SERVICE = new Set(["galapagos"]);
 
 function buildAllRoutePairs(): RoutePair[] {
   const pairs: RoutePair[] = [];
@@ -494,6 +498,64 @@ async function runSerpApiBatch(env: Env): Promise<{ processed: number; written: 
   return { processed: gapPairs.length, written, skipped };
 }
 
+// Disparo manual (2026-08-17, a pedido del usuario: "forcemos más
+// destinos sin precio con travelpayouts") — mismo criterio de reparto
+// que runSerpApiBatch (getLeastCoveredGapRoutes), pero consultando
+// Travelpayouts en vez de SerpApi. No toca el cursor de runFlightBatch
+// (el cron normal de cada 15 min sigue su recorrido secuencial de
+// siempre, sin enterarse de esto) — esto es puramente para adelantar a
+// mano los huecos actuales sin esperar a que el cursor les toque el
+// turno, que con ~1088 rutas puede tardar hasta 18h en llegar. Al no
+// depender de una cuota mensual como SerpApi, el lote puede ser más
+// grande (20×2=40 subrequests, dentro del límite de 50).
+const TRAVELPAYOUTS_GAP_BATCH_SIZE = 20;
+
+async function runTravelpayoutsGapBatch(env: Env): Promise<{ processed: number; written: number; skipped: number }> {
+  const credentials = credentialsFrom(env);
+  const gapPairs = await getLeastCoveredGapRoutes(credentials, TRAVELPAYOUTS_GAP_BATCH_SIZE);
+  const destById = new Map(destinations.map((d) => [d.id, d]));
+  const curatedSnapshots = generateAllPriceSnapshots(destinations);
+  const dealUpdates: { destinationId: string; originAirportCode: string; deal: ReturnType<typeof evaluateFlightDeal> }[] = [];
+
+  let written = 0;
+  let skipped = 0;
+
+  for (const pair of gapPairs) {
+    try {
+      const fare = await fetchCheapestFare(pair, env.TRAVELPAYOUTS_TOKEN);
+      if (!fare) {
+        skipped += 1;
+      } else {
+        const capturedAt = new Date().toISOString();
+        const searchPeriod = nextMonthPeriod();
+        const liveEntry = {
+          destinationId: pair.destinationId,
+          originAirportCode: pair.originAirportCode,
+          avgFlightCostUSD: Math.round(fare.price),
+          avgFlightDurationMinutes: Math.round(fare.durationOneWay),
+          transfers: fare.transfers,
+          airline: fare.airline,
+          searchPeriod,
+          capturedAt,
+        };
+        await setDocument("livePrices", livePriceDocId(pair.destinationId, pair.originAirportCode), liveEntry, credentials);
+        written += 1;
+
+        const deal = evaluateFlightDeal(liveEntry, destById.get(pair.destinationId), curatedSnapshots);
+        dealUpdates.push({ destinationId: pair.destinationId, originAirportCode: pair.originAirportCode, deal });
+      }
+    } catch (err) {
+      console.error(`[price-sync] travelpayouts-gaps ${pair.destinationId} from ${pair.originAirportCode}: failed`, err);
+      skipped += 1;
+    }
+    await delay(DELAY_BETWEEN_REQUESTS_MS);
+  }
+
+  await updateDealsIndex(credentials, dealUpdates);
+
+  return { processed: gapPairs.length, written, skipped };
+}
+
 // ---------- Hoteles (Xotelo, un hotel ancla curado por destino) ----------
 
 const HOTEL_TRIP_NIGHTS = 5;
@@ -653,7 +715,14 @@ export default {
         { headers: { "Content-Type": "application/json" } }
       );
     }
-    const summary = mode === "hotels" ? await runHotelBatch(env) : mode === "serpapi" ? await runSerpApiBatch(env) : await runFlightBatch(env);
+    const summary =
+      mode === "hotels"
+        ? await runHotelBatch(env)
+        : mode === "serpapi"
+          ? await runSerpApiBatch(env)
+          : mode === "travelpayouts-gaps"
+            ? await runTravelpayoutsGapBatch(env)
+            : await runFlightBatch(env);
     return new Response(JSON.stringify(summary, null, 2), { headers: { "Content-Type": "application/json" } });
   },
 } satisfies ExportedHandler<Env>;
