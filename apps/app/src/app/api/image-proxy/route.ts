@@ -134,6 +134,20 @@ async function resolveImageUrl(query: string, fallbackQuery: string | null, pexe
 const MAX_QUERY_LENGTH = 120;
 
 export async function GET(request: Request) {
+  // Formato negociado por Accept (2026-08-19, auditoría SEO/Core Web
+  // Vitals) — se calcula ACÁ arriba, antes de tocar la caché, porque ahora
+  // la respuesta varía según esto y tiene que ser parte de la clave de
+  // caché. La Cache API de Workers NO respeta el header `Vary` solo (es
+  // una limitación conocida — cachea por Request tal cual se le pasa), así
+  // que sin esto un visitante con navegador viejo podía terminar recibiendo
+  // del caché compartido la versión WebP/AVIF que le tocó a otro visitante
+  // con navegador moderno, o viceversa — imagen rota para quien reciba mal.
+  const acceptHeader = request.headers.get("accept") ?? "";
+  const targetFormat = acceptHeader.includes("image/avif") ? "avif" : acceptHeader.includes("image/webp") ? "webp" : null;
+  const cacheKeyUrl = new URL(request.url);
+  cacheKeyUrl.searchParams.set("__fmt", targetFormat ?? "orig");
+  const cacheKeyRequest = new Request(cacheKeyUrl.toString(), request);
+
   // Cache real, compartida entre TODOS los visitantes — se chequea antes
   // que nada, incluso antes del rate limit, porque un hit de caché es
   // prácticamente gratis y no necesita protegerse como sí necesita el
@@ -142,7 +156,7 @@ export async function GET(request: Request) {
   const cache = (globalThis as unknown as { caches?: { default: Cache } }).caches?.default;
   if (cache) {
     try {
-      const cached = await cache.match(request);
+      const cached = await cache.match(cacheKeyRequest);
       if (cached) return cached;
     } catch {
       // Sin acceso a la Cache API en este entorno (ej. local dev) — seguir sin caché.
@@ -191,14 +205,47 @@ export async function GET(request: Request) {
     const imageUrl = await resolveImageUrl(query, fallbackQuery, pexelsApiKey, width);
     if (!imageUrl) return fallbackResponse();
 
-    const imageRes = await fetch(imageUrl, {
-      headers: { "User-Agent": "AriTrips/0.1 (aritrips.com; helloari.trip@gmail.com)" },
-    });
+    // Transformación de formato (2026-08-19, auditoría de SEO/Core Web
+    // Vitals) — ni Wikimedia ni Pexels dejan pedir WebP/AVIF directo,
+    // siempre devuelven JPEG (~390KB para el hero de un destino). Se pide
+    // vía Cloudflare Image Resizing (`cf.image` en fetch, función de la
+    // cuenta/zona, no un binding de wrangler) — si esa función no está
+    // habilitada en el plan, Cloudflare devuelve error acá en vez de
+    // ignorar la opción, por eso el fallback explícito a la imagen
+    // original sin transformar en vez de romper la respuesta. `targetFormat`
+    // ya se calculó arriba (antes de la caché, ver el porqué ahí).
+    const fetchHeaders = { "User-Agent": "AriTrips/0.1 (aritrips.com; helloari.trip@gmail.com)" };
+    let imageRes: Response | null = null;
+    let transformed = false;
+
+    if (targetFormat) {
+      try {
+        const transformedRes = await fetch(imageUrl, {
+          headers: fetchHeaders,
+          cf: { image: { width, quality: 82, format: targetFormat } },
+        } as RequestInit);
+        if (transformedRes.ok && transformedRes.body) {
+          imageRes = transformedRes;
+          transformed = true;
+        }
+      } catch {
+        // Sigue abajo con el fetch normal.
+      }
+    }
+
+    if (!imageRes) {
+      imageRes = await fetch(imageUrl, { headers: fetchHeaders });
+    }
     if (!imageRes.ok || !imageRes.body) return fallbackResponse();
 
     const response = new Response(imageRes.body, {
       headers: {
-        "Content-Type": imageRes.headers.get("content-type") ?? "image/jpeg",
+        "Content-Type": transformed ? `image/${targetFormat}` : (imageRes.headers.get("content-type") ?? "image/jpeg"),
+        // Vary: Accept — sin esto, un visitante con navegador viejo (Accept
+        // sin webp/avif) podría recibir del caché de Cloudflare la versión
+        // ya transformada que le tocó a otro visitante con navegador
+        // moderno, o viceversa.
+        Vary: "Accept",
         // Cache agresivo en el edge (Cloudflare) y en el navegador — la
         // query de imagen por destino es estática, no cambia entre búsquedas.
         "Cache-Control": "public, max-age=604800, immutable",
@@ -209,7 +256,7 @@ export async function GET(request: Request) {
     // query que hoy no encuentra nada en Wikimedia se puede reintentar
     // más adelante en vez de quedar "atascada" en el fallback por una semana.
     if (cache && ctx) {
-      ctx.waitUntil(cache.put(request, response.clone()));
+      ctx.waitUntil(cache.put(cacheKeyRequest, response.clone()));
     }
 
     return response;
