@@ -220,6 +220,50 @@ const pageData = {
         <h3 class="text-sm font-semibold uppercase tracking-wide text-muted">Flights</h3>
         <div id="flights-result" class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface"></div>
       </div>
+
+      <div class="flex flex-col gap-3">
+        <h3 class="text-sm font-semibold uppercase tracking-wide text-muted">Log a price you found</h3>
+        <p class="text-xs text-muted">
+          Checked a real price on Kiwi, Google Flights, etc.? Log it here — it feeds the same history table above (tagged "Manual"),
+          it never overwrites the live price shown to visitors.
+        </p>
+        <form id="manual-price-form" class="flex flex-col gap-3 rounded-lg border border-rule bg-surface p-4">
+          <div class="grid grid-cols-2 gap-3">
+            <label class="flex flex-col gap-1 text-xs text-muted">
+              Origin
+              <select id="manual-origin" class="rounded-md border border-rule bg-bg px-2 py-1.5 text-sm text-ink"></select>
+            </label>
+            <label class="flex flex-col gap-1 text-xs text-muted">
+              Departure date
+              <input id="manual-date" type="date" class="rounded-md border border-rule bg-bg px-2 py-1.5 text-sm text-ink" />
+            </label>
+            <label class="flex flex-col gap-1 text-xs text-muted">
+              Price (USD, round trip)
+              <input id="manual-price" type="number" min="1" max="20000" step="1" class="rounded-md border border-rule bg-bg px-2 py-1.5 text-sm text-ink" />
+            </label>
+            <label class="flex flex-col gap-1 text-xs text-muted">
+              Site
+              <input
+                id="manual-site"
+                type="text"
+                placeholder="Kiwi, Google Flights..."
+                maxlength="40"
+                class="rounded-md border border-rule bg-bg px-2 py-1.5 text-sm text-ink"
+              />
+            </label>
+          </div>
+          <label class="flex flex-col gap-1 text-xs text-muted">
+            Note (optional)
+            <input id="manual-note" type="text" maxlength="200" class="rounded-md border border-rule bg-bg px-2 py-1.5 text-sm text-ink" />
+          </label>
+          <div class="flex items-center gap-3">
+            <button type="submit" class="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:opacity-90">
+              Save price
+            </button>
+            <p id="manual-status" class="text-xs text-muted"></p>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </AdminLayout>
@@ -267,6 +311,14 @@ const pageData = {
   const resultCountry = document.getElementById("city-result-country") as HTMLParagraphElement;
   const hotelResult = document.getElementById("hotel-result") as HTMLDivElement;
   const flightsResult = document.getElementById("flights-result") as HTMLDivElement;
+  const manualForm = document.getElementById("manual-price-form") as HTMLFormElement;
+  const manualOrigin = document.getElementById("manual-origin") as unknown as HTMLSelectElement;
+  const manualDate = document.getElementById("manual-date") as HTMLInputElement;
+  const manualPrice = document.getElementById("manual-price") as HTMLInputElement;
+  const manualSite = document.getElementById("manual-site") as HTMLInputElement;
+  const manualNote = document.getElementById("manual-note") as HTMLInputElement;
+  const manualStatus = document.getElementById("manual-status") as HTMLParagraphElement;
+  let selectedCityId: string | null = null;
 
   function timeAgo(iso: string): string {
     const diffMs = Date.now() - new Date(iso).getTime();
@@ -336,6 +388,14 @@ const pageData = {
   function selectCity(cityId: string) {
     const city = data.cities.find((c) => c.id === cityId);
     if (!city) return;
+
+    selectedCityId = cityId;
+    manualStatus.textContent = "";
+
+    const originsForCity = Object.keys(data.curatedFlights[cityId] || {}).sort((a, b) =>
+      (data.originLabels[a] || a).localeCompare(data.originLabels[b] || b)
+    );
+    manualOrigin.innerHTML = originsForCity.map((o) => `<option value="${o}">${data.originLabels[o] || o}</option>`).join("");
 
     searchInput.value = city.name;
     dropdown.classList.add("hidden");
@@ -473,4 +533,45 @@ const pageData = {
       flightsResult.innerHTML = liveRows + pendingRows;
     }
   }
+
+  manualForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!selectedCityId) return;
+
+    const price = Number(manualPrice.value);
+    if (!manualOrigin.value || !manualDate.value || !Number.isFinite(price) || price <= 0) {
+      manualStatus.textContent = "Fill in origin, date, and price.";
+      return;
+    }
+    if (!manualSite.value.trim()) {
+      manualStatus.textContent = "Which site did you check? (e.g. Kiwi, Google Flights)";
+      return;
+    }
+
+    manualStatus.textContent = "Saving...";
+    try {
+      const res = await fetch("/api/admin/manual-price", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          destinationId: selectedCityId,
+          originAirportCode: manualOrigin.value,
+          price,
+          departureDate: manualDate.value,
+          sourceSite: manualSite.value.trim(),
+          note: manualNote.value.trim(),
+        }),
+      });
+      const result = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        manualStatus.textContent = result.error || "Couldn't save — try again.";
+        return;
+      }
+      manualStatus.textContent = "Saved! Refresh the page to see it in the table above.";
+      manualPrice.value = "";
+      manualNote.value = "";
+    } catch {
+      manualStatus.textContent = "Couldn't save — check your connection and try again.";
+    }
+  });
 </script>
