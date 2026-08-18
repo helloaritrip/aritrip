@@ -290,6 +290,48 @@ async function fetchCheapestFare(pair: RoutePair, token: string, period: string)
   return { price: fare.price, durationOneWay, transfers: fare.transfers ?? 0, airline: fare.airline ?? "" };
 }
 
+interface LatestFoundFare {
+  price: number;
+  transfers: number;
+  departDate: string; // "YYYY-MM-DD" — la fecha real que un viajero buscó, no un período que nosotros elegimos
+}
+
+// v2/prices/latest (2026-08-18, investigado a pedido del usuario buscando
+// "otra fuente gratis") — MISMA cuenta/token que prices_for_dates, pero
+// lee directo el registro de tarifas encontradas en vez de la agregación
+// "más barata del mes/período que yo pida". Sin duration/airline en la
+// respuesta (esta API no los da) — se usa como ÚLTIMO recurso después de
+// agotar los 6 meses de fetchCheapestFare, así que el resto del pipeline
+// completa duration con el estimado curado en vez de con un dato real.
+async function fetchLatestFoundFare(pair: RoutePair, token: string): Promise<LatestFoundFare | null> {
+  const url = new URL("https://api.travelpayouts.com/v2/prices/latest");
+  url.searchParams.set("origin", pair.originAirportCode);
+  url.searchParams.set("destination", pair.destinationAirportCode);
+  url.searchParams.set("period_type", "year");
+  url.searchParams.set("one_way", "false");
+  url.searchParams.set("currency", "USD");
+  url.searchParams.set("sorting", "price");
+  url.searchParams.set("limit", "1");
+  url.searchParams.set("show_to_affiliates", "true");
+  url.searchParams.set("token", token);
+
+  const res = await fetch(url.toString(), { headers: { "Accept-Encoding": "gzip" } });
+  if (!res.ok) return null;
+
+  let body: { success: boolean; data?: Array<{ value: number; number_of_changes: number; depart_date: string }> };
+  try {
+    body = await res.json();
+  } catch {
+    return null;
+  }
+  if (!body.success || !body.data || body.data.length === 0) return null;
+
+  const fare = body.data[0];
+  if (typeof fare.value !== "number" || fare.value <= 0) return null;
+
+  return { price: fare.value, transfers: fare.number_of_changes ?? 0, departDate: fare.depart_date };
+}
+
 // Doc único con TODAS las ofertas vigentes, mantenido de forma
 // incremental acá mismo (2026-08-14) — antes /deals en apps/www tenía que
 // leer la colección `livePrices` COMPLETA (cientos de docs) para
@@ -659,6 +701,27 @@ async function runTravelpayoutsGapBatch(env: Env): Promise<{ processed: number; 
         if (fare) break;
         await delay(DELAY_BETWEEN_REQUESTS_MS);
       }
+
+      // Último recurso (2026-08-18) — v2/prices/latest lee el registro
+      // crudo de tarifas encontradas en vez de "la más barata del período
+      // que yo pida", así que a veces encuentra algo que los 6 intentos de
+      // arriba no. No trae duración/aerolínea, así que se completa con el
+      // estimado curado de esta ruta en vez de inventar un número.
+      let usedLatestFoundFallback = false;
+      if (!fare) {
+        await delay(DELAY_BETWEEN_REQUESTS_MS);
+        const latest = await fetchLatestFoundFare(pair, env.TRAVELPAYOUTS_TOKEN);
+        if (latest) {
+          const curatedDuration = originBaseCosts[pair.destinationId]?.find((b) => b.originAirportCode === pair.originAirportCode)
+            ?.avgFlightDurationMinutes;
+          const daysAhead = Math.round((new Date(latest.departDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+          monthsAhead = Math.max(1, Math.round(daysAhead / 30));
+          period = periodForMonthsAhead(monthsAhead);
+          fare = { price: latest.price, durationOneWay: curatedDuration ?? 180, transfers: latest.transfers, airline: "" };
+          usedLatestFoundFallback = true;
+        }
+      }
+
       if (!fare) {
         skipped += 1;
       } else {
@@ -673,10 +736,16 @@ async function runTravelpayoutsGapBatch(env: Env): Promise<{ processed: number; 
           searchPeriod: period,
           capturedAt,
           advanceMonthsBucket: monthsAhead,
+          // No es parte del union type de `source` (sigue siendo
+          // Travelpayouts) — solo para poder filtrar más adelante si hace
+          // falta separar el hallazgo de v2/prices/latest del de
+          // prices_for_dates en algún análisis.
+          ...(usedLatestFoundFallback ? { viaLatestFound: true } : {}),
         };
         // Esta ruta no tenía NINGÚN precio antes — cualquier mes real que
         // haya devuelto algo es mejor que el estimado curado solo, así
-        // que sí se escribe a `livePrices` sin importar qué ventana ganó.
+        // que sí se escribe a `livePrices` sin importar qué ventana ganó
+        // ni si vino del fallback de v2/prices/latest.
         await setDocument("livePrices", livePriceDocId(pair.destinationId, pair.originAirportCode), liveEntry, credentials);
         written += 1;
         await recordFlightPriceHistory(liveEntry, "provider_api", credentials);
