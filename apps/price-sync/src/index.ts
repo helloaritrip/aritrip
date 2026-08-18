@@ -35,6 +35,7 @@ import {
   setDocument,
   listDocuments,
   queryDocuments,
+  countDocuments,
   writeFirestoreDocument,
   livePriceDocId,
   HOTEL_KEYS,
@@ -550,10 +551,17 @@ async function fetchSerpApiFare(pair: RoutePair, apiKey: string): Promise<Travel
  * distintos (empezando por los de menor cobertura) antes de repetir
  * ninguno.
  */
-async function getLeastCoveredGapRoutes(credentials: FirestoreCredentials, limit: number): Promise<RoutePair[]> {
+async function getLeastCoveredGapRoutes(
+  credentials: FirestoreCredentials,
+  limit: number,
+  // Evita releer `livePrices` entera cuando el caller ya la tiene (2026-08-18,
+  // encontrado en vivo — ?mode=gaps la leía DOS veces: una para su propia
+  // respuesta, otra acá adentro, y con la colección ya grande eso empezó a
+  // dar error 1101 en el cliente por lo lenta que se puso la corrida).
+  liveEntriesOverride?: (Record<string, unknown> & { id: string })[]
+): Promise<RoutePair[]> {
   const allPairs = buildAllRoutePairs();
-  const liveDocs = await listDocuments("livePrices", credentials);
-  const liveEntries = liveDocs.filter((d) => d.id !== "_cursor");
+  const liveEntries = liveEntriesOverride ?? (await listDocuments("livePrices", credentials)).filter((d) => d.id !== "_cursor");
   const liveKeys = new Set(liveEntries.map((d) => d.id));
 
   const liveCountByDest = new Map<string, number>();
@@ -1042,7 +1050,7 @@ export default {
         liveCountByDest.set(id, (liveCountByDest.get(id) ?? 0) + 1);
       }
       const zeroCoverage = destinations.filter((d) => (liveCountByDest.get(d.id) ?? 0) === 0).map((d) => d.id);
-      const nextBatch = await getLeastCoveredGapRoutes(credentials, SERPAPI_BATCH_SIZE);
+      const nextBatch = await getLeastCoveredGapRoutes(credentials, SERPAPI_BATCH_SIZE, liveEntries);
       const inspectId = url.searchParams.get("destinationId");
       const inspectRoutes = inspectId
         ? liveEntries
@@ -1057,12 +1065,12 @@ export default {
               capturedAt: d.capturedAt,
             }))
         : undefined;
-      const historyDocs = await listDocuments("priceHistory", credentials);
+      const priceHistoryCount = await countDocuments("priceHistory", credentials);
       return new Response(
         JSON.stringify(
           {
             totalLiveRoutes: liveEntries.length,
-            priceHistoryDocsSoFar: historyDocs.length,
+            priceHistoryDocsSoFar: priceHistoryCount,
             destinationsWithZeroCoverage: zeroCoverage,
             nextBatchWouldPick: nextBatch.map((p) => `${p.destinationId} from ${p.originAirportCode}`),
             ...(inspectRoutes ? { [`${inspectId}LiveRoutes`]: inspectRoutes } : {}),
