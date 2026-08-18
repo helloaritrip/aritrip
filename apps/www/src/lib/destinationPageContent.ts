@@ -120,15 +120,32 @@ export function buildDestinationPageContent(destination: Destination) {
   const profileList = formatProfileList(idealTravelerProfile);
   const visa = visaSentence(country);
 
-  const title = `${name}, ${country}`;
-  const description = insiderNotes;
+  // heading (H1 visual) y pageTitle (<title> de SEO) separados a propósito
+  // (2026-08-19, auditoría de SEO) — antes eran la misma variable. El H1
+  // puede quedar limpio ("Tulum, Mexico") porque ya tiene la foto y el
+  // contexto de la página alrededor; el <title> compite solo en una lista
+  // de resultados de Google contra sitios que también dirían "Tulum,
+  // Mexico" si lo dejáramos así — necesita señal real (costo/presupuesto)
+  // para que alguien lo elija.
+  const heading = `${name}, ${country}`;
+  const pageTitle = `${name} Trip Cost — Flights, Hotels & Budget | AriTrips`;
+  // Antes reusaba insiderNotes tal cual (nota práctica, ej. "vas a volar a
+  // Cancún y trasladarte 1.5 horas..." para Tulum) — no coincide con lo
+  // que de verdad está en vivo hoy (esa description se reconstruyó a mano
+  // leyendo el HTML publicado, ver comentario de arriba del archivo, pero
+  // nunca se actualizó acá cuando se escribió esta función). Quedaba una
+  // bomba de tiempo: la próxima vez que se republicara cualquier página,
+  // la description buena se pisaba silenciosamente por insiderNotes. Ahora
+  // el código genera la misma description que ya está probada en vivo,
+  // así que "republicar" ya no puede empeorarla.
+  const description = `Real cost estimates for ${name}, ${country} — hotels, activities, best time to go, and how many days to plan. Not just a flight price.`;
 
   const content = [
     {
       type: "Hero",
       props: {
         id: "hero-1",
-        heading: title,
+        heading,
         subheading: `${region} · ${days.min}–${days.max} days · ${withIndefiniteArticle(descriptor)} trip`,
         ctaLabel: "Find your trip",
         ctaHref: APP_URL,
@@ -206,11 +223,11 @@ export function buildDestinationPageContent(destination: Destination) {
 
   return {
     slug: destination.id,
-    title,
+    title: pageTitle,
     description,
     country,
     featuredImageQuery: destination.imageQuery,
-    data: { root: { props: { title } }, content },
+    data: { root: { props: { title: pageTitle } }, content },
   };
 }
 
