@@ -12,11 +12,45 @@
   // /api/image-proxy — el plan Free de Cloudflare solo permite 1 regla de
   // rate limiting a nivel de cuenta (ya usada en aritrips-www para el
   // login del panel), así que esto se resuelve con la Workers Rate
-  // Limiting API en vez de una segunda regla de WAF.
+  // Limiting API en vez de una segunda regla de WAF. Esa restricción es
+  // solo de las reglas de WAF del dashboard — la Workers Rate Limiting
+  // API (esto de acá) no tiene ese tope, por eso se pueden agregar varias
+  // más sin problema.
+  //
+  // 4 nuevas (2026-08-19, auditoría de seguridad — "revisión endpoint por
+  // endpoint de /api/*"): antes de esto, /api/recommendations, /api/discover,
+  // /api/destination y /api/track no tenían ningún freno — alguien podía
+  // mandar miles de requests por minuto y (a) generar costo real de
+  // lecturas/escrituras de Firestore, (b) en el caso puntual de /track,
+  // llenar la colección `events` de datos falsos — justo la métrica que
+  // se va a usar para decidir el rumbo del producto (ver fase "VALIDATE").
+  // Límites elegidos por patrón de uso real, no un número al azar:
+  // /track es más generoso porque una sola carga de resultados dispara
+  // varios eventos (uno por card mostrada), no solo uno por acción del usuario.
   "ratelimits": [
     {
       "name": "IMAGE_PROXY_LIMITER",
       "namespace_id": "1001",
+      "simple": { "limit": 60, "period": 60 }
+    },
+    {
+      "name": "RECOMMENDATIONS_LIMITER",
+      "namespace_id": "1003",
+      "simple": { "limit": 20, "period": 60 }
+    },
+    {
+      "name": "DISCOVER_LIMITER",
+      "namespace_id": "1004",
+      "simple": { "limit": 30, "period": 60 }
+    },
+    {
+      "name": "DESTINATION_LIMITER",
+      "namespace_id": "1005",
+      "simple": { "limit": 30, "period": 60 }
+    },
+    {
+      "name": "TRACK_LIMITER",
+      "namespace_id": "1006",
       "simple": { "limit": 60, "period": 60 }
     }
   ]

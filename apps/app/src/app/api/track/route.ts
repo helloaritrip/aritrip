@@ -224,6 +224,21 @@ export async function POST(request: NextRequest) {
   }
 
   const { env } = await getCloudflareContext({ async: true });
+
+  // Rate limit (2026-08-19, auditoría de seguridad) — más generoso que
+  // los otros (60/60s, no 20-30) porque una sola carga de resultados
+  // dispara varios eventos reales (uno por card mostrada), no solo uno
+  // por acción del usuario. Sin esto, alguien podía llenar la colección
+  // `events` de datos falsos — justo la métrica que se va a usar para
+  // decidir el rumbo del producto.
+  const trackLimiter = (env as unknown as { TRACK_LIMITER?: { limit: (opts: { key: string }) => Promise<{ success: boolean }> } })
+    .TRACK_LIMITER;
+  if (trackLimiter) {
+    const clientIp = request.headers.get("cf-connecting-ip") ?? "unknown";
+    const { success } = await trackLimiter.limit({ key: clientIp });
+    if (!success) return NextResponse.json({ tracked: false, reason: "rate_limited" }, { status: 429, headers });
+  }
+
   const clientEmail = env.FIREBASE_CLIENT_EMAIL;
   const privateKey = env.FIREBASE_PRIVATE_KEY;
 

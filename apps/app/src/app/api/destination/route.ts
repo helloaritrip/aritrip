@@ -35,6 +35,17 @@ export async function GET(request: Request) {
   }
 
   const { env } = await getCloudflareContext({ async: true });
+
+  // Rate limit (2026-08-19, auditoría de seguridad) — mismo motivo que
+  // /api/recommendations: lecturas reales de Firestore por cada llamada.
+  const destinationLimiter = (env as unknown as { DESTINATION_LIMITER?: { limit: (opts: { key: string }) => Promise<{ success: boolean }> } })
+    .DESTINATION_LIMITER;
+  if (destinationLimiter) {
+    const clientIp = request.headers.get("cf-connecting-ip") ?? "unknown";
+    const { success } = await destinationLimiter.limit({ key: clientIp });
+    if (!success) return NextResponse.json({ error: "Too many requests. Try again in a minute." }, { status: 429 });
+  }
+
   const [livePrices, liveHotelPrices, liveImages] = await Promise.all([
     getLivePrices({ FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY }),
     getLiveHotelPrices({ FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY }),

@@ -31,6 +31,20 @@ const curatedPriceSnapshots = generateAllPriceSnapshots(destinations);
 const VALID_INTERESTS: InterestTag[] = ["beach", "adventure", "culture", "nightlife", "family", "honeymoon"];
 
 export async function POST(request: Request) {
+  // Rate limit (2026-08-19, auditoría de seguridad — "revisión endpoint
+  // por endpoint de /api/*") — antes no había ningún freno acá; cada
+  // búsqueda hace lecturas de Firestore reales (livePrices/liveHotelPrices/
+  // liveImages) más el cálculo completo del motor, así que un flood sin
+  // límite es costo real, no solo ruido.
+  const { env } = await getCloudflareContext({ async: true });
+  const limiter = (env as unknown as { RECOMMENDATIONS_LIMITER?: { limit: (opts: { key: string }) => Promise<{ success: boolean }> } })
+    .RECOMMENDATIONS_LIMITER;
+  if (limiter) {
+    const clientIp = request.headers.get("cf-connecting-ip") ?? "unknown";
+    const { success } = await limiter.limit({ key: clientIp });
+    if (!success) return NextResponse.json({ error: "Too many requests. Try again in a minute." }, { status: 429 });
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await request.json();
@@ -58,8 +72,8 @@ export async function POST(request: Request) {
 
   // Resuelto una sola vez por búsqueda, antes de puntuar — getLivePrices y
   // getPartnerConfig ya cachean en memoria (1h y 5min respectivamente), así
-  // que esto no le pega a Firestore en cada búsqueda.
-  const { env } = await getCloudflareContext({ async: true });
+  // que esto no le pega a Firestore en cada búsqueda. `env` ya se obtuvo
+  // arriba, para el rate limit.
   const [livePrices, liveHotelPrices, liveImages] = await Promise.all([
     getLivePrices({ FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY }),
     getLiveHotelPrices({ FIREBASE_CLIENT_EMAIL: env.FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY: env.FIREBASE_PRIVATE_KEY }),
