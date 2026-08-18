@@ -148,6 +148,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // propósito por ahora: el editor Puck y el script de AdSense necesitan
   // una política armada y probada con cuidado, no una regla genérica que
   // podría romper el editor o los anuncios sin que nadie lo note.
+  //
+  // Reconfirmado en la auditoría de seguridad del 2026-08-19 (misma sesión
+  // que agregó el rate limit de /api/admin/login y bloqueó /ari-admin/ en
+  // robots.txt) — sigue pendiente a propósito, no es un olvido. Cuando se
+  // retome: probar contra /ari-admin/edit (Puck) y cualquier página con el
+  // script de AdSense antes de desplegar, no asumir que una policy
+  // genérica (ej. la de algún generador online) funciona tal cual acá.
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
