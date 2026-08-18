@@ -623,7 +623,19 @@ async function runSerpApiRefreshForDestination(destinationId: string, env: Env):
 // turno, que con ~1088 rutas puede tardar hasta 18h en llegar. Al no
 // depender de una cuota mensual como SerpApi, el lote puede ser más
 // grande (20×2=40 subrequests, dentro del límite de 50).
-const TRAVELPAYOUTS_GAP_BATCH_SIZE = 20;
+//
+// Prueba varios meses por ruta (2026-08-18, a pedido del usuario tras
+// confirmar que "el próximo mes" solo no encontraba nada en 3 lotes
+// seguidos) — a diferencia de runFlightBatch/GapBatch para rutas YA
+// cubiertas, acá no hay ningún precio previo que desestabilizar: probar
+// hasta 6 meses de anticipación antes de rendirse con una ruta no le
+// cambia nada al usuario (sigue viendo el estimado curado hasta que algo
+// funcione), así que no hay motivo para quedarse solo con "el próximo
+// mes" como hacían las otras corridas. Lote más chico (6, no 20) porque
+// cada ruta ahora puede gastar hasta 6 llamadas a Travelpayouts + 1
+// escritura = 7 subrequests; 6×7=42, dentro del límite de 50.
+const GAP_MONTH_ATTEMPTS = [1, 2, 3, 4, 5, 6];
+const TRAVELPAYOUTS_GAP_BATCH_SIZE = 6;
 
 async function runTravelpayoutsGapBatch(env: Env): Promise<{ processed: number; written: number; skipped: number }> {
   const credentials = credentialsFrom(env);
@@ -634,14 +646,19 @@ async function runTravelpayoutsGapBatch(env: Env): Promise<{ processed: number; 
 
   let written = 0;
   let skipped = 0;
-  // Ancla fija en ~30 días, mismo motivo que en runFlightBatch — esta
-  // corrida también escribe `livePrices`.
-  const monthsAhead = 1;
-  const period = periodForMonthsAhead(monthsAhead);
 
   for (const pair of gapPairs) {
     try {
-      const fare = await fetchCheapestFare(pair, env.TRAVELPAYOUTS_TOKEN, period);
+      let fare: Awaited<ReturnType<typeof fetchCheapestFare>> = null;
+      let monthsAhead = GAP_MONTH_ATTEMPTS[0];
+      let period = periodForMonthsAhead(monthsAhead);
+      for (const attempt of GAP_MONTH_ATTEMPTS) {
+        monthsAhead = attempt;
+        period = periodForMonthsAhead(attempt);
+        fare = await fetchCheapestFare(pair, env.TRAVELPAYOUTS_TOKEN, period);
+        if (fare) break;
+        await delay(DELAY_BETWEEN_REQUESTS_MS);
+      }
       if (!fare) {
         skipped += 1;
       } else {
@@ -657,6 +674,9 @@ async function runTravelpayoutsGapBatch(env: Env): Promise<{ processed: number; 
           capturedAt,
           advanceMonthsBucket: monthsAhead,
         };
+        // Esta ruta no tenía NINGÚN precio antes — cualquier mes real que
+        // haya devuelto algo es mejor que el estimado curado solo, así
+        // que sí se escribe a `livePrices` sin importar qué ventana ganó.
         await setDocument("livePrices", livePriceDocId(pair.destinationId, pair.originAirportCode), liveEntry, credentials);
         written += 1;
         await recordFlightPriceHistory(liveEntry, "provider_api", credentials);
