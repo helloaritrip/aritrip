@@ -365,7 +365,10 @@ async function fetchSerpApiFare(pair: RoutePair, apiKey: string): Promise<Travel
   url.searchParams.set("outbound_date", outboundDate);
   url.searchParams.set("return_date", returnDate);
   url.searchParams.set("type", "1"); // round trip
-  url.searchParams.set("currency", "usd");
+  // Mayúsculas a propósito — SerpApi rechaza "usd" en minúscula con
+  // "Unsupported `usd` for currency" (encontrado probando en vivo,
+  // 2026-08-17), a diferencia de Travelpayouts que sí acepta minúscula.
+  url.searchParams.set("currency", "USD");
   url.searchParams.set("adults", "1");
   url.searchParams.set("api_key", apiKey);
 
