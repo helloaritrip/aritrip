@@ -34,6 +34,7 @@ import {
   getDocument,
   setDocument,
   listDocuments,
+  writeFirestoreDocument,
   livePriceDocId,
   HOTEL_KEYS,
   timingSafeEqual,
@@ -92,6 +93,49 @@ function nextMonthPeriod(): string {
   const now = new Date();
   const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// Registro histórico (2026-08-18, a pedido del usuario: "quiero que
+// llevemos ese registro" de cómo van cambiando los precios día a día).
+// A diferencia de `livePrices`/`liveHotelPrices` (que SIEMPRE pisan el
+// mismo documento por ruta/destino — solo queda la última captura), acá
+// cada captura exitosa suma un documento nuevo con ID automático
+// (writeFirestoreDocument, no setDocument) — nunca se pisa nada. Por
+// ahora solo se acumula, no se lee/calcula nada con esto todavía (eso
+// queda para cuando haya volumen real, ver la nota de "Fase futura" en
+// priceEstimation.ts). Best-effort: si esta escritura falla, no cuenta
+// como fallo de la captura principal (ya se guardó en la colección
+// "viva"), solo se loguea.
+async function recordFlightPriceHistory(
+  entry: {
+    destinationId: string;
+    originAirportCode: string;
+    avgFlightCostUSD: number;
+    avgFlightDurationMinutes: number;
+    transfers?: number;
+    airline?: string;
+    searchPeriod: string;
+    capturedAt: string;
+  },
+  source: "provider_api" | "serpapi",
+  credentials: FirestoreCredentials
+): Promise<void> {
+  try {
+    await writeFirestoreDocument("priceHistory", { type: "flight", source, ...entry }, credentials);
+  } catch (err) {
+    console.warn(`[price-sync] history write failed (flight ${entry.destinationId} from ${entry.originAirportCode})`, err);
+  }
+}
+
+async function recordHotelPriceHistory(
+  entry: { destinationId: string; avgHotelBudgetUSD?: number; avgHotelMidUSD: number; avgHotelPremiumUSD?: number; capturedAt: string },
+  credentials: FirestoreCredentials
+): Promise<void> {
+  try {
+    await writeFirestoreDocument("priceHistory", { type: "hotel", ...entry }, credentials);
+  } catch (err) {
+    console.warn(`[price-sync] history write failed (hotel ${entry.destinationId})`, err);
+  }
 }
 
 // ---------- Vuelos (Travelpayouts Data API) ----------
@@ -285,38 +329,25 @@ async function runFlightBatch(env: Env): Promise<{ processed: number; written: n
         // searchPeriod (2026-08-10, extensión del dato observado a pedido
         // del usuario) — de qué mes es esta tarifa, para poder analizar
         // más adelante si nuestro ancla "medio plazo" (ver
-        // priceEstimation.ts) sigue siendo razonable, sin necesitar una
-        // colección de historial aparte todavía.
+        // priceEstimation.ts) sigue siendo razonable.
         const capturedAt = new Date().toISOString();
         const searchPeriod = nextMonthPeriod();
-        await setDocument(
-          "livePrices",
-          livePriceDocId(pair.destinationId, pair.originAirportCode),
-          {
-            destinationId: pair.destinationId,
-            originAirportCode: pair.originAirportCode,
-            avgFlightCostUSD: Math.round(fare.price),
-            avgFlightDurationMinutes: Math.round(fare.durationOneWay),
-            transfers: fare.transfers,
-            airline: fare.airline,
-            searchPeriod,
-            capturedAt,
-          },
-          credentials
-        );
+        const liveEntry = {
+          destinationId: pair.destinationId,
+          originAirportCode: pair.originAirportCode,
+          avgFlightCostUSD: Math.round(fare.price),
+          avgFlightDurationMinutes: Math.round(fare.durationOneWay),
+          transfers: fare.transfers,
+          airline: fare.airline,
+          searchPeriod,
+          capturedAt,
+        };
+        await setDocument("livePrices", livePriceDocId(pair.destinationId, pair.originAirportCode), liveEntry, credentials);
         written += 1;
+        await recordFlightPriceHistory(liveEntry, "provider_api", credentials);
 
         const deal = evaluateFlightDeal(
-          {
-            destinationId: pair.destinationId,
-            originAirportCode: pair.originAirportCode,
-            avgFlightCostUSD: Math.round(fare.price),
-            avgFlightDurationMinutes: Math.round(fare.durationOneWay),
-            transfers: fare.transfers,
-            airline: fare.airline,
-            searchPeriod,
-            capturedAt,
-          },
+          liveEntry,
           destById.get(pair.destinationId),
           curatedSnapshots
         );
@@ -482,6 +513,7 @@ async function runSerpApiBatch(env: Env): Promise<{ processed: number; written: 
         };
         await setDocument("livePrices", livePriceDocId(pair.destinationId, pair.originAirportCode), liveEntry, credentials);
         written += 1;
+        await recordFlightPriceHistory(liveEntry, "serpapi", credentials);
 
         const deal = evaluateFlightDeal(liveEntry, destById.get(pair.destinationId), curatedSnapshots);
         dealUpdates.push({ destinationId: pair.destinationId, originAirportCode: pair.originAirportCode, deal });
@@ -540,6 +572,7 @@ async function runTravelpayoutsGapBatch(env: Env): Promise<{ processed: number; 
         };
         await setDocument("livePrices", livePriceDocId(pair.destinationId, pair.originAirportCode), liveEntry, credentials);
         written += 1;
+        await recordFlightPriceHistory(liveEntry, "provider_api", credentials);
 
         const deal = evaluateFlightDeal(liveEntry, destById.get(pair.destinationId), curatedSnapshots);
         dealUpdates.push({ destinationId: pair.destinationId, originAirportCode: pair.originAirportCode, deal });
@@ -635,19 +668,16 @@ async function runHotelBatch(env: Env): Promise<{ processed: number; written: nu
       continue;
     }
 
-    await setDocument(
-      "liveHotelPrices",
+    const hotelEntry = {
       destinationId,
-      {
-        destinationId,
-        avgHotelBudgetUSD: rates.budget as number | undefined,
-        avgHotelMidUSD: rates.mid,
-        avgHotelPremiumUSD: rates.premium as number | undefined,
-        capturedAt: new Date().toISOString(),
-      },
-      credentials
-    );
+      avgHotelBudgetUSD: rates.budget as number | undefined,
+      avgHotelMidUSD: rates.mid,
+      avgHotelPremiumUSD: rates.premium as number | undefined,
+      capturedAt: new Date().toISOString(),
+    };
+    await setDocument("liveHotelPrices", destinationId, hotelEntry, credentials);
     written += 1;
+    await recordHotelPriceHistory(hotelEntry, credentials);
   }
 
   const nextOffset = allDestinationIds.length === 0 ? 0 : (offset + HOTEL_BATCH_SIZE) % allDestinationIds.length;
