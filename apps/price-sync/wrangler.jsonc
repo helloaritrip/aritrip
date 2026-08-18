@@ -6,16 +6,18 @@
 	"observability": {
 		"enabled": true
 	},
-	// Dos horarios independientes (ver el dispatcher en src/index.ts, que
+	// Tres horarios independientes (ver el dispatcher en src/index.ts, que
 	// distingue cuál es cuál por el string exacto del cron) para que cada
-	// invocación se quede corta y liviana, en vez de una sola que haga
-	// vuelos y hoteles junta y arriesgue el límite de 50 subrequests del
-	// plan free de Workers:
-	//  - */15 * * * * (vuelos, Travelpayouts): 952 rutas, ciclo ~16h.
-	//  - 5-59/20 * * * * (hoteles, Xotelo): 40 destinos, ciclo ~1h.
+	// invocación se quede corta y liviana, en vez de una sola que haga todo
+	// junto y arriesgue el límite de 50 subrequests del plan free de Workers:
+	//  - */15 * * * * (vuelos, Travelpayouts): ~1088 rutas, ciclo ~18h.
+	//  - 5-59/20 * * * * (hoteles, Xotelo): 48 destinos, ciclo ~1.5h.
+	//  - 30 6 * * * (vuelos de respaldo, SerpApi/Google Flights, 2026-08-17):
+	//    una vez al día, 8 rutas priorizando los destinos con menos
+	//    cobertura — tier gratis de SerpApi es 250 búsquedas/mes.
 	// Nadie los dispara a mano en el día a día — Cloudflare los despierta
 	// solo, más un endpoint /run protegido por secret para probar.
 	"triggers": {
-		"crons": ["*/15 * * * *", "5-59/20 * * * *"]
+		"crons": ["*/15 * * * *", "5-59/20 * * * *", "30 6 * * *"]
 	}
 }

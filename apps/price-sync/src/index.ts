@@ -33,6 +33,7 @@ import {
   originBaseCosts,
   getDocument,
   setDocument,
+  listDocuments,
   livePriceDocId,
   HOTEL_KEYS,
   timingSafeEqual,
@@ -45,6 +46,11 @@ import {
 
 export interface Env {
   TRAVELPAYOUTS_TOKEN: string;
+  // SerpApi (Google Flights) — 2026-08-17, fuente de respaldo para las
+  // rutas que Travelpayouts nunca cachea (no depende de que otro viajero
+  // real haya buscado esa ruta antes, a diferencia de la Data API de
+  // Travelpayouts). Tier gratis: 250 búsquedas/mes — ver SERPAPI_BATCH_SIZE.
+  SERPAPI_KEY: string;
   FIREBASE_CLIENT_EMAIL: string;
   FIREBASE_PRIVATE_KEY: string;
   PRICE_SYNC_TRIGGER_KEY: string;
@@ -53,6 +59,7 @@ export interface Env {
 // Ver wrangler.jsonc — deben quedar idénticos a "triggers.crons" para que
 // el dispatcher de abajo sepa cuál corrida le toca a cada uno.
 const HOTEL_CRON = "5-59/20 * * * *";
+const SERPAPI_CRON = "30 6 * * *";
 
 // Encontrado en producción (2026-08-07): con 40 tiraba "Too many
 // subrequests by single Worker invocation" — el plan free de Workers
@@ -67,6 +74,11 @@ const HOTEL_BATCH_SIZE = 10;
 // Travelpayouts; Xotelo no publica un límite pero se mantiene el mismo
 // ritmo por prolijidad, no hay apuro.
 const DELAY_BETWEEN_REQUESTS_MS = 1100;
+// 250 búsquedas gratis/mes ÷ ~31 días ≈ 8/día — 8×31=248 deja margen sin
+// pagar nada. Corre una sola vez al día (ver SERPAPI_CRON), no cada 15
+// min como vuelos/hoteles, así que el límite de 50 subrequests/invocación
+// de Cloudflare ni entra en juego acá (8×2 = 16).
+const SERPAPI_BATCH_SIZE = 8;
 
 function credentialsFrom(env: Env): FirestoreCredentials {
   return { clientEmail: env.FIREBASE_CLIENT_EMAIL, privateKey: env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
@@ -321,6 +333,135 @@ async function runFlightBatch(env: Env): Promise<{ processed: number; written: n
   return { processed: batch.length, written, skipped, nextOffset, total: allPairs.length };
 }
 
+// ---------- Vuelos, fuente de respaldo (SerpApi / Google Flights) ----------
+//
+// A diferencia de Travelpayouts (arriba), esto no recorre TODAS las
+// rutas por turno con un cursor — busca activamente cuáles son las que
+// menos cobertura tienen (a pedido del usuario: "usemos estratégicamente
+// para buscar los destinos que tenemos menos info") y prioriza esas.
+// Recalcula la prioridad desde cero en cada corrida (lee el estado real
+// de `livePrices`), así que se auto-corrige solo a medida que
+// Travelpayouts también va llenando huecos con el tiempo — no hace
+// falta coordinarlo con el cursor del otro cron.
+
+// Ventana de fecha fija (2026-08-17): a diferencia de Travelpayouts (que
+// solo entiende "mes"), SerpApi pide fechas exactas — se elige ~70 días
+// adelante (dentro del bucket neutral de anticipación, ver
+// ADVANCE_PURCHASE_FACTORS en priceEstimation.ts) y un viaje de 7 noches,
+// mismo criterio de "precio típico" que ya usa el resto del sistema.
+function serpApiDateWindow(): { outboundDate: string; returnDate: string } {
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const outbound = new Date(Date.now() + 70 * 24 * 60 * 60 * 1000);
+  const ret = new Date(outbound.getTime() + 7 * 24 * 60 * 60 * 1000);
+  return { outboundDate: fmt(outbound), returnDate: fmt(ret) };
+}
+
+async function fetchSerpApiFare(pair: RoutePair, apiKey: string): Promise<TravelpayoutsFare | null> {
+  const { outboundDate, returnDate } = serpApiDateWindow();
+  const url = new URL("https://serpapi.com/search");
+  url.searchParams.set("engine", "google_flights");
+  url.searchParams.set("departure_id", pair.originAirportCode);
+  url.searchParams.set("arrival_id", pair.destinationAirportCode);
+  url.searchParams.set("outbound_date", outboundDate);
+  url.searchParams.set("return_date", returnDate);
+  url.searchParams.set("type", "1"); // round trip
+  url.searchParams.set("currency", "usd");
+  url.searchParams.set("adults", "1");
+  url.searchParams.set("api_key", apiKey);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    console.warn(`[price-sync] serpapi ${pair.destinationId} from ${pair.originAirportCode}: HTTP ${res.status}`);
+    return null;
+  }
+
+  const body = (await res.json()) as {
+    best_flights?: Array<{ price?: number; total_duration?: number; flights?: Array<{ airline?: string }> }>;
+    other_flights?: Array<{ price?: number; total_duration?: number; flights?: Array<{ airline?: string }> }>;
+  };
+  const options = [...(body.best_flights ?? []), ...(body.other_flights ?? [])].filter(
+    (o): o is { price: number; total_duration?: number; flights?: Array<{ airline?: string }> } => typeof o.price === "number" && o.price > 0
+  );
+  if (options.length === 0) {
+    console.warn(`[price-sync] serpapi ${pair.destinationId} from ${pair.originAirportCode}: no fare found`);
+    return null;
+  }
+
+  const cheapest = options.reduce((min, o) => (o.price < min.price ? o : min));
+  return {
+    price: cheapest.price,
+    durationOneWay: cheapest.total_duration ?? 0,
+    transfers: Math.max(0, (cheapest.flights?.length ?? 1) - 1),
+    airline: cheapest.flights?.[0]?.airline ?? "",
+  };
+}
+
+/** Rutas sin precio en vivo, priorizando los destinos con MENOS cobertura total primero. */
+async function getLeastCoveredGapRoutes(credentials: FirestoreCredentials, limit: number): Promise<RoutePair[]> {
+  const allPairs = buildAllRoutePairs();
+  const liveDocs = await listDocuments("livePrices", credentials);
+  const liveEntries = liveDocs.filter((d) => d.id !== "_cursor");
+  const liveKeys = new Set(liveEntries.map((d) => d.id));
+
+  const liveCountByDest = new Map<string, number>();
+  for (const doc of liveEntries) {
+    const id = doc.destinationId as string;
+    liveCountByDest.set(id, (liveCountByDest.get(id) ?? 0) + 1);
+  }
+
+  const gapPairs = allPairs.filter((p) => !liveKeys.has(livePriceDocId(p.destinationId, p.originAirportCode)));
+  gapPairs.sort((a, b) => (liveCountByDest.get(a.destinationId) ?? 0) - (liveCountByDest.get(b.destinationId) ?? 0));
+
+  return gapPairs.slice(0, limit);
+}
+
+async function runSerpApiBatch(env: Env): Promise<{ processed: number; written: number; skipped: number }> {
+  const credentials = credentialsFrom(env);
+  const gapPairs = await getLeastCoveredGapRoutes(credentials, SERPAPI_BATCH_SIZE);
+  const destById = new Map(destinations.map((d) => [d.id, d]));
+  const curatedSnapshots = generateAllPriceSnapshots(destinations);
+  const dealUpdates: { destinationId: string; originAirportCode: string; deal: ReturnType<typeof evaluateFlightDeal> }[] = [];
+
+  let written = 0;
+  let skipped = 0;
+
+  for (const pair of gapPairs) {
+    try {
+      const fare = await fetchSerpApiFare(pair, env.SERPAPI_KEY);
+      if (!fare) {
+        skipped += 1;
+      } else {
+        const capturedAt = new Date().toISOString();
+        const searchPeriod = serpApiDateWindow().outboundDate.slice(0, 7); // "YYYY-MM" — mismo formato que usa Travelpayouts
+        const liveEntry = {
+          destinationId: pair.destinationId,
+          originAirportCode: pair.originAirportCode,
+          avgFlightCostUSD: Math.round(fare.price),
+          avgFlightDurationMinutes: Math.round(fare.durationOneWay),
+          transfers: fare.transfers,
+          airline: fare.airline,
+          searchPeriod,
+          source: "serpapi", // distingue de Travelpayouts en el panel de admin, no cambia cómo se usa el dato
+          capturedAt,
+        };
+        await setDocument("livePrices", livePriceDocId(pair.destinationId, pair.originAirportCode), liveEntry, credentials);
+        written += 1;
+
+        const deal = evaluateFlightDeal(liveEntry, destById.get(pair.destinationId), curatedSnapshots);
+        dealUpdates.push({ destinationId: pair.destinationId, originAirportCode: pair.originAirportCode, deal });
+      }
+    } catch (err) {
+      console.error(`[price-sync] serpapi ${pair.destinationId} from ${pair.originAirportCode}: failed`, err);
+      skipped += 1;
+    }
+    await delay(DELAY_BETWEEN_REQUESTS_MS);
+  }
+
+  await updateDealsIndex(credentials, dealUpdates);
+
+  return { processed: gapPairs.length, written, skipped };
+}
+
 // ---------- Hoteles (Xotelo, un hotel ancla curado por destino) ----------
 
 const HOTEL_TRIP_NIGHTS = 5;
@@ -423,8 +564,9 @@ async function runHotelBatch(env: Env): Promise<{ processed: number; written: nu
 
 export default {
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    const job = controller.cron === HOTEL_CRON ? runHotelBatch(env) : runFlightBatch(env);
-    const label = controller.cron === HOTEL_CRON ? "hotels" : "flights";
+    const job =
+      controller.cron === HOTEL_CRON ? runHotelBatch(env) : controller.cron === SERPAPI_CRON ? runSerpApiBatch(env) : runFlightBatch(env);
+    const label = controller.cron === HOTEL_CRON ? "hotels" : controller.cron === SERPAPI_CRON ? "serpapi" : "flights";
     ctx.waitUntil(
       job
         .then((summary) => console.log(`[price-sync] ${label} batch done`, summary))
@@ -436,14 +578,16 @@ export default {
   // secret simple (no hay nada sensible del lado del usuario acá, es un
   // worker interno sin dominio público conocido, pero evita que cualquiera
   // que adivine la URL gaste el rate limit de la API a lo pavo).
-  // ?mode=hotels para probar el lote de hoteles; por default corre vuelos.
+  // ?mode=hotels|serpapi para probar esos lotes; por default corre vuelos
+  // (Travelpayouts).
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     // timingSafeEqual en vez de !== — auditoría de seguridad, 2026-08-10.
     if (!timingSafeEqual(url.searchParams.get("key") ?? "", env.PRICE_SYNC_TRIGGER_KEY)) {
       return new Response("Not found", { status: 404 });
     }
-    const summary = url.searchParams.get("mode") === "hotels" ? await runHotelBatch(env) : await runFlightBatch(env);
+    const mode = url.searchParams.get("mode");
+    const summary = mode === "hotels" ? await runHotelBatch(env) : mode === "serpapi" ? await runSerpApiBatch(env) : await runFlightBatch(env);
     return new Response(JSON.stringify(summary, null, 2), { headers: { "Content-Type": "application/json" } });
   },
 } satisfies ExportedHandler<Env>;

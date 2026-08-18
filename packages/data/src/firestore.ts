@@ -178,20 +178,39 @@ export async function getDocument(
   return fromFirestoreFields(doc.fields);
 }
 
-/** Lista todos los documentos de una colección, cada uno con su `id` incluido. */
+/**
+ * Lista todos los documentos de una colección, cada uno con su `id`
+ * incluido. Pagina de verdad (sigue `nextPageToken` hasta agotarlo) —
+ * antes cortaba en 300 documentos fijos, silencioso (sin error, solo
+ * devolvía una porción), lo que hacía que colecciones que crecen más
+ * allá de eso (ej. `livePrices`, camino a 1088 rutas) dieran conteos y
+ * resultados incompletos sin ningún aviso. Colecciones chicas (Partners,
+ * Admins, Pages) terminan en una sola vuelta igual que antes.
+ */
 export async function listDocuments(
   collection: string,
   credentials: FirestoreCredentials
 ): Promise<(Record<string, unknown> & { id: string })[]> {
-  const res = await authedFetch(`${DOCS_BASE}/${collection}?pageSize=300`, credentials);
-  if (!res.ok) {
-    throw new Error(`Firestore list failed: ${res.status} ${await res.text()}`);
-  }
-  const data = (await res.json()) as { documents?: { name: string; fields?: Record<string, unknown> }[] };
-  return (data.documents ?? []).map((doc) => ({
-    id: doc.name.split("/").pop() ?? "",
-    ...fromFirestoreFields(doc.fields),
-  }));
+  const results: (Record<string, unknown> & { id: string })[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const url = new URL(`${DOCS_BASE}/${collection}`);
+    url.searchParams.set("pageSize", "300");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+    const res = await authedFetch(url.toString(), credentials);
+    if (!res.ok) {
+      throw new Error(`Firestore list failed: ${res.status} ${await res.text()}`);
+    }
+    const data = (await res.json()) as { documents?: { name: string; fields?: Record<string, unknown> }[]; nextPageToken?: string };
+    for (const doc of data.documents ?? []) {
+      results.push({ id: doc.name.split("/").pop() ?? "", ...fromFirestoreFields(doc.fields) });
+    }
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+
+  return results;
 }
 
 /**
