@@ -32,18 +32,23 @@ type TrackedEventDoc = {
   endDate?: string;
 };
 
-const PAGE_SIZE = 20;
-const requestedPage = Number(Astro.url.searchParams.get("page"));
-const page = Number.isFinite(requestedPage) && requestedPage >= 1 ? Math.floor(requestedPage) : 1;
+// Muestra reusada para TODO — estadísticas agregadas de arriba Y la lista
+// de "Actividad reciente" de abajo (2026-08-19, a pedido del usuario tras
+// ver la lista inundada de eventos de prueba sin ningún filtro). Antes
+// "Actividad reciente" hacía su PROPIA consulta paginada (offset/limit,
+// 51 páginas de 20) contra TODA la colección — un solo fetch más grande,
+// filtrado en memoria, cubre ambas secciones con una sola lectura real a
+// Firestore (más barato, y permite filtrar sin pegarle a Firestore de
+// nuevo por cada combinación de filtro).
+const RECENT_SAMPLE_SIZE = 500;
 
-// Muestra para las estadísticas agregadas (top orígenes/destinos, CTR) —
-// separada de la actividad paginada de abajo porque esas cards tienen
-// que reflejar "los últimos N eventos" en conjunto, no solo la página
-// que se esté mirando en un momento dado.
-const STATS_SAMPLE_SIZE = 300;
+// Filtros de "Actividad reciente" (2026-08-19) — via query string, sin
+// JavaScript: un <form method="GET"> normal arma la URL solo.
+const EVENT_TYPES = ["search_performed", "recommendation_shown", "recommendation_clicked", "favorite_saved", "favorite_removed"] as const;
+const eventTypeFilter = Astro.url.searchParams.get("type") ?? "all";
+const showTest = Astro.url.searchParams.get("showTest") === "1";
 
-let statsEvents: TrackedEventDoc[] = [];
-let pageEvents: TrackedEventDoc[] = [];
+let recentEvents: TrackedEventDoc[] = [];
 let totalEvents = 0;
 let loadError: string | null = null;
 
@@ -57,19 +62,15 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
     //
     // Cacheado vía adminReadCache (2026-08-15) — esta página se había
     // quedado afuera del barrido de cacheo de admin del 13/08 (heredaba
-    // la forma original de searches.astro) y leía hasta 300+20 eventos SIN
+    // la forma original de searches.astro) y leía cientos de eventos SIN
     // cachear en cada visita/refresh. Ver adminReadCache.ts para el porqué.
-    [statsEvents, pageEvents, totalEvents] = await Promise.all([
-      getCachedQuery(`events:stats:${STATS_SAMPLE_SIZE}`, "events", credentials, {
+    // Una sola cache key (sin los filtros) — filtrar/cambiar de filtro no
+    // dispara una lectura nueva de Firestore dentro del TTL del caché.
+    [recentEvents, totalEvents] = await Promise.all([
+      getCachedQuery(`events:recent:${RECENT_SAMPLE_SIZE}`, "events", credentials, {
         orderByField: "createdAt",
         direction: "DESCENDING",
-        limit: STATS_SAMPLE_SIZE,
-      }) as Promise<TrackedEventDoc[]>,
-      getCachedQuery(`events:page:${page}:${PAGE_SIZE}`, "events", credentials, {
-        orderByField: "createdAt",
-        direction: "DESCENDING",
-        limit: PAGE_SIZE,
-        offset: (page - 1) * PAGE_SIZE,
+        limit: RECENT_SAMPLE_SIZE,
       }) as Promise<TrackedEventDoc[]>,
       countDocuments("events", credentials),
     ]);
@@ -81,7 +82,7 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
   loadError = "Firestore isn't configured yet (missing secrets).";
 }
 
-const totalPages = Math.max(1, Math.ceil(totalEvents / PAGE_SIZE));
+const statsEvents = recentEvents;
 
 const destinationName = (id?: string) => destinations.find((d) => d.id === id)?.name ?? id ?? "—";
 const originLabel = (code?: string) => ORIGIN_LABELS[code as OriginHub] ?? code ?? "—";
@@ -304,7 +305,19 @@ function formatDate(iso?: string): string {
   return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
+// Filtrado de "Actividad reciente" en memoria (2026-08-19) — sobre el
+// mismo `recentEvents` ya fetcheado arriba, no una consulta nueva.
+const activityEvents = recentEvents.filter((e) => (showTest || e.isTest !== true) && (eventTypeFilter === "all" || e.name === eventTypeFilter));
+
+// "Cargar más" sin JavaScript (2026-08-19, reemplaza los 51 links de
+// página numerada) — se muestran las primeras N filas siempre visibles,
+// el resto vive adentro de un <details> nativo (mismo patrón ya usado en
+// FAQAccordion, cero <script> nuevo). Todo lo que hay en `activityEvents`
+// ya está en el HTML de la página — "cargar más" es solo revelarlo, no
+// un pedido nuevo al servidor.
+const INITIAL_VISIBLE = 25;
+const visibleEvents = activityEvents.slice(0, INITIAL_VISIBLE);
+const moreEvents = activityEvents.slice(INITIAL_VISIBLE);
 ---
 
 <AdminLayout title="Metrics — AriTrips Admin" session={session} active="metrics">
@@ -584,69 +597,101 @@ const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
           </div>
         </div>
 
-        <div class="flex flex-col gap-2">
-          <div class="flex items-baseline justify-between">
+        <div class="flex flex-col gap-3">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Actividad reciente</h2>
-            <p class="text-xs text-muted">{totalEvents} eventos en total · página {page} de {totalPages}</p>
-          </div>
-          <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
-            {pageEvents.map((e) => (
-              <div class="flex items-center justify-between gap-4 p-3 text-sm">
-                <span
-                  class={`w-44 shrink-0 rounded-full px-2 py-0.5 text-center text-xs font-medium ${
-                    e.name === "search_performed"
-                      ? "bg-accent/10 text-accent"
-                      : e.name === "recommendation_clicked"
-                        ? "bg-highlight/10 text-highlight"
-                        : e.name === "favorite_saved" || e.name === "favorite_removed"
-                          ? "bg-green-600/10 text-green-700 dark:text-green-400"
-                          : "bg-rule/60 text-muted"
-                  }`}
-                >
-                  {e.name}
-                </span>
-                <span class="flex-1 truncate text-ink">{formatEvent(e)}</span>
-                {e.isTest && (
-                  <span class="shrink-0 rounded-full bg-red-600/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600">
-                    Test
-                  </span>
-                )}
-                <span class="shrink-0 text-xs text-muted">{formatDate(e.createdAt)}</span>
-              </div>
-            ))}
+            <p class="text-xs text-muted">
+              {activityEvents.length} de los últimos {recentEvents.length} eventos ({totalEvents} en total)
+            </p>
           </div>
 
-          {totalPages > 1 && (
-            <nav class="flex flex-wrap items-center justify-center gap-1 pt-2" aria-label="Paginación de actividad">
-              <a
-                href={page > 1 ? `?page=${page - 1}` : undefined}
-                aria-disabled={page <= 1}
-                class={`rounded-md px-2.5 py-1.5 text-sm font-medium ${
-                  page <= 1 ? "pointer-events-none text-muted opacity-40" : "text-ink hover:bg-surface-2"
-                }`}
-              >
-                ←
-              </a>
-              {pageNumbers.map((n) => (
-                <a
-                  href={`?page=${n}`}
-                  class={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                    n === page ? "bg-accent text-accent-ink" : "text-ink hover:bg-surface-2"
-                  }`}
-                >
-                  {n}
-                </a>
+          <!-- Filtros vía <form method="GET"> normal (2026-08-19) — sin
+               JavaScript, el navegador arma la URL solo al enviar. -->
+          <form method="GET" class="flex flex-wrap items-center gap-3 rounded-lg border border-rule bg-surface p-3 text-sm">
+            <label class="flex items-center gap-2">
+              <span class="text-muted">Tipo</span>
+              <select name="type" class="rounded-md border border-rule bg-bg px-2 py-1 text-ink">
+                <option value="all" selected={eventTypeFilter === "all"}>Todos</option>
+                {EVENT_TYPES.map((t) => (
+                  <option value={t} selected={eventTypeFilter === t}>{t}</option>
+                ))}
+              </select>
+            </label>
+            <label class="flex items-center gap-2">
+              <input type="checkbox" name="showTest" value="1" checked={showTest} class="rounded border-rule" />
+              <span class="text-ink">Mostrar eventos de prueba</span>
+            </label>
+            <button type="submit" class="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink">Filtrar</button>
+            {(eventTypeFilter !== "all" || showTest) && (
+              <a href="/ari-admin/metrics" class="text-xs text-muted underline">Limpiar filtros</a>
+            )}
+          </form>
+
+          {activityEvents.length === 0 ? (
+            <p class="rounded-lg border border-dashed border-rule bg-surface/50 p-8 text-center text-sm text-muted">
+              Ningún evento coincide con este filtro.
+            </p>
+          ) : (
+            <div class="flex flex-col divide-y divide-rule rounded-lg border border-rule bg-surface">
+              {visibleEvents.map((e) => (
+                <div class="flex items-center justify-between gap-4 p-3 text-sm">
+                  <span
+                    class={`w-44 shrink-0 rounded-full px-2 py-0.5 text-center text-xs font-medium ${
+                      e.name === "search_performed"
+                        ? "bg-accent/10 text-accent"
+                        : e.name === "recommendation_clicked"
+                          ? "bg-highlight/10 text-highlight"
+                          : e.name === "favorite_saved" || e.name === "favorite_removed"
+                            ? "bg-green-600/10 text-green-700 dark:text-green-400"
+                            : "bg-rule/60 text-muted"
+                    }`}
+                  >
+                    {e.name}
+                  </span>
+                  <span class="flex-1 truncate text-ink">{formatEvent(e)}</span>
+                  {e.isTest && (
+                    <span class="shrink-0 rounded-full bg-red-600/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600">
+                      Test
+                    </span>
+                  )}
+                  <span class="shrink-0 text-xs text-muted">{formatDate(e.createdAt)}</span>
+                </div>
               ))}
-              <a
-                href={page < totalPages ? `?page=${page + 1}` : undefined}
-                aria-disabled={page >= totalPages}
-                class={`rounded-md px-2.5 py-1.5 text-sm font-medium ${
-                  page >= totalPages ? "pointer-events-none text-muted opacity-50" : "text-ink hover:bg-surface-2"
-                }`}
-              >
-                →
-              </a>
-            </nav>
+
+              {moreEvents.length > 0 && (
+                <details>
+                  <summary class="cursor-pointer p-3 text-center text-sm font-medium text-accent hover:bg-surface-2">
+                    Cargar {moreEvents.length} más
+                  </summary>
+                  <div class="flex flex-col divide-y divide-rule">
+                    {moreEvents.map((e) => (
+                      <div class="flex items-center justify-between gap-4 p-3 text-sm">
+                        <span
+                          class={`w-44 shrink-0 rounded-full px-2 py-0.5 text-center text-xs font-medium ${
+                            e.name === "search_performed"
+                              ? "bg-accent/10 text-accent"
+                              : e.name === "recommendation_clicked"
+                                ? "bg-highlight/10 text-highlight"
+                                : e.name === "favorite_saved" || e.name === "favorite_removed"
+                                  ? "bg-green-600/10 text-green-700 dark:text-green-400"
+                                  : "bg-rule/60 text-muted"
+                          }`}
+                        >
+                          {e.name}
+                        </span>
+                        <span class="flex-1 truncate text-ink">{formatEvent(e)}</span>
+                        {e.isTest && (
+                          <span class="shrink-0 rounded-full bg-red-600/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600">
+                            Test
+                          </span>
+                        )}
+                        <span class="shrink-0 text-xs text-muted">{formatDate(e.createdAt)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </div>
           )}
         </div>
       </>
