@@ -8,6 +8,8 @@ worker-configuration.d.ts
 .astro/
 .env
 .env.local
+.dev.vars
+.dev.vars.*
 *.log
 .DS_Store
 dist/

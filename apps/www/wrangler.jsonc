@@ -10,5 +10,17 @@
 	},
 	"observability": {
 		"enabled": true
-	}
+	},
+	// Rate limit de intentos de login (2026-08-19, auditoría de seguridad) —
+	// /api/admin/login no tenía ningún freno, se podían probar contraseñas
+	// sin límite contra un email de admin conocido/adivinado. Mismo patrón
+	// ya usado en apps/app para el proxy de imágenes (Workers Rate Limiting
+	// API, no depende del plan de Cloudflare).
+	"ratelimits": [
+		{
+			"name": "LOGIN_LIMITER",
+			"namespace_id": "1002",
+			"simple": { "limit": 10, "period": 60 }
+		}
+	]
 }

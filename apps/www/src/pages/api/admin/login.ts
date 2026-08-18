@@ -10,9 +10,22 @@ function json(body: unknown, status: number): Response {
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, SESSION_SECRET } = env;
+  const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, SESSION_SECRET, LOGIN_LIMITER } = env as typeof env & {
+    LOGIN_LIMITER?: { limit: (opts: { key: string }) => Promise<{ success: boolean }> };
+  };
   if (!FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY || !SESSION_SECRET) {
     return json({ error: "Admin panel isn't configured yet (missing secrets)." }, 503);
+  }
+
+  // Freno de fuerza bruta (2026-08-19, auditoría de seguridad) — sin esto
+  // no había ningún límite a cuántas contraseñas se podían probar contra
+  // un email de admin conocido. Por IP, no por email — así tampoco sirve
+  // para tumbar el acceso legítimo de un admin real spameando su propio
+  // email desde otra IP.
+  if (LOGIN_LIMITER) {
+    const clientIp = request.headers.get("cf-connecting-ip") ?? "unknown";
+    const { success } = await LOGIN_LIMITER.limit({ key: clientIp });
+    if (!success) return json({ error: "Too many attempts. Try again in a minute." }, 429);
   }
 
   let body: { email?: string; password?: string };
