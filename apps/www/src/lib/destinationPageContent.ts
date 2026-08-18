@@ -108,6 +108,91 @@ function visaSentence(country: string): string {
   return `U.S. citizens can enter ${country} visa-free for a standard tourist stay — just bring a passport valid for the length of your trip.`;
 }
 
+// Variantes de redacción (2026-08-19, auditoría de SEO — duplicación de
+// contenido) — hallazgo real: comparando Tulum vs. Banff en vivo, secciones
+// enteras salían idénticas letra por letra entre las 48 páginas (solo
+// cambiaban 2-3 números). En vez de re-investigar cada destino a mano
+// (como sí se hizo con los 24 hub pages), se escribieron 5 formas de decir
+// lo mismo por cada bloque repetido, y cada destino usa siempre EL MISMO
+// índice (derivado de su id) en las 10 listas de abajo — así cada página
+// tiene una "voz" consistente de punta a punta, y solo comparte esa voz
+// con ~9 de los otros 47 destinos en vez de con los 47 completos.
+function variantIndex(id: string, poolSize: number): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return hash % poolSize;
+}
+
+const DO_HEADINGS = ["What there is to do", "Things to do while you're there", "What to expect on the ground", "How you'll spend your days", "The highlights"];
+
+const EXPERIENCES_INTROS = [
+  (x: string) => `On the ground, most trips here revolve around a handful of things: ${x}.`,
+  (x: string) => `Day to day, expect a mix of ${x}.`,
+  (x: string) => `The highlights people build their trip around: ${x}.`,
+  (x: string) => `What keeps people busy here: ${x}.`,
+  (x: string) => `A typical trip here touches on ${x}.`,
+];
+
+const KNOW_HEADINGS = ["Good to know before you go", "Before you book", "Practical details", "What to plan around", "The logistics"];
+
+const BEST_WINDOW_SENTENCES = [
+  (month: string, temp: string) => `The best-value window is ${month}, when crowds are thinner and average highs run around ${temp}.`,
+  (month: string, temp: string) => `${month} tends to be the sweet spot — fewer crowds and average highs around ${temp}.`,
+  (month: string, temp: string) => `For the best mix of price and weather, aim for ${month}, with highs typically around ${temp}.`,
+  (month: string, temp: string) => `${month} is when this destination is at its best value — lighter crowds, highs near ${temp}.`,
+  (month: string, temp: string) => `Crowds thin out and prices ease during ${month}, with highs averaging ${temp}.`,
+];
+
+const TRIP_LENGTH_SENTENCES = [
+  (days: string, name: string) => `Most travelers plan ${days} days for ${name} — enough time to settle in without rushing.`,
+  (days: string, _name: string) => `${days} days is the typical window here — enough to settle in without feeling rushed.`,
+  (days: string, name: string) => `Plan on ${days} days for ${name}; that's enough to get past the arrival scramble and actually relax.`,
+  (days: string, name: string) => `A ${days}-day trip is the norm for ${name} — long enough to not feel rushed.`,
+  (days: string, name: string) => `Most people give ${name} ${days} days, which is enough time to settle into the pace.`,
+];
+
+const COST_HEADINGS = ["What a trip here costs", "The real cost breakdown", "What you'll actually spend", "Budgeting for this trip", "The numbers"];
+
+const COST_PARAGRAPHS = [
+  (budget: string, premium: string, activity: string) =>
+    `Hotels here run roughly $${budget}–${premium} a night depending on tier (budget/mid/premium), and activities average around $${activity} a day per person. These are curated estimates, not live quotes — real prices shift by season and exact dates. The fastest way to see what a full trip actually costs from your city is to run it through AriTrips: real flight, hotel, and activity costs together, not just a flight price.`,
+  (budget: string, premium: string, activity: string) =>
+    `Expect hotels in the $${budget}–${premium}/night range across tiers (budget/mid/premium), with activities running about $${activity} a day per person. Treat these as curated estimates, not live quotes — actual prices move with season and exact dates. Want the real number for your trip? Run it through AriTrips for actual flight, hotel, and activity costs together, not just a flight price.`,
+  (budget: string, premium: string, activity: string) =>
+    `Hotel rates here typically fall between $${budget} and $${premium} a night depending on tier, and activities run around $${activity} a day per person. These numbers are curated estimates, not live quotes — real prices shift with season and exact dates. To see what a full trip from your city actually costs, run it through AriTrips: real flight, hotel, and activity costs together, not just a flight price.`,
+  (budget: string, premium: string, activity: string) =>
+    `Plan on $${budget}–${premium} a night for hotels depending on tier (budget/mid/premium), plus about $${activity} a day per person for activities. These are curated estimates, not live quotes — real prices move with season and exact dates. For the actual number from your city, run it through AriTrips: real flight, hotel, and activity costs together, not just a flight price.`,
+  (budget: string, premium: string, activity: string) =>
+    `Hotels range roughly $${budget} to $${premium} a night by tier, and activities average $${activity} a day per person. These are curated estimates, not live quotes — real prices shift by season and exact dates. AriTrips shows the real number for your specific trip: flight, hotel, and activity costs together, not just a flight price.`,
+];
+
+const CTA_SUBHEADINGS = [
+  "Real flight, hotel, and activity costs — not just a flight price.",
+  "Actual flight, hotel, and activity numbers — not just a flight quote.",
+  "See flights, hotels, and activities together — not just a flight price.",
+  "Real costs across flights, hotels, and activities — not a flight-only estimate.",
+  "Flights, hotels, and activities, all real numbers — not just a flight price.",
+];
+
+const FAQ_BEST_TIME_ANSWERS = [
+  (month: string) =>
+    `The best-value window is ${month} — it's also the cheapest time to go. That's a value/crowds read, not the only good time — peak season works too if you don't mind higher rates and more company.`,
+  (month: string) =>
+    `${month} offers the best value — it's also typically the cheapest stretch. Peak season still works fine if you don't mind paying more and sharing the place with more people.`,
+  (month: string) =>
+    `For the best combination of price and crowds, go in ${month}. Peak season is still a fine choice if higher rates and bigger crowds don't bother you.`,
+  (month: string) => `${month} is the value pick — cheaper and less crowded. That doesn't rule out peak season, just means you'll pay more and share it with more people.`,
+  (month: string) => `Aim for ${month} if value matters most — it's the cheapest window. Peak season remains a solid option if cost and crowds aren't a concern.`,
+];
+
+const FAQ_TRIP_LENGTH_ANSWERS = [
+  (days: string) => `Most travelers plan ${days} days. It also works well as a longer, slower trip if you have the time.`,
+  (days: string) => `${days} days is typical. If you've got more time, it also works well as a slower, longer trip.`,
+  (days: string) => `The usual plan is ${days} days, though it holds up fine as a longer, more relaxed trip too.`,
+  (days: string) => `Most people budget ${days} days for this — it also stretches well into a longer, slower trip.`,
+  (days: string) => `${days} days covers it for most people. Given extra time, it works just as well as an extended, slower trip.`,
+];
+
 export function buildDestinationPageContent(destination: Destination) {
   const stay = destinationBaseStayCosts[destination.id];
   if (!stay) return null;
@@ -119,6 +204,7 @@ export function buildDestinationPageContent(destination: Destination) {
   const descriptorTrip = withIndefiniteArticle(`${descriptor} trip`);
   const profileList = formatProfileList(idealTravelerProfile);
   const visa = visaSentence(country);
+  const v = variantIndex(destination.id, 5);
 
   // heading (H1 visual) y pageTitle (<title> de SEO) separados a propósito
   // (2026-08-19, auditoría de SEO) — antes eran la misma variable. El H1
@@ -159,29 +245,33 @@ export function buildDestinationPageContent(destination: Destination) {
         text: `${insiderNotes} ${name} tends to work best for travelers planning ${descriptorTrip} — it's a regular pick for ${profileList}.`,
       },
     },
-    { type: "Heading", props: { id: "h-do", text: "What there is to do", level: "h2" } },
+    { type: "Heading", props: { id: "h-do", text: DO_HEADINGS[v], level: "h2" } },
     {
       type: "TextBlock",
       props: {
         id: "text-do",
-        text: `On the ground, most trips here revolve around a handful of things: ${signatureExperiences.map(lowerFirst).join("; ")}.`,
+        text: EXPERIENCES_INTROS[v](signatureExperiences.map(lowerFirst).join("; ")),
       },
     },
     { type: "ExperienceGallery", props: { id: "gallery-1", destinationId: destination.id } },
-    { type: "Heading", props: { id: "h-know", text: "Good to know before you go", level: "h2" } },
+    { type: "Heading", props: { id: "h-know", text: KNOW_HEADINGS[v], level: "h2" } },
     {
       type: "TextBlock",
       props: {
         id: "text-know",
-        text: `The best-value window is ${monthLabel}, when crowds are thinner and average highs run around ${bestSeason.avgTempC.max}°C (${celsiusToFahrenheit(bestSeason.avgTempC.max)}°F). Most travelers plan ${days.min}–${days.max} days for ${name} — enough time to settle in without rushing. ${visa}`,
+        text: `${BEST_WINDOW_SENTENCES[v](monthLabel, `${bestSeason.avgTempC.max}°C (${celsiusToFahrenheit(bestSeason.avgTempC.max)}°F)`)} ${TRIP_LENGTH_SENTENCES[v](`${days.min}–${days.max}`, name)} ${visa}`,
       },
     },
-    { type: "Heading", props: { id: "h-cost", text: "What a trip here costs", level: "h2" } },
+    { type: "Heading", props: { id: "h-cost", text: COST_HEADINGS[v], level: "h2" } },
     {
       type: "TextBlock",
       props: {
         id: "text-cost",
-        text: `Hotels here run roughly $${stay.avgHotelCostPerNightUSD.budget}–${stay.avgHotelCostPerNightUSD.premium} a night depending on tier (budget/mid/premium), and activities average around $${stay.avgActivityCostPerDayUSD} a day per person. These are curated estimates, not live quotes — real prices shift by season and exact dates. The fastest way to see what a full trip actually costs from your city is to run it through AriTrips: real flight, hotel, and activity costs together, not just a flight price.`,
+        text: COST_PARAGRAPHS[v](
+          String(stay.avgHotelCostPerNightUSD.budget),
+          String(stay.avgHotelCostPerNightUSD.premium),
+          String(stay.avgActivityCostPerDayUSD)
+        ),
       },
     },
     // "Destinos relacionados" (2026-08-16, auditoría de SEO — enlazado
@@ -196,7 +286,7 @@ export function buildDestinationPageContent(destination: Destination) {
         items: [
           {
             question: `What's the best time to visit ${name}?`,
-            answer: `The best-value window is ${monthLabel} — it's also the cheapest time to go. That's a value/crowds read, not the only good time — peak season works too if you don't mind higher rates and more company.`,
+            answer: FAQ_BEST_TIME_ANSWERS[v](monthLabel),
           },
           {
             question: `Do U.S. travelers need a visa for ${name}${country === "United States" ? "" : `, ${country}`}?`,
@@ -204,7 +294,7 @@ export function buildDestinationPageContent(destination: Destination) {
           },
           {
             question: `How many days should I plan for ${name}?`,
-            answer: `Most travelers plan ${days.min}–${days.max} days. It also works well as a longer, slower trip if you have the time.`,
+            answer: FAQ_TRIP_LENGTH_ANSWERS[v](`${days.min}–${days.max}`),
           },
         ],
       },
@@ -214,7 +304,7 @@ export function buildDestinationPageContent(destination: Destination) {
       props: {
         id: "cta-1",
         heading: `See what a trip to ${name} costs from your city`,
-        subheading: "Real flight, hotel, and activity costs — not just a flight price.",
+        subheading: CTA_SUBHEADINGS[v],
         ctaLabel: "Find your trip",
         ctaHref: APP_URL,
       },
