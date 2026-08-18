@@ -399,7 +399,17 @@ async function fetchSerpApiFare(pair: RoutePair, apiKey: string): Promise<Travel
   };
 }
 
-/** Rutas sin precio en vivo, priorizando los destinos con MENOS cobertura total primero. */
+/**
+ * Rutas sin precio en vivo, repartidas entre destinos distintos — no solo
+ * "las de menor cobertura", sino una por destino, dando la vuelta en
+ * rondas (2026-08-17, a pedido del usuario: "priorizando destinos que
+ * nunca han tenido nada"). Ordenar solo por cobertura y cortar en
+ * `limit` tenía un problema real: un destino con muchos huecos podía
+ * consumir el lote entero él solo, dejando a otros destinos en cero sin
+ * tocar ni una ruta. Con esto, un lote de 8 toca hasta 8 destinos
+ * distintos (empezando por los de menor cobertura) antes de repetir
+ * ninguno.
+ */
 async function getLeastCoveredGapRoutes(credentials: FirestoreCredentials, limit: number): Promise<RoutePair[]> {
   const allPairs = buildAllRoutePairs();
   const liveDocs = await listDocuments("livePrices", credentials);
@@ -412,10 +422,29 @@ async function getLeastCoveredGapRoutes(credentials: FirestoreCredentials, limit
     liveCountByDest.set(id, (liveCountByDest.get(id) ?? 0) + 1);
   }
 
-  const gapPairs = allPairs.filter((p) => !liveKeys.has(livePriceDocId(p.destinationId, p.originAirportCode)));
-  gapPairs.sort((a, b) => (liveCountByDest.get(a.destinationId) ?? 0) - (liveCountByDest.get(b.destinationId) ?? 0));
+  const gapsByDest = new Map<string, RoutePair[]>();
+  for (const p of allPairs) {
+    if (liveKeys.has(livePriceDocId(p.destinationId, p.originAirportCode))) continue;
+    if (!gapsByDest.has(p.destinationId)) gapsByDest.set(p.destinationId, []);
+    gapsByDest.get(p.destinationId)!.push(p);
+  }
 
-  return gapPairs.slice(0, limit);
+  const destOrder = [...gapsByDest.keys()].sort((a, b) => (liveCountByDest.get(a) ?? 0) - (liveCountByDest.get(b) ?? 0));
+
+  const selected: RoutePair[] = [];
+  for (let round = 0; selected.length < limit; round++) {
+    let addedThisRound = false;
+    for (const destId of destOrder) {
+      const remaining = gapsByDest.get(destId)!;
+      if (round >= remaining.length) continue;
+      selected.push(remaining[round]);
+      addedThisRound = true;
+      if (selected.length >= limit) break;
+    }
+    if (!addedThisRound) break; // no quedan huecos en ningún destino
+  }
+
+  return selected;
 }
 
 async function runSerpApiBatch(env: Env): Promise<{ processed: number; written: number; skipped: number }> {
