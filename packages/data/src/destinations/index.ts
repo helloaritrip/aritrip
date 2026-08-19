@@ -586,7 +586,6 @@ export const destinations: Destination[] = [
     idealTravelerProfile: ["families_young_kids", "couples", "risk_averse_travelers"],
     signatureExperiences: [
       "Eagle Beach, one of the calmest, flattest beaches in the Caribbean",
-      "Reliable weather year-round, outside the hurricane belt",
       "Snorkeling the Antilla shipwreck",
     ],
     insiderNotes:
@@ -1055,7 +1054,6 @@ export const destinations: Destination[] = [
     signatureExperiences: [
       "Colorful waterfront facades of Handelskade in Willemstad",
       "Top-tier diving and snorkeling",
-      "Outside the hurricane belt, like Aruba",
     ],
     insiderNotes:
       "A similar profile to Aruba — stable weather, outside the hurricane belt — but with better value and a stronger diving scene, so it's worth considering as an alternative if you've already looked at Aruba.",

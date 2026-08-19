@@ -17,6 +17,7 @@ declare global {
       SESSION_SECRET?: string;
       FIREBASE_CLIENT_EMAIL?: string;
       FIREBASE_PRIVATE_KEY?: string;
+      PURGE_CACHE_KEY?: string;
     }
   }
 }
