@@ -11,6 +11,7 @@
 import type { APIRoute } from "astro";
 import { env } from "cloudflare:workers";
 import { getCachedPageIndex } from "../lib/pagesCache";
+import { FLIGHT_ROUTE_PAIRS, flightRouteSlug } from "../lib/flightRouteContent";
 
 export const prerender = false;
 
@@ -23,6 +24,14 @@ export const GET: APIRoute = async () => {
     { loc: `${SITE_URL}/`, priority: "1.0" },
     { loc: `${SITE_URL}/blog`, priority: "0.7" },
     { loc: `${SITE_URL}/deals`, priority: "0.8" },
+    { loc: `${SITE_URL}/flights`, priority: "0.7" },
+    // Cluster "Origen → Destino" (2026-08-19) — no vive en Firestore
+    // (prerenderizado en build time, ver flights/[pair].astro), así que
+    // no sale del índice de páginas de arriba — hay que listarlo a mano.
+    ...FLIGHT_ROUTE_PAIRS.map((p) => ({
+      loc: `${SITE_URL}/flights/${flightRouteSlug(p.originCode, p.destinationId)}`,
+      priority: "0.75",
+    })),
   ];
 
   if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {

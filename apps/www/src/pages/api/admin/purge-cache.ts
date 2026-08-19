@@ -18,8 +18,17 @@ export const GET: APIRoute = async ({ request }) => {
   if (!timingSafeEqual(key, env.PURGE_CACHE_KEY ?? "")) {
     return new Response("Not found", { status: 404 });
   }
+  // `path` (2026-08-19) — el cluster de vuelos vive en /flights/{slug}, no
+  // /p/{slug} (purgePageCache asume ese prefijo a propósito, es lo único
+  // que existía cuando se escribió). Acepta cualquier path del sitio en
+  // vez de sumar un purgeFlightRouteCache casi idéntico.
+  const path = url.searchParams.get("path");
   const slug = url.searchParams.get("slug");
-  if (!slug) return new Response(JSON.stringify({ error: "Missing slug" }), { status: 400 });
+  if (path) {
+    await purgePageCache(path, true);
+    return new Response(JSON.stringify({ ok: true, path }), { headers: { "Content-Type": "application/json" } });
+  }
+  if (!slug) return new Response(JSON.stringify({ error: "Missing slug or path" }), { status: 400 });
 
   await purgePageCache(slug);
   return new Response(JSON.stringify({ ok: true, slug }), { headers: { "Content-Type": "application/json" } });

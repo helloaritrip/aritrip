@@ -1,0 +1,55 @@
+---
+// Índice del cluster "Origen → Destino" (2026-08-19) — página real de
+// listado, no solo para el sitemap: sin esto las 25 páginas de rutas
+// quedarían huérfanas (nadie del sitio las enlaza, mismo bug real que ya
+// pasó una vez con las hub pages — "se generaron y deployaron sin ningún
+// link apuntándoles"). Agrupado por origen para que sea fácil de escanear.
+import Layout from "../../layouts/Layout.astro";
+import { FLIGHT_ROUTE_PAIRS, flightRouteSlug } from "../../lib/flightRouteContent";
+import { destinations, ORIGIN_LABELS } from "@aritrips/data";
+
+export const prerender = false;
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=3600, stale-if-error=86400");
+
+const destById = new Map(destinations.map((d) => [d.id, d]));
+
+const byOrigin = new Map<string, { label: string; routes: { slug: string; destinationName: string }[] }>();
+for (const pair of FLIGHT_ROUTE_PAIRS) {
+  const dest = destById.get(pair.destinationId);
+  if (!dest) continue;
+  const entry = byOrigin.get(pair.originCode) ?? { label: ORIGIN_LABELS[pair.originCode] ?? pair.originCode, routes: [] };
+  entry.routes.push({ slug: flightRouteSlug(pair.originCode, pair.destinationId), destinationName: dest.name });
+  byOrigin.set(pair.originCode, entry);
+}
+---
+
+<Layout
+  title="Flight Costs by Route | AriTrips"
+  description="Real flight cost and timing estimates for popular routes — what a trip actually costs from your city, not just a flight price."
+>
+  <main class="mx-auto flex max-w-4xl flex-col gap-10 px-6 py-16">
+    <div class="flex flex-col gap-3 text-center">
+      <h1 class="text-3xl font-semibold text-balance text-ink sm:text-4xl">Flight costs, by route</h1>
+      <p class="mx-auto max-w-xl text-muted">
+        Real cost estimates for popular routes — flight price, flight time, hotel, and the best months to go. Pick your city.
+      </p>
+    </div>
+
+    <div class="flex flex-col gap-8">
+      {
+        [...byOrigin.entries()].map(([, { label, routes }]) => (
+          <div class="flex flex-col gap-3">
+            <h2 class="text-lg font-semibold text-ink">From {label.replace(/\s*\([A-Z]{3}\)$/, "")}</h2>
+            <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              {routes.map((r) => (
+                <a href={`/flights/${r.slug}`} class="text-muted hover:text-accent">
+                  to {r.destinationName}
+                </a>
+              ))}
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </main>
+</Layout>

@@ -1,0 +1,57 @@
+---
+// Cluster SEO "Origen → Destino" (2026-08-19, plan acordado con el
+// usuario tras revisar la propuesta del head) — a diferencia de las
+// páginas de destino/hub, esto NO pasa por Firestore/Puck-editor: el
+// contenido se computa en el momento desde packages/data (mismo patrón
+// defensivo que ya usa DestinationHighlight en puck/config.tsx — curado,
+// no overlay en vivo, para no gastar una lectura de Firestore por visita
+// en lo que podría ser la fuente de mayor volumen de páginas del sitio).
+// SSR (no prerenderizado en build) — mismo patrón que /p/[slug].astro,
+// cacheado en el borde por middleware.ts. Se probó primero con
+// getStaticPaths/prerender: build generaba solo un stub de redirect
+// vacío en vez del contenido real (bug real encontrado en vivo, no
+// investigado más a fondo) — SSR es el camino ya probado en este código.
+import { Render } from "@measured/puck";
+import { config } from "../../puck/config";
+import Layout from "../../layouts/Layout.astro";
+import { parseFlightRouteSlug, buildFlightRouteContent } from "../../lib/flightRouteContent";
+
+export const prerender = false;
+
+const pair = Astro.params.pair;
+const parsed = pair ? parseFlightRouteSlug(pair) : null;
+const content = parsed ? buildFlightRouteContent(parsed.originCode, parsed.destinationId) : null;
+
+if (!content) {
+  return new Response("Not found", { status: 404 });
+}
+
+// Cache de borde en Cloudflare (2026-08-19, mismo patrón que /p/[slug].astro
+// y la home) — el contenido de estas páginas solo cambia cuando cambian
+// los precios curados (packages/data), que requiere un deploy de todos
+// modos, así que un TTL largo no cuesta frescura real.
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=3600, stale-if-error=86400");
+
+const APP_URL_FOR_IMAGES = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
+function imageProxyUrl(query: string, fallback: string): string {
+  return `${APP_URL_FOR_IMAGES}/api/image-proxy?q=${encodeURIComponent(query)}&fallback=${encodeURIComponent(fallback)}`;
+}
+
+const pageImage = imageProxyUrl(content.destination.imageQuery, content.pageTitle);
+
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: content.faqItems.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  },
+];
+---
+
+<Layout title={content.pageTitle} description={content.description} type="website" image={pageImage} jsonLd={jsonLd}>
+  <Render config={config} data={content.puckData} />
+</Layout>

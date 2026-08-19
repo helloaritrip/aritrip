@@ -22,11 +22,15 @@
  * funcionaba bien. No es gratis solo por no ser un `fetch` a un host
  * externo.
  */
-export async function purgePageCache(slug: string): Promise<void> {
+// `isFullPath` (2026-08-19) — el cluster de vuelos vive en /flights/{slug},
+// no /p/{slug}. `false` mantiene el comportamiento original para todos los
+// call sites existentes (republish-*.ts, que solo conocen páginas /p/).
+export async function purgePageCache(slugOrPath: string, isFullPath = false): Promise<void> {
   try {
     const cache = (caches as unknown as { default?: Cache }).default;
     if (!cache) return;
-    await cache.delete(new Request(`https://aritrips.com/p/${slug}`));
+    const path = isFullPath ? slugOrPath : `/p/${slugOrPath}`;
+    await cache.delete(new Request(`https://aritrips.com${path}`));
   } catch {
     // best-effort, ver comentario de arriba
   }
