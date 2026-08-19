@@ -1081,6 +1081,71 @@ export default {
         { headers: { "Content-Type": "application/json" } }
       );
     }
+    // ?mode=manual-bulk (POST) — carga masiva de precios investigados a
+    // mano (2026-08-19, a pedido del usuario: "quiero que me ayudes a
+    // introducir esos datos" con una tabla de 56 precios reales de Aruba
+    // por 14 orígenes × 4 ventanas). Mismo esquema/reglas que
+    // apps/www/src/pages/api/admin/manual-price.ts (source:"manual",
+    // nunca toca `livePrices`) pero acepta un lote entero en el body en
+    // vez de 1 por request — cargar 56 a mano por el formulario habría
+    // sido carísimo en tiempo del usuario para cero beneficio real.
+    // Body: { entries: [{ destinationId, originAirportCode, price,
+    // daysAhead, sourceSite, note? }] }.
+    if (mode === "manual-bulk" && request.method === "POST") {
+      const credentials = credentialsFrom(env);
+      let body: {
+        entries?: { destinationId: string; originAirportCode: string; price: number; daysAhead: number; sourceSite: string; note?: string }[];
+      };
+      try {
+        body = await request.json();
+      } catch {
+        return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers: { "Content-Type": "application/json" } });
+      }
+      const entries = body.entries ?? [];
+
+      let written = 0;
+      const errors: string[] = [];
+      for (const entry of entries) {
+        const routeExists = originBaseCosts[entry.destinationId]?.some((b) => b.originAirportCode === entry.originAirportCode);
+        if (!routeExists) {
+          errors.push(`${entry.destinationId} from ${entry.originAirportCode}: not a route in the catalog`);
+          continue;
+        }
+        if (typeof entry.price !== "number" || entry.price <= 0 || entry.price > 20000) {
+          errors.push(`${entry.destinationId} from ${entry.originAirportCode}: invalid price ${entry.price}`);
+          continue;
+        }
+        const departure = new Date(Date.now() + entry.daysAhead * 24 * 60 * 60 * 1000);
+        const searchPeriod = `${departure.getFullYear()}-${String(departure.getMonth() + 1).padStart(2, "0")}`;
+        const advanceMonthsBucket = Math.max(1, Math.round(entry.daysAhead / 30));
+        try {
+          await writeFirestoreDocument(
+            "priceHistory",
+            {
+              type: "flight",
+              source: "manual",
+              destinationId: entry.destinationId,
+              originAirportCode: entry.originAirportCode,
+              avgFlightCostUSD: Math.round(entry.price),
+              searchPeriod,
+              capturedAt: new Date().toISOString(),
+              advanceMonthsBucket,
+              sourceSite: entry.sourceSite,
+              note: entry.note ?? "",
+            },
+            credentials
+          );
+          written += 1;
+        } catch (err) {
+          errors.push(`${entry.destinationId} from ${entry.originAirportCode}: ${err instanceof Error ? err.message : "write failed"}`);
+        }
+      }
+
+      return new Response(JSON.stringify({ processed: entries.length, written, errors }, null, 2), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // ?mode=bias-check — diagnóstico de solo lectura (2026-08-18, a pedido
     // del usuario: "buscar el gap real contra Kiwi"). Compara, ruta por
     // ruta, la tarifa que trajo Travelpayouts (ancla = más barata de TODO
