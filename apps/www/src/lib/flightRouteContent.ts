@@ -174,6 +174,8 @@ export interface FlightRouteContent {
   heading: string;
   pageTitle: string;
   description: string;
+  flightCostUSD: number;
+  durationLabel: string;
   puckData: Data<Props>;
   faqItems: { question: string; answer: string }[];
 }
@@ -305,5 +307,18 @@ export function buildFlightRouteContent(originCode: OriginHub, destinationId: st
     ],
   };
 
-  return { slug, originCode, originCityLabel: originCity, originImageQuery: ORIGIN_IMAGE_QUERY[originCode] ?? "", destination, heading, pageTitle, description, puckData, faqItems };
+  return {
+    slug,
+    originCode,
+    originCityLabel: originCity,
+    originImageQuery: ORIGIN_IMAGE_QUERY[originCode] ?? "",
+    destination,
+    heading,
+    pageTitle,
+    description,
+    flightCostUSD: base.avgFlightCostUSD,
+    durationLabel,
+    puckData,
+    faqItems,
+  };
 }

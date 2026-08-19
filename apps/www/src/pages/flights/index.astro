@@ -4,21 +4,49 @@
 // quedarían huérfanas (nadie del sitio las enlaza, mismo bug real que ya
 // pasó una vez con las hub pages — "se generaron y deployaron sin ningún
 // link apuntándoles"). Agrupado por origen para que sea fácil de escanear.
+//
+// Rediseñado (2026-08-19, a pedido del usuario: "centremos la info...
+// agreguemos imágenes... mejoremos el estilo") — de una lista de texto
+// plano a cards con foto real por destino, precio y duración, mismo
+// lenguaje visual que ya usan las cards de "From the blog" en la Home
+// (imagen con overlay + rounded-lg + hover:shadow). Reusa
+// buildFlightRouteContent por ruta (puro/síncrono, sin lectura de
+// Firestore) solo para sacar precio/duración/imageQuery — no arma el
+// Puck data completo, que sería desperdiciar trabajo acá.
 import Layout from "../../layouts/Layout.astro";
-import { FLIGHT_ROUTE_PAIRS, flightRouteSlug } from "../../lib/flightRouteContent";
-import { destinations, ORIGIN_LABELS } from "@aritrips/data";
+import { FLIGHT_ROUTE_PAIRS, buildFlightRouteContent } from "../../lib/flightRouteContent";
+import { ORIGIN_LABELS } from "@aritrips/data";
 
 export const prerender = false;
 Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=3600, stale-if-error=86400");
 
-const destById = new Map(destinations.map((d) => [d.id, d]));
+const APP_URL_FOR_IMAGES = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
+function imageProxyUrl(query: string, fallback: string): string {
+  return `${APP_URL_FOR_IMAGES}/api/image-proxy?q=${encodeURIComponent(query)}&fallback=${encodeURIComponent(fallback)}`;
+}
 
-const byOrigin = new Map<string, { label: string; routes: { slug: string; destinationName: string }[] }>();
+interface RouteCard {
+  slug: string;
+  destinationName: string;
+  destinationCountry: string;
+  imageQuery: string;
+  flightCostUSD: number;
+  durationLabel: string;
+}
+
+const byOrigin = new Map<string, { label: string; routes: RouteCard[] }>();
 for (const pair of FLIGHT_ROUTE_PAIRS) {
-  const dest = destById.get(pair.destinationId);
-  if (!dest) continue;
+  const content = buildFlightRouteContent(pair.originCode, pair.destinationId);
+  if (!content) continue;
   const entry = byOrigin.get(pair.originCode) ?? { label: ORIGIN_LABELS[pair.originCode] ?? pair.originCode, routes: [] };
-  entry.routes.push({ slug: flightRouteSlug(pair.originCode, pair.destinationId), destinationName: dest.name });
+  entry.routes.push({
+    slug: content.slug,
+    destinationName: content.destination.name,
+    destinationCountry: content.destination.country,
+    imageQuery: content.destination.imageQuery,
+    flightCostUSD: content.flightCostUSD,
+    durationLabel: content.durationLabel,
+  });
   byOrigin.set(pair.originCode, entry);
 }
 ---
@@ -27,27 +55,46 @@ for (const pair of FLIGHT_ROUTE_PAIRS) {
   title="Flight Costs by Route | AriTrips"
   description="Real flight cost and timing estimates for popular routes — what a trip actually costs from your city, not just a flight price."
 >
-  <main class="mx-auto flex max-w-4xl flex-col gap-10 px-6 py-16">
-    <div class="flex flex-col gap-3 text-center">
+  <main class="mx-auto flex max-w-5xl flex-col gap-16 px-6 py-16">
+    <div class="mx-auto flex max-w-xl flex-col items-center gap-3 text-center">
       <h1 class="text-3xl font-semibold text-balance text-ink sm:text-4xl">Flight costs, by route</h1>
-      <p class="mx-auto max-w-xl text-muted">
+      <p class="text-muted">
         Real cost estimates for popular routes — flight price, flight time, hotel, and the best months to go. Pick your city.
       </p>
     </div>
 
-    <div class="flex flex-col gap-8">
+    <div class="flex flex-col gap-14">
       {
         [...byOrigin.entries()].map(([, { label, routes }]) => (
-          <div class="flex flex-col gap-3">
-            <h2 class="text-lg font-semibold text-ink">From {label.replace(/\s*\([A-Z]{3}\)$/, "")}</h2>
-            <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <section class="flex flex-col items-center gap-6">
+            <h2 class="text-xl font-semibold text-ink sm:text-2xl">Flights from {label.replace(/\s*\([A-Z]{3}\)$/, "")}</h2>
+            <div class="grid w-full grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
               {routes.map((r) => (
-                <a href={`/flights/${r.slug}`} class="text-muted hover:text-accent">
-                  to {r.destinationName}
+                <a
+                  href={`/flights/${r.slug}`}
+                  class="group flex flex-col overflow-hidden rounded-xl border border-rule bg-surface shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
+                >
+                  <div class="relative h-28 w-full overflow-hidden sm:h-32">
+                    <img
+                      src={imageProxyUrl(r.imageQuery, r.destinationName)}
+                      alt={r.destinationName}
+                      loading="lazy"
+                      class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                    <div class="absolute inset-x-0 bottom-0 p-2.5">
+                      <p class="text-sm font-semibold text-white">{r.destinationName}</p>
+                      <p class="text-xs text-white/75">{r.destinationCountry}</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between gap-2 px-3 py-2.5">
+                    <span class="text-xs text-muted">{r.durationLabel}</span>
+                    <span class="text-sm font-semibold text-accent">from ${r.flightCostUSD}</span>
+                  </div>
                 </a>
               ))}
             </div>
-          </div>
+          </section>
         ))
       }
     </div>
