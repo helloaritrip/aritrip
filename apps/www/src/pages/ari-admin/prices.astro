@@ -150,6 +150,14 @@ const cityOptions = destinations
 // endpoint aparte.
 const pageData = {
   cities: cityOptions,
+  // Rango completo por ruta, sin importar si tiene o no un doc en
+  // `livePrices` (2026-08-19, bug real: las rutas cargadas a mano por
+  // ?mode=manual-bulk nunca tienen `livePrices` a propósito, pero antes
+  // el rango solo se adjuntaba a `liveFlights` — esos 56 precios de Aruba
+  // quedaban guardados pero invisibles en esta página). El cliente arma
+  // la misma clave con `${destinationId}_${originAirportCode}` para
+  // buscar acá tanto en filas con precio en vivo como en las "pendientes".
+  priceRanges: Object.fromEntries(priceRangeByRoute),
   liveFlights: liveFlightDocs.map((d) => ({
     destinationId: d.destinationId as string,
     originAirportCode: d.originAirportCode as string,
@@ -281,6 +289,14 @@ const pageData = {
 
 <script>
   type City = { id: string; name: string; country: string };
+  type PriceRange = {
+    min: number;
+    max: number;
+    count: number;
+    p50: number;
+    byBucket: { monthsAhead: number; min: number; max: number; count: number }[];
+    captures: { capturedAt: string; price: number; source: string; advanceMonthsBucket: number | null }[];
+  };
   type LiveFlight = {
     destinationId: string;
     originAirportCode: string;
@@ -290,18 +306,12 @@ const pageData = {
     airline: string;
     transfers: number | null;
     capturedAt: string;
-    range: {
-      min: number;
-      max: number;
-      count: number;
-      p50: number;
-      byBucket: { monthsAhead: number; min: number; max: number; count: number }[];
-      captures: { capturedAt: string; price: number; source: string; advanceMonthsBucket: number | null }[];
-    } | null;
+    range: PriceRange | null;
   };
   type LiveHotel = { destinationId: string; budget: number | null; mid: number; premium: number | null; capturedAt: string };
   type PageData = {
     cities: City[];
+    priceRanges: Record<string, PriceRange>;
     liveFlights: LiveFlight[];
     liveHotels: LiveHotel[];
     originLabels: Record<string, string>;
@@ -455,6 +465,39 @@ const pageData = {
       const bucketLabel = (b: number | null) => (b === null ? "—" : `~${b * 30}d`);
       const formatCapturedAt = (iso: string) => new Date(iso).toISOString().slice(0, 16).replace("T", " ");
 
+      function capturesTableHtml(range: PriceRange, originLabel: string): string {
+        const tableRows = range.captures
+          .map(
+            (c) => `
+            <tr class="border-t border-rule">
+              <td class="py-1.5 pr-3 text-xs text-muted">${formatCapturedAt(c.capturedAt)}</td>
+              <td class="py-1.5 pr-3 text-xs text-muted">${sourceLabel(c.source)}</td>
+              <td class="py-1.5 pr-3 text-xs text-muted">${bucketLabel(c.advanceMonthsBucket)}</td>
+              <td class="py-1.5 text-xs font-medium text-ink">$${c.price}</td>
+            </tr>`
+          )
+          .join("");
+        return `
+          <div class="border-t border-rule bg-bg/50 px-4 pb-4 pt-3">
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+              ${originLabel} → ${resultName.textContent} — min $${range.min} · median $${range.p50} · max $${range.max} (${range.count} captures)
+            </p>
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[400px] border-collapse text-left">
+                <thead>
+                  <tr>
+                    <th class="pb-1.5 pr-3 text-xs font-semibold uppercase tracking-wide text-muted">Captured</th>
+                    <th class="pb-1.5 pr-3 text-xs font-semibold uppercase tracking-wide text-muted">Source</th>
+                    <th class="pb-1.5 pr-3 text-xs font-semibold uppercase tracking-wide text-muted">Window</th>
+                    <th class="pb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">Price</th>
+                  </tr>
+                </thead>
+                <tbody>${tableRows}</tbody>
+              </table>
+            </div>
+          </div>`;
+      }
+
       // Cada ruta es un <details> (2026-08-18, a pedido del usuario: "haga
       // clic en atlanta y me muestre en una tabla los datos") — clic
       // expande una tabla con cada captura individual de priceHistory
@@ -492,52 +535,39 @@ const pageData = {
           if (!f.range || f.range.captures.length === 0) {
             return `<details class="group">${summaryRow}</details>`;
           }
-
-          const tableRows = f.range.captures
-            .map(
-              (c) => `
-              <tr class="border-t border-rule">
-                <td class="py-1.5 pr-3 text-xs text-muted">${formatCapturedAt(c.capturedAt)}</td>
-                <td class="py-1.5 pr-3 text-xs text-muted">${sourceLabel(c.source)}</td>
-                <td class="py-1.5 pr-3 text-xs text-muted">${bucketLabel(c.advanceMonthsBucket)}</td>
-                <td class="py-1.5 text-xs font-medium text-ink">$${c.price}</td>
-              </tr>`
-            )
-            .join("");
-
-          return `
-          <details class="group">
-            ${summaryRow}
-            <div class="border-t border-rule bg-bg/50 px-4 pb-4 pt-3">
-              <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-                ${f.originLabel} → ${resultName.textContent} — min $${f.range.min} · median $${f.range.p50} · max $${f.range.max} (${f.range.count} captures)
-              </p>
-              <div class="overflow-x-auto">
-                <table class="w-full min-w-[400px] border-collapse text-left">
-                  <thead>
-                    <tr>
-                      <th class="pb-1.5 pr-3 text-xs font-semibold uppercase tracking-wide text-muted">Captured</th>
-                      <th class="pb-1.5 pr-3 text-xs font-semibold uppercase tracking-wide text-muted">Source</th>
-                      <th class="pb-1.5 pr-3 text-xs font-semibold uppercase tracking-wide text-muted">Window</th>
-                      <th class="pb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">Price</th>
-                    </tr>
-                  </thead>
-                  <tbody>${tableRows}</tbody>
-                </table>
-              </div>
-            </div>
-          </details>`;
+          return `<details class="group">${summaryRow}${capturesTableHtml(f.range, f.originLabel)}</details>`;
         })
         .join("");
+
+      // Rutas sin doc en `livePrices` (2026-08-19, bug real encontrado por
+      // el usuario: los 56 precios cargados a mano por ?mode=manual-bulk
+      // quedaban invisibles acá) — ahora también buscan en
+      // `data.priceRanges` y, si hay algo, se muestran igual que una fila
+      // en vivo (con su tabla de detalle), solo que sin el precio "actual"
+      // grande arriba porque no hay ningún capturedAt que sea "el más
+      // reciente en vivo" — el rango observado es el dato real que importa.
       const pendingRows = routesWithoutLiveData
         .sort((a, b) => (data.originLabels[a] || a).localeCompare(data.originLabels[b] || b))
-        .map(
-          (origin) => `
+        .map((origin) => {
+          const originLabel = data.originLabels[origin] || origin;
+          const range = data.priceRanges[`${cityId}_${origin}`];
+          if (!range) {
+            return `
         <div class="flex items-center justify-between gap-3 p-4 opacity-60">
-          <p class="text-sm text-ink">${data.originLabels[origin] || origin}</p>
+          <p class="text-sm text-ink">${originLabel}</p>
           <p class="text-xs text-muted">No live price yet — curated $${curatedForCity[origin]}</p>
-        </div>`
-        )
+        </div>`;
+          }
+          const summaryRow = `
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-4 opacity-80 [&::-webkit-details-marker]:hidden">
+            <p class="text-sm text-ink">${originLabel}</p>
+            <div class="text-right">
+              <p class="text-xs text-muted">No live price yet — curated $${curatedForCity[origin]}</p>
+              <p class="text-xs text-muted">Observed $${range.min}–$${range.max}, median $${range.p50} (${range.count} captures)</p>
+            </div>
+          </summary>`;
+          return `<details class="group">${summaryRow}${capturesTableHtml(range, originLabel)}</details>`;
+        })
         .join("");
       flightsResult.innerHTML = liveRows + pendingRows;
     }
