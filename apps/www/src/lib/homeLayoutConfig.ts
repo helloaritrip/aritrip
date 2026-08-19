@@ -1,50 +1,36 @@
 import { getDocument, type FirestoreCredentials } from "@aritrips/data";
 
 /**
- * Valores de layout (en px) para la sección "What can Ari find for you?"
- * de la Home — antes hardcodeados como clases arbitrarias de Tailwind
- * (pl-24, h-64, etc.), lo que significaba que cada ajuste de espaciado
- * pedido por el usuario requería que yo edite código y haga deploy. Varias
- * rondas de ida y vuelta por captura de pantalla (2026-08-10) no
- * convergían rápido, así que esto se volvió editable a mano desde
- * /ari-admin/home-layout, con vista previa en vivo — el mismo objeto de
- * config alimenta tanto el editor como la Home real.
+ * Contenido editable de la card de ejemplo "What can Ari find for you?" de
+ * la Home (2026-08-19) — reemplaza el sistema de tamaños/espaciado
+ * editables (DemoSectionSizes, /ari-admin/home-layout con sliders) que el
+ * usuario pidió sacar por no necesitarlo más ("nunca va a variar"). Lo que
+ * SÍ quiso poder editar sin deploy es el destino de ejemplo y el texto de
+ * la oferta — mismo principio que llevó a construir el editor de tamaños
+ * en primer lugar (2026-08-10), aplicado a lo que de verdad hace falta
+ * ahora. `destinationId` maneja tanto el nombre como la foto (vía
+ * destinationImages/imageQuery del catálogo, ver index.astro) — el resto
+ * son campos de texto/número libres.
  */
-export interface DemoSectionSizes {
-  mascotHeight: number;
-  rowGap: number;
-  cardPadLeft: number;
-  photoWidth: number;
-  photoHeight: number;
-  cardTextPad: number;
+export interface DemoTripContent {
+  destinationId: string;
+  flag: string;
+  budgetLabel: string;
+  total: number;
+  flight: number;
+  hotel: number;
+  activities: number;
 }
 
-export const DEMO_SIZE_DEFAULTS: DemoSectionSizes = {
-  mascotHeight: 256,
-  rowGap: 24,
-  cardPadLeft: 128,
-  photoWidth: 208,
-  photoHeight: 256,
-  cardTextPad: 20,
+export const DEFAULT_DEMO_TRIP: DemoTripContent = {
+  destinationId: "cancun",
+  flag: "🇲🇽",
+  budgetLabel: "$700 budget",
+  total: 642,
+  flight: 280,
+  hotel: 210,
+  activities: 152,
 };
-
-// Límites de seguridad — sin esto, un valor mal tipeado en el editor
-// (ej. 9999) podría romper el layout de la Home para todo el mundo hasta
-// el próximo ajuste.
-const BOUNDS: Record<keyof DemoSectionSizes, [number, number]> = {
-  mascotHeight: [80, 500],
-  rowGap: [0, 200],
-  cardPadLeft: [0, 400],
-  photoWidth: [80, 500],
-  photoHeight: [80, 500],
-  cardTextPad: [0, 100],
-};
-
-export function clampHomeLayoutValue(key: keyof DemoSectionSizes, value: number): number {
-  const [min, max] = BOUNDS[key];
-  if (Number.isNaN(value)) return DEMO_SIZE_DEFAULTS[key];
-  return Math.min(max, Math.max(min, Math.round(value)));
-}
 
 /**
  * Las 4 secciones de la Home que se pueden reordenar entre sí (2026-08-10,
@@ -58,8 +44,9 @@ export const HOME_SECTION_IDS = ["demo", "how-it-works", "blog", "trip-ideas"] a
 export type HomeSectionId = (typeof HOME_SECTION_IDS)[number];
 export const DEFAULT_SECTION_ORDER: HomeSectionId[] = ["demo", "how-it-works", "blog", "trip-ideas"];
 
-export interface HomeLayoutConfig extends DemoSectionSizes {
+export interface HomeLayoutConfig {
   sectionOrder: HomeSectionId[];
+  demoTrip: DemoTripContent;
 }
 
 function normalizeSectionOrder(raw: unknown): HomeSectionId[] {
@@ -82,17 +69,13 @@ let cachedLayout: { config: HomeLayoutConfig; expiresAt: number } | null = null;
 const CACHE_TTL_MS = 20 * 60 * 1000;
 
 export async function getHomeLayoutConfig(credentials: FirestoreCredentials | null): Promise<HomeLayoutConfig> {
-  const fallback: HomeLayoutConfig = { ...DEMO_SIZE_DEFAULTS, sectionOrder: DEFAULT_SECTION_ORDER };
+  const fallback: HomeLayoutConfig = { sectionOrder: DEFAULT_SECTION_ORDER, demoTrip: DEFAULT_DEMO_TRIP };
   if (!credentials) return fallback;
   if (cachedLayout && cachedLayout.expiresAt > Date.now()) return cachedLayout.config;
   try {
     const doc = await getDocument("siteConfig", "home", credentials);
     if (!doc) return fallback;
-    const config: HomeLayoutConfig = { ...fallback };
-    for (const key of Object.keys(DEMO_SIZE_DEFAULTS) as (keyof DemoSectionSizes)[]) {
-      const raw = doc[key];
-      if (typeof raw === "number") config[key] = clampHomeLayoutValue(key, raw);
-    }
+    const config: HomeLayoutConfig = { sectionOrder: DEFAULT_SECTION_ORDER, demoTrip: { ...DEFAULT_DEMO_TRIP } };
     if (typeof doc.sectionOrder === "string") {
       // Firestore (vía toFirestoreFields) solo guarda planos — un array se
       // manda como JSON serializado a mano, no como lista nativa.
@@ -102,6 +85,13 @@ export async function getHomeLayoutConfig(credentials: FirestoreCredentials | nu
         config.sectionOrder = DEFAULT_SECTION_ORDER;
       }
     }
+    if (typeof doc.demoDestinationId === "string" && doc.demoDestinationId) config.demoTrip.destinationId = doc.demoDestinationId;
+    if (typeof doc.demoFlag === "string") config.demoTrip.flag = doc.demoFlag;
+    if (typeof doc.demoBudgetLabel === "string" && doc.demoBudgetLabel) config.demoTrip.budgetLabel = doc.demoBudgetLabel;
+    if (typeof doc.demoTotal === "number") config.demoTrip.total = doc.demoTotal;
+    if (typeof doc.demoFlight === "number") config.demoTrip.flight = doc.demoFlight;
+    if (typeof doc.demoHotel === "number") config.demoTrip.hotel = doc.demoHotel;
+    if (typeof doc.demoActivities === "number") config.demoTrip.activities = doc.demoActivities;
     cachedLayout = { config, expiresAt: Date.now() + CACHE_TTL_MS };
     return config;
   } catch {

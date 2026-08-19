@@ -2,7 +2,7 @@
 import { env } from "cloudflare:workers";
 import Layout from "../layouts/Layout.astro";
 import { Button } from "@aritrips/ui";
-import { ORIGIN_HUBS, ORIGIN_LABELS } from "@aritrips/data";
+import { ORIGIN_HUBS, ORIGIN_LABELS, destinations } from "@aritrips/data";
 import { getCachedPageIndex } from "../lib/pagesCache";
 import { getCachedDestinationImageUrl } from "../lib/destinationImageCache";
 import { cityName, hubPageSlug } from "../lib/citySlug";
@@ -95,19 +95,12 @@ const steps = [
 // Demo estático a propósito (2026-08-10) — el objetivo es que el visitante
 // entienda qué hace Ari en 3 segundos mirando la Home, no una búsqueda en
 // vivo. Números ilustrativos, coherentes con el resto del catálogo curado.
-// Un solo ejemplo, no dos (2026-08-10, a pedido del usuario tras ver la
-// versión de 3 columnas muy apretada) — Cancún, con la misma query que usa
-// el catálogo real (packages/data), en una card más ancha con más aire.
-const demoTrip = {
-  budgetLabel: "$700 budget",
-  flag: "🇲🇽",
-  destination: "Cancún",
-  total: 642,
-  flight: 280,
-  hotel: 210,
-  activities: 152,
-  imageQuery: "cancun turquoise beach aerial",
-};
+// Editable desde /ari-admin/home-layout sin deploy (2026-08-19, a pedido
+// del usuario) — homeLayout.demoTrip trae destinationId + los números de
+// la oferta; el nombre/imageQuery salen del catálogo real, no se duplican
+// a mano acá.
+const demoDestination = destinations.find((d) => d.id === homeLayout.demoTrip.destinationId) ?? destinations.find((d) => d.id === "cancun")!;
+const demoTrip = { ...homeLayout.demoTrip, destination: demoDestination.name, imageQuery: demoDestination.imageQuery };
 
 // Bug real reportado por el usuario (2026-08-10): esta card seguía
 // mostrando la foto vieja (búsqueda en vivo por texto) en vez de la que ya
@@ -117,7 +110,7 @@ const demoTrip = {
 // foto fijada, gana sobre la búsqueda por query.
 let demoImageUrl: string | undefined;
 if (credentials) {
-  demoImageUrl = await getCachedDestinationImageUrl("cancun", credentials);
+  demoImageUrl = await getCachedDestinationImageUrl(demoDestination.id, credentials);
 }
 ---
 
@@ -165,8 +158,8 @@ if (credentials) {
                   <img
                     src={demoImageUrl || imageProxyUrl(demoTrip.imageQuery, demoTrip.destination)}
                     alt={demoTrip.destination}
-                    width={homeLayout.photoWidth}
-                    height={homeLayout.photoHeight}
+                    width="213"
+                    height="249"
                     class="demo-photo shrink-0 object-cover"
                     loading="lazy"
                   />
@@ -260,20 +253,21 @@ if (credentials) {
   </main>
 </Layout>
 
-<style define:vars={{
-  mascotH: `${homeLayout.mascotHeight}px`,
-  rowGap: `${homeLayout.rowGap}px`,
-  cardPadLeft: `${homeLayout.cardPadLeft}px`,
-  photoW: `${homeLayout.photoWidth}px`,
-  photoH: `${homeLayout.photoHeight}px`,
-  textPad: `${homeLayout.cardTextPad}px`,
-}}>
-  /* Mobile primero: valores fijos y compactos, sin importar lo que se haya
-     ajustado en el editor para desktop (2026-08-10, bug real reportado por
-     el usuario: en mobile los valores grandes de desktop, aplicados como
-     inline style sin diferenciar breakpoint, desbordaban la pantalla y
-     rompían el layout). A partir de 640px se usan los valores reales del
-     editor, vía las custom properties de arriba. */
+<style>
+  /* Tamaño/espaciado de esta card (mascotHeight/rowGap/cardPadLeft/
+     photoWidth/photoHeight/cardTextPad) fijado en el código (2026-08-19, a
+     pedido del usuario: "no la necesito de verdad... dejar hardcodeado el
+     elemento completo con esa configuración") — antes editable a mano
+     desde /ari-admin/home-layout con vista previa en vivo, sacado porque
+     nunca iba a variar. Estos valores (255/42/0/213/249/47px) son los
+     últimos que quedaron guardados ahí. Lo que sigue siendo editable sin
+     deploy es el CONTENIDO (destino/oferta), ver homeLayout.demoTrip
+     arriba.
+
+     Mobile primero: valores fijos y compactos, distintos de los de
+     desktop (2026-08-10, bug real reportado por el usuario: en mobile los
+     valores grandes de desktop desbordaban la pantalla). A partir de
+     640px se usan los valores fijos de desktop. */
   .demo-row {
     display: flex;
     flex-direction: column;
@@ -300,24 +294,24 @@ if (credentials) {
   @media (min-width: 640px) {
     .demo-row {
       flex-direction: row;
-      gap: var(--rowGap);
+      gap: 42px;
       width: auto;
     }
     .demo-mascot {
-      height: var(--mascotH);
+      height: 255px;
     }
     .demo-card {
       flex-direction: row;
       width: auto;
       max-width: none;
-      padding-left: var(--cardPadLeft);
+      padding-left: 0px;
     }
     .demo-photo {
-      width: var(--photoW);
-      height: var(--photoH);
+      width: 213px;
+      height: 249px;
     }
     .demo-text {
-      padding: var(--textPad);
+      padding: 47px;
     }
   }
 </style>
