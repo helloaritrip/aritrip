@@ -225,6 +225,16 @@ export async function listDocuments(
  * Firestore puede devolver cualquier subconjunto, no necesariamente el
  * más reciente).
  */
+function buildFieldFilter(where: { field: string; op: "EQUAL" | "GREATER_THAN_OR_EQUAL"; value: string }) {
+  return {
+    fieldFilter: {
+      field: { fieldPath: where.field },
+      op: where.op,
+      value: { stringValue: where.value },
+    },
+  };
+}
+
 export async function queryDocuments(
   collection: string,
   credentials: FirestoreCredentials,
@@ -238,7 +248,10 @@ export async function queryDocuments(
     // usuario en vez de traer la colección `favorites` entera y filtrar
     // del lado del servidor (mismo antipatrón de "leer toda la colección"
     // que agotó la cuota gratis de Firestore, ver dealsCache.ts).
-    where?: { field: string; op: "EQUAL"; value: string };
+    // GREATER_THAN_OR_EQUAL sumado (2026-08-23) para cortes por fecha
+    // (ej. "capturedAt >= hace 24h") — capturedAt se guarda como string
+    // ISO 8601, que ordena lexicográficamente igual que cronológicamente.
+    where?: { field: string; op: "EQUAL" | "GREATER_THAN_OR_EQUAL"; value: string };
   }
 ): Promise<(Record<string, unknown> & { id: string })[]> {
   const structuredQuery: Record<string, unknown> = { from: [{ collectionId: collection }] };
@@ -248,13 +261,7 @@ export async function queryDocuments(
   if (typeof options.limit === "number") structuredQuery.limit = options.limit;
   if (options.offset) structuredQuery.offset = options.offset;
   if (options.where) {
-    structuredQuery.where = {
-      fieldFilter: {
-        field: { fieldPath: options.where.field },
-        op: options.where.op,
-        value: { stringValue: options.where.value },
-      },
-    };
+    structuredQuery.where = buildFieldFilter(options.where);
   }
   const body = { structuredQuery };
   const res = await authedFetch(`${DOCS_BASE}:runQuery`, credentials, {
@@ -271,11 +278,23 @@ export async function queryDocuments(
     .map((r) => ({ id: r.document.name.split("/").pop() ?? "", ...fromFirestoreFields(r.document.fields) }));
 }
 
-/** Cuenta los documentos de una colección sin traerlos — usa la agregación nativa de Firestore, no cuenta del lado del cliente. */
-export async function countDocuments(collection: string, credentials: FirestoreCredentials): Promise<number> {
+/**
+ * Cuenta los documentos de una colección sin traerlos — usa la agregación
+ * nativa de Firestore, no cuenta del lado del cliente. `where` opcional
+ * (2026-08-23, para el contador de "precios actualizados" del admin de
+ * Live Prices) filtra antes de contar, ej. `capturedAt >= hace 24h` — sigue
+ * siendo una sola lectura de agregación, no trae los documentos.
+ */
+export async function countDocuments(
+  collection: string,
+  credentials: FirestoreCredentials,
+  where?: { field: string; op: "EQUAL" | "GREATER_THAN_OR_EQUAL"; value: string }
+): Promise<number> {
+  const structuredQuery: Record<string, unknown> = { from: [{ collectionId: collection }] };
+  if (where) structuredQuery.where = buildFieldFilter(where);
   const body = {
     structuredAggregationQuery: {
-      structuredQuery: { from: [{ collectionId: collection }] },
+      structuredQuery,
       aggregations: [{ alias: "count", count: {} }],
     },
   };

@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../lib/requireAdminSession";
 import { destinations, originBaseCosts, destinationBaseStayCosts, ORIGIN_LABELS, livePriceDocId, type OriginHub } from "@aritrips/data";
-import { getCachedCollection, getCachedQuery } from "../../lib/adminReadCache";
+import { getCachedCollection, getCachedQuery, getCachedCount } from "../../lib/adminReadCache";
 
 export const prerender = false;
 
@@ -17,12 +17,17 @@ const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
 let liveFlightDocs: Record<string, unknown>[] = [];
 let liveHotelDocs: Record<string, unknown>[] = [];
 let priceHistoryDocs: Record<string, unknown>[] = [];
+let updateCounts = { day: 0, week: 0, month: 0 };
 let loadError: string | null = null;
 
 if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
   try {
     const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
-    const [flightDocs, hotelDocs, historyDocs] = await Promise.all([
+    const now = Date.now();
+    const dayAgo = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+    const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const monthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const [flightDocs, hotelDocs, historyDocs, dayCount, weekCount, monthCount] = await Promise.all([
       getCachedCollection("livePrices", credentials),
       getCachedCollection("liveHotelPrices", credentials),
       // Acotado, no la colección entera (2026-08-19, tras un 429 real de
@@ -35,10 +40,31 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
         direction: "DESCENDING",
         limit: 3000,
       }),
+      // Contador "precios actualizados" (2026-08-23) — cuenta de agregación
+      // aparte, no del array de arriba: con el ritmo real de price-sync
+      // (varios miles de capturas por día entre las 4 tareas de cron) el
+      // tope de 3000 docs de arriba ni siquiera cubre 24h completas, así
+      // que "semana" o "mes" saldrían mal si se contaran de ahí.
+      getCachedCount("priceHistory:count:24h", "priceHistory", credentials, {
+        field: "capturedAt",
+        op: "GREATER_THAN_OR_EQUAL",
+        value: dayAgo,
+      }),
+      getCachedCount("priceHistory:count:7d", "priceHistory", credentials, {
+        field: "capturedAt",
+        op: "GREATER_THAN_OR_EQUAL",
+        value: weekAgo,
+      }),
+      getCachedCount("priceHistory:count:30d", "priceHistory", credentials, {
+        field: "capturedAt",
+        op: "GREATER_THAN_OR_EQUAL",
+        value: monthAgo,
+      }),
     ]);
     liveFlightDocs = flightDocs.filter((d) => d.id !== "_cursor");
     liveHotelDocs = hotelDocs.filter((d) => d.id !== "_cursor");
     priceHistoryDocs = historyDocs;
+    updateCounts = { day: dayCount, week: weekCount, month: monthCount };
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Failed to load live prices.";
   }
@@ -150,6 +176,7 @@ const cityOptions = destinations
 // endpoint aparte.
 const pageData = {
   cities: cityOptions,
+  updateCounts,
   // Rango completo por ruta, sin importar si tiene o no un doc en
   // `livePrices` (2026-08-19, bug real: las rutas cargadas a mano por
   // ?mode=manual-bulk nunca tienen `livePrices` a propósito, pero antes
@@ -192,7 +219,23 @@ const pageData = {
 <AdminLayout title="Live Prices — AriTrips Admin" session={session} active="live-prices">
   <div class="flex max-w-3xl flex-col gap-8">
     <div>
-      <h1 class="text-2xl font-semibold text-ink">Live Prices</h1>
+      <div class="flex flex-wrap items-center gap-3">
+        <h1 class="text-2xl font-semibold text-ink">Live Prices</h1>
+        {!loadError && (
+          <div class="flex items-center gap-1.5 rounded-full border border-rule bg-surface px-3 py-1">
+            <span id="update-count" class="text-sm font-semibold text-accent">{updateCounts.day.toLocaleString()}</span>
+            <span class="text-xs text-muted">prices updated in the last</span>
+            <select
+              id="update-range"
+              class="rounded-md border-none bg-transparent text-xs font-medium text-ink focus:outline focus:outline-2 focus:outline-accent"
+            >
+              <option value="day">24 hours</option>
+              <option value="week">week</option>
+              <option value="month">month</option>
+            </select>
+          </div>
+        )}
+      </div>
       <p class="text-sm text-muted">
         Real flight and hotel prices fetched automatically by apps/price-sync, and when each one was last refreshed.
         Search a city to see just that city — {cityOptions.length} destinations tracked, {liveFlightDocs.length} live
@@ -311,6 +354,7 @@ const pageData = {
   type LiveHotel = { destinationId: string; budget: number | null; mid: number; premium: number | null; capturedAt: string };
   type PageData = {
     cities: City[];
+    updateCounts: { day: number; week: number; month: number };
     priceRanges: Record<string, PriceRange>;
     liveFlights: LiveFlight[];
     liveHotels: LiveHotel[];
@@ -338,6 +382,13 @@ const pageData = {
   const manualNote = document.getElementById("manual-note") as HTMLInputElement;
   const manualStatus = document.getElementById("manual-status") as HTMLParagraphElement;
   let selectedCityId: string | null = null;
+
+  const updateCountEl = document.getElementById("update-count") as HTMLSpanElement | null;
+  const updateRangeSelect = document.getElementById("update-range") as HTMLSelectElement | null;
+  updateRangeSelect?.addEventListener("change", () => {
+    const range = updateRangeSelect.value as keyof PageData["updateCounts"];
+    if (updateCountEl) updateCountEl.textContent = data.updateCounts[range].toLocaleString();
+  });
 
   function timeAgo(iso: string): string {
     const diffMs = Date.now() - new Date(iso).getTime();

@@ -1,4 +1,4 @@
-import { listDocuments, queryDocuments, type FirestoreCredentials } from "@aritrips/data";
+import { listDocuments, queryDocuments, countDocuments, type FirestoreCredentials } from "@aritrips/data";
 
 /**
  * Cache en memoria para las colecciones que leen las páginas de admin de
@@ -35,6 +35,28 @@ export async function getCachedCollection(collection: string, credentials: Fires
  */
 const QUERY_CACHE_TTL_MS = 2 * 60 * 1000;
 const queryCache = new Map<string, { docs: Doc[]; expiresAt: number }>();
+
+/**
+ * Mismo patrón que getCachedCollection/getCachedQuery, pero para conteos
+ * de agregación (2026-08-23, contador "precios actualizados" de Live
+ * Prices) — evita repetir la query cada vez que el dueño solo está
+ * cambiando el dropdown de rango, ya que las tres ventanas (24h/semana/mes)
+ * se calculan todas de una en el server y quedan cacheadas 1 min.
+ */
+const countCache = new Map<string, { count: number; expiresAt: number }>();
+
+export async function getCachedCount(
+  cacheKey: string,
+  collection: string,
+  credentials: FirestoreCredentials,
+  where?: Parameters<typeof countDocuments>[2]
+): Promise<number> {
+  const hit = countCache.get(cacheKey);
+  if (hit && hit.expiresAt > Date.now()) return hit.count;
+  const count = await countDocuments(collection, credentials, where);
+  countCache.set(cacheKey, { count, expiresAt: Date.now() + CACHE_TTL_MS });
+  return count;
+}
 
 export async function getCachedQuery(
   cacheKey: string,
