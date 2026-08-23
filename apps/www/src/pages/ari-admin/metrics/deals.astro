@@ -4,6 +4,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../../lib/requireAdminSession";
 import { destinations } from "@aritrips/data";
 import { getCachedQuery } from "../../../lib/adminReadCache";
+import { parseRange, rangeCutoffISO, RANGE_OPTIONS } from "../../../lib/metricsRange";
 
 export const prerender = false;
 
@@ -42,16 +43,23 @@ type TrackedEventDoc = {
 // Ver adminReadCache.ts para el porqué.
 const STATS_SAMPLE_SIZE = 500;
 
+// Rango 24h/semana/mes/todo (2026-08-23) — mismo selector y mismo default
+// ("all") que /ari-admin/metrics, ver lib/metricsRange.ts.
+const range = parseRange(Astro.url.searchParams);
+const rangeCutoff = rangeCutoffISO(range);
+const rangeWhere = rangeCutoff ? ({ field: "createdAt", op: "GREATER_THAN_OR_EQUAL" as const, value: rangeCutoff }) : undefined;
+
 let statsEvents: TrackedEventDoc[] = [];
 let loadError: string | null = null;
 
 if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
   try {
     const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
-    statsEvents = (await getCachedQuery(`events:stats:${STATS_SAMPLE_SIZE}`, "events", credentials, {
+    statsEvents = (await getCachedQuery(`events:stats:${STATS_SAMPLE_SIZE}:${range}`, "events", credentials, {
       orderByField: "createdAt",
       direction: "DESCENDING",
       limit: STATS_SAMPLE_SIZE,
+      where: rangeWhere,
     })) as TrackedEventDoc[];
   } catch (err) {
     console.error("[ari-admin/metrics/deals] Failed to load events", err);
@@ -136,10 +144,24 @@ const recentClicks = clicks.slice(0, 20);
     </div>
 
     <div>
-      <h1 class="text-2xl font-semibold text-ink">Deals</h1>
+      <div class="flex flex-wrap items-center gap-3">
+        <h1 class="text-2xl font-semibold text-ink">Deals</h1>
+        <form method="GET" class="flex items-center gap-1.5 rounded-full border border-rule bg-surface px-3 py-1">
+          <span class="text-xs text-muted">Rango:</span>
+          <select
+            name="range"
+            onchange="this.form.submit()"
+            class="rounded-md border-none bg-transparent text-xs font-medium text-ink focus:outline focus:outline-2 focus:outline-accent"
+          >
+            {RANGE_OPTIONS.map((o) => (
+              <option value={o.value} selected={range === o.value}>{o.label}</option>
+            ))}
+          </select>
+        </form>
+      </div>
       <p class="text-sm text-muted">
         Qué tan bien funciona /deals como puerta de entrada — {views.length} visitas, {clicks.length} clicks a
-        afiliados, {netDealFavorites} favoritos guardados hasta ahora.
+        afiliados, {netDealFavorites} favoritos guardados{range !== "all" ? " en este rango" : " hasta ahora"}.
       </p>
       {testCount > 0 && (
         <p class="text-xs text-muted">
@@ -152,7 +174,9 @@ const recentClicks = clicks.slice(0, 20);
 
     {!loadError && views.length === 0 && clicks.length === 0 && (
       <div class="rounded-lg border border-dashed border-rule bg-surface/50 p-8 text-center text-sm text-muted">
-        Todavía no hay datos — van a empezar a aparecer acá apenas alguien visite /deals.
+        {range === "all"
+          ? "Todavía no hay datos — van a empezar a aparecer acá apenas alguien visite /deals."
+          : "No hubo actividad en este rango — probá con Todo el tiempo."}
       </div>
     )}
 

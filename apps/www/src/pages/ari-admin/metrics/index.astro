@@ -2,8 +2,9 @@
 import { env } from "cloudflare:workers";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../../lib/requireAdminSession";
-import { countDocuments, destinations, ORIGIN_LABELS, type OriginHub } from "@aritrips/data";
-import { getCachedQuery } from "../../../lib/adminReadCache";
+import { destinations, ORIGIN_LABELS, type OriginHub } from "@aritrips/data";
+import { getCachedQuery, getCachedCount } from "../../../lib/adminReadCache";
+import { parseRange, rangeCutoffISO, RANGE_OPTIONS } from "../../../lib/metricsRange";
 
 export const prerender = false;
 
@@ -48,6 +49,12 @@ const EVENT_TYPES = ["search_performed", "recommendation_shown", "recommendation
 const eventTypeFilter = Astro.url.searchParams.get("type") ?? "all";
 const showTest = Astro.url.searchParams.get("showTest") === "1";
 
+// Rango 24h/semana/mes/todo (2026-08-23) — "all" es el default, así que sin
+// ?range en la URL esta página se comporta exactamente igual que antes.
+const range = parseRange(Astro.url.searchParams);
+const rangeCutoff = rangeCutoffISO(range);
+const rangeWhere = rangeCutoff ? ({ field: "createdAt", op: "GREATER_THAN_OR_EQUAL" as const, value: rangeCutoff }) : undefined;
+
 let recentEvents: TrackedEventDoc[] = [];
 let totalEvents = 0;
 let loadError: string | null = null;
@@ -67,12 +74,13 @@ if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
     // Una sola cache key (sin los filtros) — filtrar/cambiar de filtro no
     // dispara una lectura nueva de Firestore dentro del TTL del caché.
     [recentEvents, totalEvents] = await Promise.all([
-      getCachedQuery(`events:recent:${RECENT_SAMPLE_SIZE}`, "events", credentials, {
+      getCachedQuery(`events:recent:${RECENT_SAMPLE_SIZE}:${range}`, "events", credentials, {
         orderByField: "createdAt",
         direction: "DESCENDING",
         limit: RECENT_SAMPLE_SIZE,
+        where: rangeWhere,
       }) as Promise<TrackedEventDoc[]>,
-      countDocuments("events", credentials),
+      getCachedCount(`events:count:${range}`, "events", credentials, rangeWhere),
     ]);
   } catch (err) {
     console.error("[metrics] Failed to load events", err);
@@ -338,10 +346,26 @@ const moreEvents = activityEvents.slice(INITIAL_VISIBLE);
     </div>
 
     <div>
-      <h1 class="text-2xl font-semibold text-ink">Search Funnel</h1>
+      <div class="flex flex-wrap items-center gap-3">
+        <h1 class="text-2xl font-semibold text-ink">Search Funnel</h1>
+        <form method="GET" class="flex items-center gap-1.5 rounded-full border border-rule bg-surface px-3 py-1">
+          <input type="hidden" name="type" value={eventTypeFilter} />
+          {showTest && <input type="hidden" name="showTest" value="1" />}
+          <span class="text-xs text-muted">Rango:</span>
+          <select
+            name="range"
+            onchange="this.form.submit()"
+            class="rounded-md border-none bg-transparent text-xs font-medium text-ink focus:outline focus:outline-2 focus:outline-accent"
+          >
+            {RANGE_OPTIONS.map((o) => (
+              <option value={o.value} selected={range === o.value}>{o.label}</option>
+            ))}
+          </select>
+        </form>
+      </div>
       <p class="text-sm text-muted">
         Lo que la gente busca de verdad, y qué eligió — {searches.length} búsquedas, {shown.length} recomendaciones
-        mostradas, {clicked.length} clicks y {netFavorites} favoritos guardados hasta ahora.
+        mostradas, {clicked.length} clicks y {netFavorites} favoritos guardados{range !== "all" ? " en este rango" : " hasta ahora"}.
       </p>
       {testEventsInSample > 0 && (
         <p class="text-xs text-muted">
@@ -355,7 +379,9 @@ const moreEvents = activityEvents.slice(INITIAL_VISIBLE);
 
     {!loadError && totalEvents === 0 && (
       <div class="rounded-lg border border-dashed border-rule bg-surface/50 p-8 text-center text-sm text-muted">
-        Todavía no hay datos — van a empezar a aparecer acá apenas alguien use el buscador.
+        {range === "all"
+          ? "Todavía no hay datos — van a empezar a aparecer acá apenas alguien use el buscador."
+          : "No hubo actividad en este rango — probá con Todo el tiempo."}
       </div>
     )}
 
@@ -608,6 +634,7 @@ const moreEvents = activityEvents.slice(INITIAL_VISIBLE);
           <!-- Filtros vía <form method="GET"> normal (2026-08-19) — sin
                JavaScript, el navegador arma la URL solo al enviar. -->
           <form method="GET" class="flex flex-wrap items-center gap-3 rounded-lg border border-rule bg-surface p-3 text-sm">
+            <input type="hidden" name="range" value={range} />
             <label class="flex items-center gap-2">
               <span class="text-muted">Tipo</span>
               <select name="type" class="rounded-md border border-rule bg-bg px-2 py-1 text-ink">
@@ -623,7 +650,7 @@ const moreEvents = activityEvents.slice(INITIAL_VISIBLE);
             </label>
             <button type="submit" class="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink">Filtrar</button>
             {(eventTypeFilter !== "all" || showTest) && (
-              <a href="/ari-admin/metrics" class="text-xs text-muted underline">Limpiar filtros</a>
+              <a href={`/ari-admin/metrics${range !== "all" ? `?range=${range}` : ""}`} class="text-xs text-muted underline">Limpiar filtros</a>
             )}
           </form>
 
