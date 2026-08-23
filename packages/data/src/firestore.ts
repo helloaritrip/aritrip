@@ -225,12 +225,25 @@ export async function listDocuments(
  * Firestore puede devolver cualquier subconjunto, no necesariamente el
  * más reciente).
  */
-function buildFieldFilter(where: { field: string; op: "EQUAL" | "GREATER_THAN_OR_EQUAL"; value: string }) {
+/**
+ * `valueType` (2026-08-23) — Firestore solo matchea un fieldFilter contra
+ * el MISMO tipo de valor que tiene el campo guardado, no hace coerción.
+ * `capturedAt` (priceHistory) se escribe como string ISO (`toFirestoreFields`
+ * lo manda como stringValue), pero `createdAt` (events) se escribe como
+ * `new Date()` — eso `toFirestoreFields` lo serializa como timestampValue.
+ * Un filtro con stringValue contra un campo timestampValue no tira error,
+ * simplemente no matchea NUNCA (0 resultados silencioso) — bug real
+ * encontrado al agregar el filtro de rango a /ari-admin/metrics. Default
+ * "string" para no romper los usos existentes (favorites.uid, capturedAt).
+ */
+export type FieldFilterWhere = { field: string; op: "EQUAL" | "GREATER_THAN_OR_EQUAL"; value: string; valueType?: "string" | "timestamp" };
+
+function buildFieldFilter(where: FieldFilterWhere) {
   return {
     fieldFilter: {
       field: { fieldPath: where.field },
       op: where.op,
-      value: { stringValue: where.value },
+      value: where.valueType === "timestamp" ? { timestampValue: where.value } : { stringValue: where.value },
     },
   };
 }
@@ -249,9 +262,9 @@ export async function queryDocuments(
     // del lado del servidor (mismo antipatrón de "leer toda la colección"
     // que agotó la cuota gratis de Firestore, ver dealsCache.ts).
     // GREATER_THAN_OR_EQUAL sumado (2026-08-23) para cortes por fecha
-    // (ej. "capturedAt >= hace 24h") — capturedAt se guarda como string
-    // ISO 8601, que ordena lexicográficamente igual que cronológicamente.
-    where?: { field: string; op: "EQUAL" | "GREATER_THAN_OR_EQUAL"; value: string };
+    // (ej. "capturedAt >= hace 24h") — ver FieldFilterWhere para por qué
+    // `valueType` importa.
+    where?: FieldFilterWhere;
   }
 ): Promise<(Record<string, unknown> & { id: string })[]> {
   const structuredQuery: Record<string, unknown> = { from: [{ collectionId: collection }] };
@@ -285,11 +298,7 @@ export async function queryDocuments(
  * Live Prices) filtra antes de contar, ej. `capturedAt >= hace 24h` — sigue
  * siendo una sola lectura de agregación, no trae los documentos.
  */
-export async function countDocuments(
-  collection: string,
-  credentials: FirestoreCredentials,
-  where?: { field: string; op: "EQUAL" | "GREATER_THAN_OR_EQUAL"; value: string }
-): Promise<number> {
+export async function countDocuments(collection: string, credentials: FirestoreCredentials, where?: FieldFilterWhere): Promise<number> {
   const structuredQuery: Record<string, unknown> = { from: [{ collectionId: collection }] };
   if (where) structuredQuery.where = buildFieldFilter(where);
   const body = {

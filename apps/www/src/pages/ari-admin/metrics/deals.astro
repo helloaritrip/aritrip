@@ -47,7 +47,9 @@ const STATS_SAMPLE_SIZE = 500;
 // ("all") que /ari-admin/metrics, ver lib/metricsRange.ts.
 const range = parseRange(Astro.url.searchParams);
 const rangeCutoff = rangeCutoffISO(range);
-const rangeWhere = rangeCutoff ? ({ field: "createdAt", op: "GREATER_THAN_OR_EQUAL" as const, value: rangeCutoff }) : undefined;
+// valueType: "timestamp" — ver el comentario en metrics/index.astro, mismo
+// bug: createdAt en `events` es un timestampValue, no un string.
+const rangeWhere = rangeCutoff ? ({ field: "createdAt", op: "GREATER_THAN_OR_EQUAL" as const, value: rangeCutoff, valueType: "timestamp" as const }) : undefined;
 
 let statsEvents: TrackedEventDoc[] = [];
 let loadError: string | null = null;
@@ -151,10 +153,10 @@ const recentClicks = clicks.slice(0, 20);
           <select
             name="range"
             onchange="this.form.submit()"
-            class="rounded-md border-none bg-transparent text-xs font-medium text-ink focus:outline focus:outline-2 focus:outline-accent"
+            class="rounded-md border-none bg-surface text-xs font-medium text-ink focus:outline focus:outline-2 focus:outline-accent"
           >
             {RANGE_OPTIONS.map((o) => (
-              <option value={o.value} selected={range === o.value}>{o.label}</option>
+              <option value={o.value} selected={range === o.value} class="bg-surface text-ink">{o.label}</option>
             ))}
           </select>
         </form>

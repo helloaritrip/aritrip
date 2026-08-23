@@ -53,7 +53,11 @@ const showTest = Astro.url.searchParams.get("showTest") === "1";
 // ?range en la URL esta página se comporta exactamente igual que antes.
 const range = parseRange(Astro.url.searchParams);
 const rangeCutoff = rangeCutoffISO(range);
-const rangeWhere = rangeCutoff ? ({ field: "createdAt", op: "GREATER_THAN_OR_EQUAL" as const, value: rangeCutoff }) : undefined;
+// valueType: "timestamp" (2026-08-23, bug real: sin esto el filtro no
+// matcheaba NADA) — createdAt en `events` se escribe como `new Date()`
+// (api/track/route.ts), que Firestore guarda como timestampValue, no
+// como el stringValue que usa capturedAt en priceHistory.
+const rangeWhere = rangeCutoff ? ({ field: "createdAt", op: "GREATER_THAN_OR_EQUAL" as const, value: rangeCutoff, valueType: "timestamp" as const }) : undefined;
 
 let recentEvents: TrackedEventDoc[] = [];
 let totalEvents = 0;
@@ -355,10 +359,10 @@ const moreEvents = activityEvents.slice(INITIAL_VISIBLE);
           <select
             name="range"
             onchange="this.form.submit()"
-            class="rounded-md border-none bg-transparent text-xs font-medium text-ink focus:outline focus:outline-2 focus:outline-accent"
+            class="rounded-md border-none bg-surface text-xs font-medium text-ink focus:outline focus:outline-2 focus:outline-accent"
           >
             {RANGE_OPTIONS.map((o) => (
-              <option value={o.value} selected={range === o.value}>{o.label}</option>
+              <option value={o.value} selected={range === o.value} class="bg-surface text-ink">{o.label}</option>
             ))}
           </select>
         </form>
