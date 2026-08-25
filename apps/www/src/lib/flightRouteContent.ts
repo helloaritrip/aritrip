@@ -216,6 +216,14 @@ export function buildFlightRouteContent(originCode: OriginHub, destinationId: st
   const cheapMonths = formatMonthRanges(cheapSeason.months);
   const expensiveMonths = formatMonthRanges(expensiveSeason.months);
 
+  // Bridge SEO -> Ari Core (2026-08-25, a pedido del head): antes estos CTA
+  // mandaban a APP_URL pelado, tirando el origen/presupuesto que la página
+  // ya conoce. Mismo patrón que ya usa hubPageContent.ts (?origin=) y el
+  // bloque DestinationHighlight de Puck (?origin=&budget=) — el buscador
+  // (SearchForm.tsx) ya sabe leer los dos, no hizo falta tocar la app.
+  const appUrlWithContext =
+    fiveDayTotal !== null ? `${APP_URL}/?origin=${originCode}&budget=${fiveDayTotal}` : `${APP_URL}/?origin=${originCode}`;
+
   const heading = `${originCity} to ${destination.name}`;
   const pageTitle = `${originCity} to ${destination.name} — Flight Cost & Best Time to Go | AriTrips`;
   const description = `What a trip from ${originCity} to ${destination.name} really costs — flight price, flight time, hotel, and the best months to go. Real curated estimates, not a teaser rate.`;
@@ -282,7 +290,7 @@ export function buildFlightRouteContent(originCode: OriginHub, destinationId: st
           heading,
           subheading: `${durationLabel} flight · from $${base.avgFlightCostUSD} round trip`,
           ctaLabel: "Find your trip",
-          ctaHref: APP_URL,
+          ctaHref: appUrlWithContext,
           backgroundImageQuery: destination.imageQuery,
         },
       },
@@ -301,7 +309,7 @@ export function buildFlightRouteContent(originCode: OriginHub, destinationId: st
           heading: `See what ${destination.name} costs from ${originCity} right now`,
           subheading: "Real flight, hotel, and activity costs together — not just a flight price.",
           ctaLabel: "Find your trip",
-          ctaHref: APP_URL,
+          ctaHref: appUrlWithContext,
         },
       },
     ],
