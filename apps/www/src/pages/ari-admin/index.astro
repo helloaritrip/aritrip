@@ -2,6 +2,9 @@
 import { env } from "cloudflare:workers";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { getAdminSession } from "../../lib/requireAdminSession";
+import { getCachedQuery, getCachedCount } from "../../lib/adminReadCache";
+import { getCachedFlightDeals } from "../../lib/dealsCache";
+import { parseRange, rangeCutoffISO, RANGE_OPTIONS } from "../../lib/metricsRange";
 
 export const prerender = false;
 
@@ -9,16 +12,178 @@ const session = await getAdminSession(Astro.cookies, env);
 if (!session) {
   return Astro.redirect("/ari-admin/login");
 }
+
+const { FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
+
+// Dashboard ejecutivo (2026-08-25, Fase A acordada con el head/usuario tras
+// su propuesta de un panel "de un vistazo") — no es una pantalla de datos
+// nueva, es un resumen de lo que YA vive repartido en Live Prices y las 2
+// pestañas de Metrics. Mismo patrón de sample acotado + filtro en memoria
+// que ya usa metrics/index.astro (ver ese archivo para el porqué del tope).
+type TrackedEventDoc = { id: string; name?: string; createdAt?: string; isTest?: boolean };
+
+const SAMPLE_SIZE = 1000;
+
+const range = parseRange(Astro.url.searchParams);
+const rangeCutoff = rangeCutoffISO(range);
+// valueType: "timestamp" para `events` (createdAt es un Date real, ver el
+// mismo bug ya documentado en metrics/index.astro); priceHistory.capturedAt
+// en cambio es un string ISO, así que ese va sin valueType (default "string").
+const eventsRangeWhere = rangeCutoff
+  ? ({ field: "createdAt", op: "GREATER_THAN_OR_EQUAL" as const, value: rangeCutoff, valueType: "timestamp" as const })
+  : undefined;
+const pricesRangeWhere = rangeCutoff ? ({ field: "capturedAt", op: "GREATER_THAN_OR_EQUAL" as const, value: rangeCutoff }) : undefined;
+
+let events: TrackedEventDoc[] = [];
+let pricesCaptured = 0;
+let activeDeals = 0;
+let loadError: string | null = null;
+
+if (FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+  try {
+    const credentials = { clientEmail: FIREBASE_CLIENT_EMAIL, privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") };
+    const [eventDocs, pricesCount, deals] = await Promise.all([
+      getCachedQuery(`overview:events:${SAMPLE_SIZE}:${range}`, "events", credentials, {
+        orderByField: "createdAt",
+        direction: "DESCENDING",
+        limit: SAMPLE_SIZE,
+        where: eventsRangeWhere,
+      }) as Promise<TrackedEventDoc[]>,
+      getCachedCount(`overview:priceHistory:count:${range}`, "priceHistory", credentials, pricesRangeWhere),
+      // Deals activos = snapshot de AHORA (no depende del rango elegido,
+      // igual que "Prices captured" del head es histórico pero esto es
+      // estado actual) — mismo cache ya usado por /deals, sin lectura extra.
+      getCachedFlightDeals(credentials),
+    ]);
+    events = eventDocs;
+    pricesCaptured = pricesCount;
+    activeDeals = deals.filter((d) => d.discountPercent >= 25).length;
+  } catch (err) {
+    console.error("[ari-admin] Failed to load overview", err);
+    loadError = "Couldn't load the overview right now.";
+  }
+} else {
+  loadError = "Firestore isn't configured yet (missing secrets).";
+}
+
+const real = events.filter((e) => e.isTest !== true);
+const testCount = events.length - real.length;
+const sampleCapped = events.length >= SAMPLE_SIZE;
+
+const searches = real.filter((e) => e.name === "search_performed").length;
+const recsShown = real.filter((e) => e.name === "recommendation_shown").length;
+const recsClicked = real.filter((e) => e.name === "recommendation_clicked").length;
+const dealsViews = real.filter((e) => e.name === "deals_page_viewed").length;
+const dealsClicked = real.filter((e) => e.name === "deal_clicked").length;
+const favoriteSaves = real.filter((e) => e.name === "favorite_saved").length;
+const favoriteRemoves = real.filter((e) => e.name === "favorite_removed").length;
+const netFavorites = favoriteSaves - favoriteRemoves;
+
+// "Clicks a afiliados" del mockup del head = las 2 salidas reales a un
+// partner link que ya trackeamos por separado (recommendation_clicked en
+// el buscador, deal_clicked en /deals) — sumadas, no un evento nuevo.
+const affiliateClicks = recsClicked + dealsClicked;
+const recCTR = recsShown > 0 ? Math.round((recsClicked / recsShown) * 1000) / 10 : null;
+
+const rangeQS = range !== "all" ? `?range=${range}` : "";
 ---
 
 <AdminLayout title="Dashboard — AriTrips Admin" session={session} active={null}>
-  <div class="flex max-w-xl flex-col gap-3">
-    <p class="text-sm font-medium uppercase tracking-wide text-accent">Welcome back</p>
-    <h1 class="text-2xl font-semibold text-ink">{session.email}</h1>
-    <p class="text-sm leading-relaxed text-muted">
-      Use the sidebar to edit pages, update partner links, or manage who can log into this panel.
-      Sections marked "Soon" are reserved for when Ari Core v2 and built-in analytics land — the nav
-      won't need a redesign when that happens.
-    </p>
+  <div class="flex max-w-4xl flex-col gap-8">
+    <div>
+      <div class="flex flex-wrap items-center gap-3">
+        <h1 class="text-2xl font-semibold text-ink">Overview</h1>
+        <form method="GET" class="flex items-center gap-1.5 rounded-full border border-rule bg-surface px-3 py-1">
+          <span class="text-xs text-muted">Rango:</span>
+          <select
+            name="range"
+            onchange="this.form.submit()"
+            class="rounded-md border-none bg-surface text-xs font-medium text-ink focus:outline focus:outline-2 focus:outline-accent"
+          >
+            {RANGE_OPTIONS.map((o) => (
+              <option value={o.value} selected={range === o.value} class="bg-surface text-ink">{o.label}</option>
+            ))}
+          </select>
+        </form>
+      </div>
+      <p class="text-sm text-muted">
+        Bienvenido, {session.email}. Así está AriTrips{range !== "all" ? " en este rango" : " hasta ahora"} — de un
+        vistazo, sin entrar a cada pantalla por separado.
+      </p>
+      {testCount > 0 && <p class="text-xs text-muted">Excluidos {testCount} eventos marcados como prueba.</p>}
+      {sampleCapped && (
+        <p class="text-xs text-muted">
+          Búsquedas/recomendaciones basadas en los últimos {SAMPLE_SIZE.toLocaleString()} eventos de este rango — para
+          el detalle sin ese tope (CTR por dimensión, Acceptance Rate, etc.), ver Metrics.
+        </p>
+      )}
+    </div>
+
+    {loadError && <p class="rounded-md border border-rule bg-surface p-4 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
+
+    {!loadError && (
+      <>
+        <div class="flex flex-col gap-2">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Búsquedas y recomendaciones</h2>
+          <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div class="rounded-lg border border-rule bg-surface p-4">
+              <p class="text-2xl font-semibold text-ink">{searches}</p>
+              <p class="text-xs text-muted">Búsquedas realizadas</p>
+            </div>
+            <div class="rounded-lg border border-rule bg-surface p-4">
+              <p class="text-2xl font-semibold text-ink">{recsShown}</p>
+              <p class="text-xs text-muted">Recomendaciones mostradas</p>
+            </div>
+            <div class="rounded-lg border border-rule bg-surface p-4">
+              <p class="text-2xl font-semibold text-ink">{recCTR !== null ? `${recCTR}%` : "—"}</p>
+              <p class="text-xs text-muted">CTR de recomendación</p>
+            </div>
+            <div class="rounded-lg border border-rule bg-surface p-4">
+              <p class="text-2xl font-semibold text-ink">{netFavorites}</p>
+              <p class="text-xs text-muted">Favoritos guardados</p>
+            </div>
+          </div>
+          <a href={`/ari-admin/metrics${rangeQS}`} class="text-xs text-accent underline">Ver Search Funnel completo →</a>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Deals y afiliados</h2>
+          <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div class="rounded-lg border border-rule bg-surface p-4">
+              <p class="text-2xl font-semibold text-ink">{dealsViews}</p>
+              <p class="text-xs text-muted">Visitas a /deals</p>
+            </div>
+            <div class="rounded-lg border border-rule bg-surface p-4">
+              <p class="text-2xl font-semibold text-ink">{affiliateClicks}</p>
+              <p class="text-xs text-muted">Clicks a afiliados</p>
+            </div>
+            <div class="rounded-lg border border-rule bg-surface p-4">
+              <p class="text-2xl font-semibold text-ink">{activeDeals}</p>
+              <p class="text-xs text-muted">Deals activos ahora (🔥 ≥25% off)</p>
+            </div>
+          </div>
+          <a href={`/ari-admin/metrics/deals${rangeQS}`} class="text-xs text-accent underline">Ver Deals completo →</a>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted">Precios</h2>
+          <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div class="rounded-lg border border-rule bg-surface p-4">
+              <p class="text-2xl font-semibold text-ink">{pricesCaptured.toLocaleString()}</p>
+              <p class="text-xs text-muted">Precios capturados{range !== "all" ? " en este rango" : ""}</p>
+            </div>
+          </div>
+          <a href="/ari-admin/prices" class="text-xs text-accent underline">Ver Live Prices completo →</a>
+        </div>
+
+        <p class="rounded-md border border-dashed border-rule bg-surface/50 p-3 text-xs text-muted">
+          Lo que NO está acá todavía, a propósito: <strong>Visitantes reales del sitio</strong> (viven en Cloudflare
+          Web Analytics, no en este Firestore), <strong>estado de SEO</strong> (rutas indexadas / clics orgánicos,
+          viven en Google Search Console), y <strong>Revenue</strong> (Travelpayouts/Kiwi/Booking no nos avisan
+          cuándo alguien compra — ese número vive en sus paneles). Sumar los primeros dos requiere generar
+          credenciales nuevas; avisame cuando quieras encararlo.
+        </p>
+      </>
+    )}
   </div>
 </AdminLayout>

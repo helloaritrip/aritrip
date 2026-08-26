@@ -248,6 +248,16 @@ function buildFieldFilter(where: FieldFilterWhere) {
   };
 }
 
+// Array = AND compuesto (2026-08-25, para el dashboard ejecutivo del admin:
+// contar "search_performed en los últimos 7 días" necesita 2 condiciones a
+// la vez, `name == X` y `createdAt >= corte`). Un solo FieldFilterWhere
+// sigue funcionando igual que antes, sin compositeFilter de por medio.
+function buildFilter(where: FieldFilterWhere | FieldFilterWhere[]) {
+  const wheres = Array.isArray(where) ? where : [where];
+  if (wheres.length === 1) return buildFieldFilter(wheres[0]);
+  return { compositeFilter: { op: "AND", filters: wheres.map(buildFieldFilter) } };
+}
+
 export async function queryDocuments(
   collection: string,
   credentials: FirestoreCredentials,
@@ -264,7 +274,7 @@ export async function queryDocuments(
     // GREATER_THAN_OR_EQUAL sumado (2026-08-23) para cortes por fecha
     // (ej. "capturedAt >= hace 24h") — ver FieldFilterWhere para por qué
     // `valueType` importa.
-    where?: FieldFilterWhere;
+    where?: FieldFilterWhere | FieldFilterWhere[];
   }
 ): Promise<(Record<string, unknown> & { id: string })[]> {
   const structuredQuery: Record<string, unknown> = { from: [{ collectionId: collection }] };
@@ -274,7 +284,7 @@ export async function queryDocuments(
   if (typeof options.limit === "number") structuredQuery.limit = options.limit;
   if (options.offset) structuredQuery.offset = options.offset;
   if (options.where) {
-    structuredQuery.where = buildFieldFilter(options.where);
+    structuredQuery.where = buildFilter(options.where);
   }
   const body = { structuredQuery };
   const res = await authedFetch(`${DOCS_BASE}:runQuery`, credentials, {
@@ -298,9 +308,13 @@ export async function queryDocuments(
  * Live Prices) filtra antes de contar, ej. `capturedAt >= hace 24h` — sigue
  * siendo una sola lectura de agregación, no trae los documentos.
  */
-export async function countDocuments(collection: string, credentials: FirestoreCredentials, where?: FieldFilterWhere): Promise<number> {
+export async function countDocuments(
+  collection: string,
+  credentials: FirestoreCredentials,
+  where?: FieldFilterWhere | FieldFilterWhere[]
+): Promise<number> {
   const structuredQuery: Record<string, unknown> = { from: [{ collectionId: collection }] };
-  if (where) structuredQuery.where = buildFieldFilter(where);
+  if (where) structuredQuery.where = buildFilter(where);
   const body = {
     structuredAggregationQuery: {
       structuredQuery,
