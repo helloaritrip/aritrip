@@ -791,17 +791,24 @@ export const config: Config<Props> = {
           { value: "24", label: "cities you can fly from" },
         ],
       },
+      // Card contenida, no franja full-bleed (2026-08-26, a pedido del
+      // usuario con referencia visual: "que no ocupen todo el ancho de la
+      // pantalla, solo el ancho del cuadro máximo alineado con el texto")
+      // — mismo max-w-3xl + px-6 que Heading/TextBlock, para que el borde
+      // del bloque quede alineado con el resto de la columna de lectura.
       render: ({ stats }) => (
-        <section className="relative overflow-hidden bg-brand-blue-mid px-6 py-12 text-white">
-          <div className="relative mx-auto flex max-w-4xl flex-wrap justify-center gap-x-12 gap-y-6 text-center">
-            {stats.map((s, i) => (
-              <div key={i}>
-                <p className="text-4xl font-semibold">{s.value}</p>
-                <p className="text-sm text-white/80">{s.label}</p>
-              </div>
-            ))}
+        <div className="mx-auto mt-8 max-w-3xl px-6">
+          <div className="rounded-2xl bg-brand-blue-mid px-6 py-10 text-white">
+            <div className="flex flex-wrap justify-center gap-x-12 gap-y-6 text-center">
+              {stats.map((s, i) => (
+                <div key={i}>
+                  <p className="text-4xl font-semibold">{s.value}</p>
+                  <p className="text-sm text-white/80">{s.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </section>
+        </div>
       ),
     },
     Testimonials: {

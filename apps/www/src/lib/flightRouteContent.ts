@@ -297,6 +297,12 @@ export function buildFlightRouteContent(originCode: OriginHub, destinationId: st
       { type: "TextBlock", props: { id: "text-intro", text: introText } },
       { type: "StatsBanner", props: { id: "stats-main", stats: stats1 } },
       { type: "TextBlock", props: { id: "text-total", text: totalText } },
+      // Galería de fotos del destino (2026-08-26, a pedido del usuario:
+      // "incluir imágenes del destino, las mismas que ya mostramos en la
+      // página de este destino") — mismo componente ExperienceGallery que
+      // ya usan las páginas /p/{id}, reusando signatureExperiences como
+      // fuente de las fotos, cero curación nueva.
+      { type: "ExperienceGallery", props: { id: "gallery-1", destinationId } },
       { type: "Heading", props: { id: "heading-class", text: "Cabin prices on this route", level: "h2" } },
       { type: "StatsBanner", props: { id: "stats-class", stats: stats2 } },
       { type: "Heading", props: { id: "heading-timing", text: "When to fly this route", level: "h2" } },
