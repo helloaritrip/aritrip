@@ -5,23 +5,10 @@ import { TextInput, Combobox, Chip } from "@aritrips/ui";
 import { ORIGIN_HUBS, DEFAULT_ORIGIN_HUB, type OriginHub, type InterestTag } from "@aritrips/data";
 import type { RecommendationResult } from "./ResultCard";
 import { ORIGIN_OPTIONS } from "@/lib/originLabels";
+import { INTEREST_OPTIONS, type SavedProfile } from "@/lib/interestOptions";
 import { trackEvent, newSearchId } from "@/lib/trackEvent";
 import { useSearch } from "./SearchContext";
-import {
-  BeachIcon,
-  AdventureIcon,
-  CultureIcon,
-  NightlifeIcon,
-  FamilyIcon,
-  HoneymoonIcon,
-  PlaneIcon,
-  CalendarIcon,
-  PersonIcon,
-  ChildIcon,
-  WalletIcon,
-  SparkleIcon,
-} from "@/components/Icons";
-import type { ComponentType, SVGProps } from "react";
+import { PlaneIcon, CalendarIcon, PersonIcon, ChildIcon, WalletIcon, SparkleIcon } from "@/components/Icons";
 
 // Google Flights limita a 9 pasajeros por búsqueda; KAYAK permite hasta 9
 // adultos + 7 niños — referencia real de la industria, no un número
@@ -46,18 +33,6 @@ function getTodayISODate(): string {
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
-
-// 6 opciones, no 8 (2026-08-09) — "Food" se fusionó en "Culture" y
-// "Nature" en "Adventure" (mucho solapamiento para el usuario final);
-// 6 chips entran en una sola línea del formulario en vez de partirse.
-const INTEREST_OPTIONS: { value: InterestTag; label: string; icon: ComponentType<SVGProps<SVGSVGElement>> }[] = [
-  { value: "beach", label: "Beach", icon: BeachIcon },
-  { value: "adventure", label: "Adventure", icon: AdventureIcon },
-  { value: "culture", label: "Culture", icon: CultureIcon },
-  { value: "nightlife", label: "Nightlife", icon: NightlifeIcon },
-  { value: "family", label: "Family", icon: FamilyIcon },
-  { value: "honeymoon", label: "Honeymoon", icon: HoneymoonIcon },
-];
 
 type FormState = {
   originAirportCode: OriginHub;
@@ -98,25 +73,59 @@ export function SearchForm() {
   // "Find trips under $750"), precarga el campo en vez de que el usuario
   // tenga que re-tipear un número que ya dijo en la página de SEO. Set
   // aparte del de origin porque no depende de si hubo geo-detección o no.
+  //
+  // Perfil guardado (2026-08-26, a pedido del usuario) — tercera fuente,
+  // entre la URL y la geo-detección: si el usuario está logueado y guardó
+  // preferencias en /account, precargan origen/presupuesto/intereses en
+  // vez de re-pedírselos en cada búsqueda. La URL sigue ganando siempre
+  // (viene de un CTA con intención explícita, ver el bridge SEO→Ari Core
+  // en flightRouteContent.ts) — el perfil es el fallback antes de la
+  // geo-detección por IP, no un override.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const budgetParam = Number(params.get("budget"));
-    if (Number.isFinite(budgetParam) && budgetParam > 0) {
+    const hasBudgetParam = Number.isFinite(budgetParam) && budgetParam > 0;
+    if (hasBudgetParam) {
       setForm((f) => ({ ...f, budgetUSD: String(Math.round(budgetParam)) }));
     }
 
     const originParam = params.get("origin");
-    if (originParam && (ORIGIN_HUBS as readonly string[]).includes(originParam)) {
+    const hasOriginParam = !!originParam && (ORIGIN_HUBS as readonly string[]).includes(originParam);
+    if (hasOriginParam) {
       setForm((f) => ({ ...f, originAirportCode: originParam as OriginHub }));
-      return;
     }
-    fetch("/api/discover")
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data: { originAirportCode: OriginHub }) => {
-        setForm((f) => ({ ...f, originAirportCode: data.originAirportCode }));
+
+    function detectOriginByIP() {
+      fetch("/api/discover")
+        .then((res) => (res.ok ? res.json() : Promise.reject()))
+        .then((data: { originAirportCode: OriginHub }) => {
+          setForm((f) => ({ ...f, originAirportCode: data.originAirportCode }));
+        })
+        .catch(() => {
+          // sin señal de geo — se queda con DEFAULT_ORIGIN_HUB, no es un error visible
+        });
+    }
+
+    fetch("/api/profile")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { profile: SavedProfile | null } | null) => {
+        const profile = data?.profile;
+        if (!hasOriginParam) {
+          if (profile?.originAirportCode && (ORIGIN_HUBS as readonly string[]).includes(profile.originAirportCode)) {
+            setForm((f) => ({ ...f, originAirportCode: profile.originAirportCode as OriginHub }));
+          } else {
+            detectOriginByIP();
+          }
+        }
+        if (!hasBudgetParam && typeof profile?.budgetUSD === "number" && profile.budgetUSD > 0) {
+          setForm((f) => ({ ...f, budgetUSD: String(Math.round(profile.budgetUSD!)) }));
+        }
+        if (profile?.interests && profile.interests.length > 0) {
+          setForm((f) => ({ ...f, interests: profile.interests! }));
+        }
       })
       .catch(() => {
-        // sin señal de geo — se queda con DEFAULT_ORIGIN_HUB, no es un error visible
+        if (!hasOriginParam) detectOriginByIP();
       });
   }, []);
 

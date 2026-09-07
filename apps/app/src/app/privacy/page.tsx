@@ -62,7 +62,7 @@ export default function PrivacyPage() {
       <p>
         If you&apos;ve signed in with Google, you can permanently delete your profile and every
         favorite you&apos;ve saved at any time from the{" "}
-        <Link href="/favorites">My Favorites</Link> page — look for &quot;Delete account&quot; at
+        <Link href="/account">My Profile</Link> page — look for &quot;Delete account&quot; at
         the bottom. It takes effect immediately and can&apos;t be undone. This removes everything
         tied to your account; it doesn&apos;t touch the anonymous search records described above,
         since those were never linked to you in the first place.
