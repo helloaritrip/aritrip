@@ -513,7 +513,7 @@ const pageData = {
       flightsResult.innerHTML = `<p class="p-4 text-sm text-muted">No flight routes tracked for this destination.</p>`;
     } else {
       const sourceLabel = (s: string) => (s === "serpapi" ? "SerpApi" : s === "manual" ? "Manual" : "Travelpayouts");
-      const bucketLabel = (b: number | null) => (b === null ? "—" : `~${b * 30}d`);
+      const bucketLabel = (b: number | null) => (b === null ? "—" : b === 0 ? "≤30d" : `~${b * 30}d`);
       const formatCapturedAt = (iso: string) => new Date(iso).toISOString().slice(0, 16).replace("T", " ");
 
       function capturesTableHtml(range: PriceRange, originLabel: string): string {
@@ -575,7 +575,7 @@ const pageData = {
               ${
                 f.range && f.range.byBucket.length >= 2
                   ? `<p class="text-xs text-muted">${f.range.byBucket
-                      .map((b) => `~${b.monthsAhead * 30}d: $${b.min}${b.max !== b.min ? `–$${b.max}` : ""}`)
+                      .map((b) => `${b.monthsAhead === 0 ? "≤30d" : `~${b.monthsAhead * 30}d`}: $${b.min}${b.max !== b.min ? `–$${b.max}` : ""}`)
                       .join(" · ")}</p>`
                   : ""
               }

@@ -115,8 +115,17 @@ function periodForMonthsAhead(monthsAhead: number): string {
 // sin arriesgar los datos que ya tenemos. Cada corrida de cron completa usa
 // UNA sola ventana (no una por ruta) para que decenas de rutas no queden
 // mezclando ventanas en el mismo lote; la rotación día a día (no por lote)
-// es lo que con el tiempo arma las 3 canastas por ruta.
-const ADVANCE_MONTHS_BUCKETS = [1, 2, 3] as const;
+// es lo que con el tiempo arma las canastas por ruta.
+// Bucket 0 = mes calendario ACTUAL (2026-09-10, a pedido del usuario:
+// "comparar ese precio y tener el dato de ventanas variadas"). Es lo mas
+// cerca de "last minute" que esta fuente permite de forma confiable: un
+// dia puntual a 7-14 dias vista devuelve vacio casi siempre (cache
+// pasivo), pero "el mes en curso" agrega las busquedas reales de todos
+// los que viajan en las proximas ~2-4 semanas. Solo entra en la rotacion
+// de runPriorityBatch (priceHistory / investigacion) — el cron principal
+// de vuelos sigue fijo en bucket 1, y bucket 0 nunca pisa livePrices (ver
+// el guard `monthsAhead === 1` en runPriorityBatch).
+const ADVANCE_MONTHS_BUCKETS = [0, 1, 2, 3] as const;
 
 function advanceMonthsForCycle(): number {
   const epochDay = Math.floor(Date.now() / 86_400_000);
@@ -826,10 +835,10 @@ function buildPriorityRoutes(): RoutePair[] {
   );
 }
 
-// 197 rutas × 3 ventanas = 591 combinaciones. A 20/lote cada 15 min
-// (PRIORITY_CRON), un lote completo tarda ~7.5h — dentro de 1 día se
-// completan más de 2 vueltas enteras a las 3 ventanas para todo el
-// subconjunto prioritario.
+// 197 rutas × 4 ventanas (0/30/60/90 días, ver ADVANCE_MONTHS_BUCKETS) =
+// 788 combinaciones. A 20/lote cada 15 min (PRIORITY_CRON), un lote
+// completo tarda ~10h — dentro de 1 día se completan ~2.4 vueltas enteras
+// a las 4 ventanas para todo el subconjunto prioritario.
 const PRIORITY_BATCH_SIZE = 20;
 
 async function runPriorityBatch(env: Env): Promise<{ processed: number; written: number; skipped: number; nextOffset: number; total: number }> {

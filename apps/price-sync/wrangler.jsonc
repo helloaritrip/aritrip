@@ -18,8 +18,9 @@
 	//  - 8-59/15 * * * * (muestreo profundo de rutas prioritarias,
 	//    Travelpayouts, 2026-08-18): corrido 8 min del cron principal para
 	//    no pegarle al mismo segundo — barre ~197 rutas de alto tráfico real
-	//    por las 3 ventanas de anticipación (30/60/90 días) en vez de
-	//    esperar la rotación orgánica del cron principal.
+	//    por las 4 ventanas de anticipación (mes actual + 30/60/90 días,
+	//    2026-09-10) en vez de esperar la rotación orgánica del cron
+	//    principal. Solo la ventana de 30 días pisa el precio del sitio.
 	// Nadie los dispara a mano en el día a día — Cloudflare los despierta
 	// solo, más un endpoint /run protegido por secret para probar.
 	"triggers": {
